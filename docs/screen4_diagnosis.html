@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error-container": "#ffdad6",
+              "primary-container": "#0ea5e9",
+              "primary-fixed": "#c9e6ff",
+              "on-tertiary-fixed-variant": "#005236",
+              "error-container": "#93000a",
+              "on-tertiary-container": "#003b26",
+              "primary": "#89ceff",
+              "inverse-primary": "#006591",
+              "on-background": "#dae2fd",
+              "secondary": "#d0bcff",
+              "inverse-surface": "#dae2fd",
+              "on-primary-fixed": "#001e2f",
+              "surface-container-low": "#131b2e",
+              "surface-bright": "#31394d",
+              "surface-tint": "#89ceff",
+              "tertiary": "#4edea3",
+              "surface-dim": "#0b1326",
+              "on-secondary-container": "#c4abff",
+              "tertiary-container": "#00b17b",
+              "on-tertiary": "#003824",
+              "on-primary-fixed-variant": "#004c6e",
+              "error": "#ffb4ab",
+              "on-primary-container": "#003751",
+              "on-secondary": "#3c0091",
+              "inverse-on-surface": "#283044",
+              "on-error": "#690005",
+              "surface-variant": "#2d3449",
+              "background": "#0b1326",
+              "outline-variant": "#3e4850",
+              "outline": "#88929b",
+              "surface-container-high": "#222a3d",
+              "primary-fixed-dim": "#89ceff",
+              "on-surface-variant": "#bec8d2",
+              "secondary-fixed-dim": "#d0bcff",
+              "on-secondary-fixed": "#23005c",
+              "surface-container-highest": "#2d3449",
+              "surface-container-lowest": "#060e20",
+              "on-surface": "#dae2fd",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary-fixed": "#002113",
+              "surface-container": "#171f33",
+              "secondary-container": "#571bc1",
+              "on-secondary-fixed-variant": "#5516be",
+              "surface": "#0b1326",
+              "secondary-fixed": "#e9ddff",
+              "on-primary": "#00344d",
+              "tertiary-fixed-dim": "#4edea3"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.6);
+            backdrop-filter: blur(24px);
+        }
+        .neural-glow {
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.08);
+        }
+        .ai-shimmer {
+            background: linear-gradient(90deg, transparent, rgba(208, 188, 255, 0.1), transparent);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] shadow-[0_0_40px_rgba(14,165,233,0.08)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-sky-500 tracking-tighter font-headline">NeuralDB</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-sky-400 border-b-2 border-sky-400 pb-1 font-headline font-bold tracking-tight" href="#">Health: 98%</a>
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-headline font-bold tracking-tight" href="#">On-Premise</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-highest px-4 py-1.5 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface-variant" placeholder="Search clusters..." type="text"/>
+</div>
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded-full">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col py-6 bg-[#171f33] border-r border-white/5 z-40 mt-16">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 p-3 bg-surface-container-high rounded-xl">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">memory</span>
+</div>
+<div>
+<div class="text-sm font-bold text-slate-100">Autonomy Lvl 4</div>
+<div class="text-[10px] text-sky-500 font-medium">Latency: 12ms</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-medium text-sm">Topology</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#222a3d] text-sky-400 border-r-4 border-sky-500 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="troubleshoot">troubleshoot</span>
+<span class="font-medium text-sm">Diagnosis</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-medium text-sm">ASH Explorer</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-medium text-sm">Playbook</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full py-3 px-4 bg-primary-container text-on-primary-container font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+<span>NL2SQL Assistant</span>
+</button>
+<div class="pt-4 border-t border-white/5 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-slate-100 text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+                    Documentation
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-slate-100 text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="contact_support">contact_support</span>
+                    Support
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 pt-24 px-8 pb-12 grid grid-cols-12 gap-8">
+<!-- Left Column: Diagnosis List -->
+<section class="col-span-4 space-y-6">
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-headline text-xl font-bold tracking-tight text-on-surface">Active Incidents</h2>
+<span class="text-xs font-mono text-outline uppercase tracking-widest">Live Feed</span>
+</div>
+<div class="space-y-3">
+<!-- Highlighted Incident -->
+<div class="p-5 rounded-xl bg-error-container/10 border border-error/20 ring-1 ring-error/10 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-error"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-error text-on-error uppercase">Critical</span>
+<span class="text-[10px] text-outline">2m ago</span>
+</div>
+<h3 class="font-bold text-on-error-container text-sm leading-tight mb-1">Response Time Spike (PG-PROD-01)</h3>
+<p class="text-xs text-on-surface-variant line-clamp-2">Latency jumped from 45ms to 1200ms. High CPU observed on node-04.</p>
+</div>
+<!-- Secondary Incidents -->
+<div class="p-5 rounded-xl bg-surface-container-high hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">Warning</span>
+<span class="text-[10px] text-outline">14m ago</span>
+</div>
+<h3 class="font-bold text-on-surface text-sm leading-tight mb-1">Unusual Sequential Scan Detection</h3>
+<p class="text-xs text-on-surface-variant">Schema: reporting | Table: legacy_logs</p>
+</div>
+<div class="p-5 rounded-xl bg-surface-container-high hover:bg-surface-bright transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">Warning</span>
+<span class="text-[10px] text-outline">45m ago</span>
+</div>
+<h3 class="font-bold text-on-surface text-sm leading-tight mb-1">Replication Lag Threshold Exceeded</h3>
+<p class="text-xs text-on-surface-variant">Node: replica-us-east-1 | Lag: 4.2s</p>
+</div>
+<div class="p-5 rounded-xl bg-surface-container-high hover:bg-surface-bright transition-colors cursor-pointer opacity-60">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary/20 text-tertiary border border-tertiary/30 uppercase">Resolved</span>
+<span class="text-[10px] text-outline">2h ago</span>
+</div>
+<h3 class="font-bold text-on-surface text-sm leading-tight mb-1">Memory Pressure on Analytics-02</h3>
+<p class="text-xs text-on-surface-variant">Auto-scaling group triggered. New node added.</p>
+</div>
+</div>
+</section>
+<!-- Right Column: Incident Detail -->
+<section class="col-span-8 space-y-6">
+<!-- AI Diagnosis Summary -->
+<div class="glass-panel p-8 rounded-2xl border border-secondary/10 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-[100px] -mr-32 -mt-32"></div>
+<div class="flex items-center gap-3 mb-6">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-secondary shadow-[0_0_20px_rgba(208,188,255,0.2)]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">AI Root Cause Analysis</h2>
+<p class="text-sm text-secondary/70">Engine: Neural-Insight-v4.2 | Confidence: 94%</p>
+</div>
+</div>
+<div class="space-y-6">
+<div class="p-6 bg-surface-container-lowest rounded-xl border-l-4 border-secondary">
+<h4 class="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Diagnosis</h4>
+<p class="text-lg font-medium text-on-surface leading-relaxed">
+                            Root Cause: <span class="text-secondary">High Lock Contention</span> in 'orders' table. Triggered by DDL change (Add Column 'tax_id') initiated 15 mins ago by user <code class="bg-surface-variant px-1.5 rounded text-primary">dev_ops_bot</code>.
+                        </p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-container rounded-lg border border-white/5">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm">history</span>
+<h4 class="text-xs font-bold text-outline uppercase">RAG Reference</h4>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                                Similar to <span class="text-primary underline cursor-pointer">Incident #421</span> (2025-11-12). Solution: Increase <code class="text-tertiary">work_mem</code> or apply recommended index on 'created_at'.
+                            </p>
+</div>
+<div class="p-4 bg-surface-container rounded-lg border border-white/5">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-tertiary text-sm">lightbulb</span>
+<h4 class="text-xs font-bold text-outline uppercase">Optimization Suggestion</h4>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                                Parallel index creation on 'order_status' will reduce sequential scan overhead by <span class="text-tertiary font-bold">62%</span>.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Causal Inference Graph Visualization (Stylized) -->
+<div class="p-8 bg-surface-container rounded-2xl border border-white/5">
+<h4 class="text-xs font-bold text-outline uppercase tracking-widest mb-8">Causal Inference Chain</h4>
+<div class="relative flex justify-between items-center px-12">
+<!-- Connector Line -->
+<div class="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-outline-variant to-transparent -translate-y-1/2"></div>
+<!-- Nodes -->
+<div class="relative z-10 flex flex-col items-center gap-3 group">
+<div class="w-14 h-14 rounded-full bg-surface-container-high border-2 border-primary/40 flex items-center justify-center text-primary group-hover:border-primary transition-all">
+<span class="material-symbols-outlined">edit_square</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant text-center uppercase tracking-tighter">Schema<br/>Change</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-3 group">
+<div class="w-14 h-14 rounded-full bg-surface-container-high border-2 border-amber-500/40 flex items-center justify-center text-amber-400 group-hover:border-amber-500 transition-all">
+<span class="material-symbols-outlined">search</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant text-center uppercase tracking-tighter">Sequential<br/>Scan</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-3 group">
+<div class="w-14 h-14 rounded-full bg-surface-container-high border-2 border-secondary/40 flex items-center justify-center text-secondary group-hover:border-secondary transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant text-center uppercase tracking-tighter">Lock<br/>Wait</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-3 group">
+<div class="w-14 h-14 rounded-full bg-error/20 border-2 border-error/40 flex items-center justify-center text-error group-hover:border-error transition-all">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<span class="text-[10px] font-bold text-error text-center uppercase tracking-tighter">Latency<br/>Spike</span>
+</div>
+</div>
+</div>
+<!-- AI Action Area -->
+<div class="flex flex-wrap gap-4 items-center">
+<button class="px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">auto_fix</span>
+                    Generate Playbook
+                </button>
+<button class="px-6 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">settings_input_component</span>
+                    Auto-Tune Index
+                </button>
+<button class="px-6 py-3 bg-surface-variant text-on-surface-variant border border-outline-variant font-bold rounded-lg flex items-center gap-2 hover:bg-surface-bright active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">code</span>
+                    View SQL Recommendation
+                </button>
+</div>
+</section>
+</main>
+<!-- Floating Chat Assistant -->
+<div class="fixed bottom-8 right-8 z-50 w-80">
+<div class="bg-surface-container-high rounded-2xl shadow-2xl border border-white/5 overflow-hidden flex flex-col">
+<div class="p-4 bg-secondary-container text-on-secondary-container flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">smart_toy</span>
+<span class="font-bold text-sm">NL2SQL Assistant</span>
+</div>
+<button class="text-on-secondary-container/60 hover:text-on-secondary-container">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="h-64 p-4 space-y-4 overflow-y-auto bg-surface-container-lowest/50">
+<div class="flex justify-end">
+<div class="bg-surface-variant px-3 py-2 rounded-xl rounded-tr-none text-xs text-on-surface-variant max-w-[80%]">
+                        What other queries are blocked by this lock?
+                    </div>
+</div>
+<div class="flex justify-start">
+<div class="bg-secondary-container/10 border border-secondary/20 px-3 py-2 rounded-xl rounded-tl-none text-xs text-on-surface max-w-[80%]">
+                        Scanning active sessions... I've identified 14 transactions waiting on the 'orders' ExclusiveLock. 
+                        <br/><br/>
+                        Most impacted: <code class="text-secondary">SELECT * FROM orders WHERE user_id = ?</code>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-white/5 bg-surface-container-high">
+<div class="flex items-center gap-2 bg-surface-container rounded-lg px-3 py-2 border border-outline-variant/30">
+<input class="bg-transparent border-none focus:ring-0 text-xs flex-1 text-on-surface" placeholder="Ask follow up..." type="text"/>
+<span class="material-symbols-outlined text-primary text-sm cursor-pointer">send</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Background Decoration -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+<div class="absolute top-[20%] right-[10%] w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[10%] left-[20%] w-[300px] h-[300px] bg-secondary/5 rounded-full blur-[100px]"></div>
+</div>
+</body></html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-surface-variant": "#bec8d2",
+              "on-surface": "#dae2fd",
+              "surface-variant": "#2d3449",
+              "on-secondary": "#3c0091",
+              "surface-dim": "#0b1326",
+              "primary-fixed-dim": "#89ceff",
+              "surface-container-lowest": "#060e20",
+              "primary-fixed": "#c9e6ff",
+              "primary-container": "#0ea5e9",
+              "on-secondary-fixed": "#23005c",
+              "tertiary-fixed": "#6ffbbe",
+              "outline": "#88929b",
+              "surface-tint": "#89ceff",
+              "secondary-fixed-dim": "#d0bcff",
+              "inverse-primary": "#006591",
+              "secondary": "#d0bcff",
+              "primary": "#89ceff",
+              "on-tertiary-fixed": "#002113",
+              "surface-bright": "#31394d",
+              "outline-variant": "#3e4850",
+              "on-secondary-fixed-variant": "#5516be",
+              "inverse-on-surface": "#283044",
+              "on-primary-fixed-variant": "#004c6e",
+              "secondary-fixed": "#e9ddff",
+              "surface-container-high": "#222a3d",
+              "on-primary-container": "#003751",
+              "on-error-container": "#ffdad6",
+              "on-tertiary": "#003824",
+              "error": "#ffb4ab",
+              "on-background": "#dae2fd",
+              "background": "#0b1326",
+              "tertiary-container": "#00b17b",
+              "secondary-container": "#571bc1",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-primary-fixed": "#001e2f",
+              "tertiary": "#4edea3",
+              "surface-container": "#171f33",
+              "on-secondary-container": "#c4abff",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-container-highest": "#2d3449",
+              "on-error": "#690005",
+              "surface-container-low": "#131b2e",
+              "surface": "#0b1326",
+              "on-tertiary-container": "#003b26",
+              "inverse-surface": "#dae2fd",
+              "error-container": "#93000a",
+              "on-primary": "#00344d"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(34, 42, 61, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .step-active {
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] shadow-[0_0_40px_rgba(14,165,233,0.08)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-sky-500 tracking-tighter font-headline">NeuralDB</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-headline font-bold tracking-tight" href="#">Health: 98%</a>
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-headline font-bold tracking-tight" href="#">On-Premise</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded-lg">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded-lg">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 border-r border-white/5 bg-[#171f33] w-64 z-40 mt-16">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="hub">hub</span>
+</div>
+<div>
+<p class="text-slate-100 font-bold font-headline text-lg leading-tight">Autonomy Lvl 4</p>
+<p class="text-xs text-slate-400">Latency: 12ms</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 font-medium text-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 font-medium text-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+                Topology
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 font-medium text-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="troubleshoot">troubleshoot</span>
+                Diagnosis
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 font-medium text-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+                ASH Explorer
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 font-medium text-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+                Playbook
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#222a3d] text-sky-400 border-r-4 border-sky-500 font-medium text-sm rounded-l" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full flex items-center justify-center gap-2 py-3 bg-secondary-container text-on-secondary-container rounded font-bold text-sm shadow-[0_0_20px_rgba(87,27,193,0.3)]">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span>
+                NL2SQL Assistant
+            </button>
+<div class="space-y-1 pb-16">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-slate-200 text-sm" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+                    Documentation
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-slate-200 text-sm" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="contact_support">contact_support</span>
+                    Support
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-8 min-h-screen">
+<div class="max-w-4xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="text-4xl font-headline font-bold text-on-surface tracking-tight mb-2">Connect New Intelligence</h1>
+<p class="text-on-surface-variant text-lg max-w-2xl">Initialize a new neural node in your database cluster. Monitoring and ASH profiling will begin immediately upon connection.</p>
+</header>
+<!-- Multi-step Wizard Container -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Step Indicator (Left Rail) -->
+<div class="col-span-3 space-y-12 relative">
+<div class="absolute left-[11px] top-2 bottom-2 w-[2px] bg-surface-variant"></div>
+<div class="relative flex items-center gap-4 group">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center z-10 step-active">
+<span class="material-symbols-outlined text-sm text-on-primary font-bold" data-icon="check">check</span>
+</div>
+<span class="font-headline font-bold text-primary text-sm uppercase tracking-widest">Type</span>
+</div>
+<div class="relative flex items-center gap-4 group">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center z-10 step-active">
+<div class="w-2 h-2 bg-on-primary rounded-full"></div>
+</div>
+<span class="font-headline font-bold text-on-surface text-sm uppercase tracking-widest">Connection</span>
+</div>
+<div class="relative flex items-center gap-4 group">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center z-10">
+<div class="w-2 h-2 bg-on-surface-variant rounded-full"></div>
+</div>
+<span class="font-headline font-bold text-on-surface-variant text-sm uppercase tracking-widest opacity-50">Options</span>
+</div>
+</div>
+<!-- Form Area -->
+<div class="col-span-9 space-y-8">
+<!-- Section 1: DB Type Selection (Visual Feedback) -->
+<section class="bg-surface-container p-6 rounded-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+<h3 class="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-6">01. Database Architecture</h3>
+<div class="grid grid-cols-3 gap-4">
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-high border-2 border-primary ring-1 ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-4xl text-primary" data-icon="database">database</span>
+<span class="font-bold text-sm">PostgreSQL</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-low hover:bg-surface-container-high transition-all text-on-surface-variant border border-transparent">
+<span class="material-symbols-outlined text-4xl" data-icon="storage">storage</span>
+<span class="font-bold text-sm">MySQL</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-low hover:bg-surface-container-high transition-all text-on-surface-variant border border-transparent">
+<span class="material-symbols-outlined text-4xl" data-icon="cloud_done">cloud_done</span>
+<span class="font-bold text-sm">MS-SQL</span>
+</button>
+</div>
+</section>
+<!-- Section 2: Connection Details -->
+<section class="bg-surface-container p-6 rounded-xl">
+<h3 class="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-6">02. Network &amp; Authentication</h3>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Host Address</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="db.production.cluster.local" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Port</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="5432" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Database User</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="neural_monitor_svc" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" type="password" value="••••••••••••"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant cursor-pointer text-sm" data-icon="visibility">visibility</span>
+</div>
+</div>
+</div>
+<div class="mt-8 flex items-center justify-between p-4 rounded bg-surface-container-low border border-outline-variant/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="verified_user">verified_user</span>
+<div>
+<p class="font-bold text-sm">SSL Connection Required</p>
+<p class="text-xs text-on-surface-variant">Encrypt all telemetry data in transit</p>
+</div>
+</div>
+<button class="w-12 h-6 rounded-full bg-primary relative transition-colors">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-primary rounded-full"></div>
+</button>
+</div>
+</section>
+<!-- Section 3: Monitoring Options -->
+<section class="bg-surface-container p-6 rounded-xl">
+<h3 class="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-6">03. Intelligence Configuration</h3>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-4 rounded hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="mt-1">
+<div class="w-5 h-5 border-2 border-primary rounded bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-primary font-bold" data-icon="check">check</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<p class="font-bold text-sm">Enable 1s ASH Explorer</p>
+<span class="px-1.5 py-0.5 rounded-full bg-secondary-container text-[10px] text-on-secondary-container font-black uppercase tracking-tighter">High Res</span>
+</div>
+<p class="text-xs text-on-surface-variant">Capture active session history every second for millisecond-level diagnosis.</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 rounded hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="mt-1">
+<div class="w-5 h-5 border-2 border-outline rounded transition-colors group-hover:border-primary"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<p class="font-bold text-sm">Enable Autonomous Tuning</p>
+<span class="px-1.5 py-0.5 rounded-full bg-tertiary-container text-[10px] text-on-tertiary-container font-black uppercase tracking-tighter">AI Driven</span>
+</div>
+<p class="text-xs text-on-surface-variant">Allow NeuralDB to automatically adjust buffer pools and index recommendations.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Actions -->
+<footer class="flex items-center justify-between pt-4">
+<button class="px-6 py-3 border border-outline-variant/30 rounded font-bold text-sm text-on-surface-variant hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="network_check">network_check</span>
+                            Test Connection
+                        </button>
+<div class="flex items-center gap-4">
+<button class="px-6 py-3 font-bold text-sm text-on-surface-variant hover:text-on-surface transition-colors">
+                                Cancel
+                            </button>
+<button class="px-8 py-3 bg-primary-container text-on-primary-container rounded font-bold text-sm shadow-[0_0_30px_rgba(14,165,233,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+                                Save &amp; Start Monitoring
+                                <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</footer>
+</div>
+</div>
+</div>
+<!-- Floating Neural Background Elements -->
+<div class="fixed top-1/4 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
+<div class="fixed bottom-0 left-64 w-[500px] h-[500px] bg-secondary-container/5 rounded-full blur-[150px] -z-10 pointer-events-none"></div>
+</main>
+</body></html>

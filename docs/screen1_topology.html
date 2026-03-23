@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NeuralDB Dashboard | Full-Stack Topology</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-error-container": "#ffdad6",
+            "primary-container": "#0ea5e9",
+            "primary-fixed": "#c9e6ff",
+            "on-tertiary-fixed-variant": "#005236",
+            "error-container": "#93000a",
+            "on-tertiary-container": "#003b26",
+            "primary": "#89ceff",
+            "inverse-primary": "#006591",
+            "on-background": "#dae2fd",
+            "secondary": "#d0bcff",
+            "inverse-surface": "#dae2fd",
+            "on-primary-fixed": "#001e2f",
+            "surface-container-low": "#131b2e",
+            "surface-bright": "#31394d",
+            "surface-tint": "#89ceff",
+            "tertiary": "#4edea3",
+            "surface-dim": "#0b1326",
+            "on-secondary-container": "#c4abff",
+            "tertiary-container": "#00b17b",
+            "on-tertiary": "#003824",
+            "on-primary-fixed-variant": "#004c6e",
+            "error": "#ffb4ab",
+            "on-primary-container": "#003751",
+            "on-secondary": "#3c0091",
+            "inverse-on-surface": "#283044",
+            "on-error": "#690005",
+            "surface-variant": "#2d3449",
+            "background": "#0b1326",
+            "outline-variant": "#3e4850",
+            "outline": "#88929b",
+            "surface-container-high": "#222a3d",
+            "primary-fixed-dim": "#89ceff",
+            "on-surface-variant": "#bec8d2",
+            "secondary-fixed-dim": "#d0bcff",
+            "on-secondary-fixed": "#23005c",
+            "surface-container-highest": "#2d3449",
+            "surface-container-lowest": "#060e20",
+            "on-surface": "#dae2fd",
+            "tertiary-fixed": "#6ffbbe",
+            "on-tertiary-fixed": "#002113",
+            "surface-container": "#171f33",
+            "secondary-container": "#571bc1",
+            "on-secondary-fixed-variant": "#5516be",
+            "surface": "#0b1326",
+            "secondary-fixed": "#e9ddff",
+            "on-primary": "#00344d",
+            "tertiary-fixed-dim": "#4edea3"
+          },
+          fontFamily: {
+            "headline": ["Space Grotesk"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-card {
+      background: rgba(34, 42, 61, 0.4);
+      backdrop-filter: blur(24px);
+    }
+    .neural-grid {
+      background-image: radial-gradient(circle at 1px 1px, rgba(14, 165, 233, 0.05) 1px, transparent 0);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar Implementation -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] shadow-[0_0_40px_rgba(14,165,233,0.08)]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-black text-sky-500 tracking-tighter font-['Space_Grotesk']">NeuralDB</div>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-['Space_Grotesk'] font-bold tracking-tight text-sky-400 border-b-2 border-sky-400 pb-1" href="#">Health: 98%</a>
+<a class="font-['Space_Grotesk'] font-bold tracking-tight text-slate-400 hover:text-slate-200 transition-colors" href="#">On-Premise</a>
+<span class="text-slate-500 font-bold ml-2">AWS Seoul</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="bg-surface-container-lowest border-none rounded-xl pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Query Infrastructure..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-white/5 transition-all duration-200 rounded-full">
+<span class="material-symbols-outlined text-slate-300">notifications</span>
+</button>
+<button class="p-2 hover:bg-white/5 transition-all duration-200 rounded-full">
+<span class="material-symbols-outlined text-slate-300">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- SideNavBar Implementation -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 border-r border-white/5 bg-[#171f33] w-64 z-40 pt-20">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+</div>
+<div>
+<div class="text-lg font-bold text-slate-100 font-['Inter']">Autonomy Lvl 4</div>
+<div class="text-xs text-sky-400 font-medium">Latency: 12ms</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium bg-[#222a3d] text-sky-400 border-r-4 border-sky-500 translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+        Dashboard
+      </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">hub</span>
+        Topology
+      </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+        Diagnosis
+      </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+        ASH Explorer
+      </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+        Playbook
+      </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-['Inter'] text-sm font-medium text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+        Settings
+      </a>
+</nav>
+<div class="px-4 mb-6">
+<button class="w-full flex items-center justify-center gap-2 bg-secondary-container text-white py-3 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(87,27,193,0.3)] hover:opacity-90 transition-all">
+<span class="material-symbols-outlined text-sm">bolt</span>
+        NL2SQL Assistant
+      </button>
+</div>
+<div class="border-t border-white/5 pt-4 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 text-sm hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+        Documentation
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 text-sm hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-sm">contact_support</span>
+        Support
+      </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 pt-24 px-8 pb-12 neural-grid min-h-screen">
+<!-- Top Section: Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="bg-surface-container p-5 rounded-xl border-l-4 border-primary shadow-sm hover:bg-surface-container-high transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-400 text-xs font-semibold tracking-wider uppercase">Total Instances</span>
+<span class="material-symbols-outlined text-primary text-xl">dns</span>
+</div>
+<div class="text-3xl font-headline font-bold text-on-surface">52</div>
+<div class="text-tertiary text-xs mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +3 this week
+        </div>
+</div>
+<div class="bg-surface-container p-5 rounded-xl border-l-4 border-primary-container shadow-sm hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-400 text-xs font-semibold tracking-wider uppercase">Active Sessions</span>
+<span class="material-symbols-outlined text-primary-container text-xl">group</span>
+</div>
+<div class="text-3xl font-headline font-bold text-on-surface">1,240</div>
+<div class="text-slate-400 text-xs mt-1 flex items-center gap-1">
+          Peak: 1,850 at 14:00
+        </div>
+</div>
+<div class="bg-surface-container p-5 rounded-xl border-l-4 border-error shadow-sm hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-400 text-xs font-semibold tracking-wider uppercase">Anomalies</span>
+<span class="material-symbols-outlined text-error text-xl">warning</span>
+</div>
+<div class="text-3xl font-headline font-bold text-error">2</div>
+<div class="text-error text-xs mt-1 flex items-center gap-1">
+          Requires attention
+        </div>
+</div>
+<div class="bg-surface-container p-5 rounded-xl border-l-4 border-tertiary shadow-sm hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-400 text-xs font-semibold tracking-wider uppercase">Avg Response Time</span>
+<span class="material-symbols-outlined text-tertiary text-xl">timer</span>
+</div>
+<div class="text-3xl font-headline font-bold text-on-surface">12ms</div>
+<div class="text-tertiary text-xs mt-1 flex items-center gap-1">
+          Optimal Performance
+        </div>
+</div>
+</div>
+<!-- Center: Large Topology Map -->
+<section class="bg-surface-container rounded-2xl p-8 mb-8 relative overflow-hidden h-[500px] flex flex-col">
+<div class="flex justify-between items-center mb-6 z-10">
+<h2 class="font-headline text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">account_tree</span>
+          Full-Stack Topology Map
+        </h2>
+<div class="flex gap-2">
+<button class="bg-surface-container-high px-4 py-1.5 rounded-lg text-xs font-bold border border-white/5">Cluster: PROD-SEOUL</button>
+<button class="bg-surface-container-high px-4 py-1.5 rounded-lg text-xs font-bold border border-white/5">View: Logical</button>
+</div>
+</div>
+<div class="flex-1 relative">
+<!-- Connecting Lines (SVG for precision) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none">
+<path d="M150 200 L400 200" stroke="#1e293b" stroke-width="2"></path>
+<path d="M400 200 L650 100" stroke="#1e293b" stroke-width="2"></path>
+<path class="opacity-80" d="M400 200 L650 300" stroke="#f59e0b" stroke-dasharray="8 4" stroke-width="3"></path>
+<path d="M650 100 L900 100" stroke="#1e293b" stroke-width="2"></path>
+<path d="M650 300 L900 300" stroke="#1e293b" stroke-width="2"></path>
+</svg>
+<!-- K8s Layer -->
+<div class="absolute left-10 top-1/2 -translate-y-1/2 flex flex-col gap-4">
+<div class="bg-surface-container-high p-4 rounded-xl border border-white/10 flex flex-col items-center gap-2 w-32 shadow-lg">
+<span class="material-symbols-outlined text-primary text-3xl">token</span>
+<span class="text-[10px] font-bold text-slate-400">APP-SERVICES</span>
+</div>
+</div>
+<!-- Load Balancer -->
+<div class="absolute left-[350px] top-1/2 -translate-y-1/2">
+<div class="bg-surface-container-high p-4 rounded-full border-2 border-primary/30 flex items-center justify-center w-24 h-24 shadow-[0_0_30px_rgba(14,165,233,0.15)]">
+<span class="material-symbols-outlined text-primary text-4xl">alt_route</span>
+</div>
+<div class="text-center mt-2 text-[10px] font-bold text-slate-500 uppercase">Gateway-LB</div>
+</div>
+<!-- DB Layer -->
+<div class="absolute left-[600px] top-0 bottom-0 flex flex-col justify-around">
+<div class="bg-surface-container-high p-4 rounded-xl border border-white/10 flex flex-col items-center gap-2 w-36 shadow-lg">
+<span class="material-symbols-outlined text-tertiary text-3xl">database</span>
+<span class="text-[10px] font-bold text-slate-400">PG-WRITE-01</span>
+<div class="h-1 w-full bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-1/4"></div>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border-2 border-amber-500/50 flex flex-col items-center gap-2 w-36 shadow-lg ring-4 ring-amber-500/10">
+<span class="material-symbols-outlined text-amber-500 text-3xl" style="font-variation-settings: 'FILL' 1;">database</span>
+<span class="text-[10px] font-bold text-on-surface">PG-READ-REPLICA</span>
+<div class="text-[10px] text-amber-500 font-bold">Latency Spike</div>
+</div>
+</div>
+<!-- Infrastructure Layer -->
+<div class="absolute right-10 top-0 bottom-0 flex flex-col justify-around">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-white/5 flex flex-col items-center gap-2 w-32 opacity-60">
+<span class="material-symbols-outlined text-slate-500 text-3xl">cloud</span>
+<span class="text-[10px] font-bold text-slate-500">EC2-ASG-A</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-white/5 flex flex-col items-center gap-2 w-32 opacity-60">
+<span class="material-symbols-outlined text-slate-500 text-3xl">cloud</span>
+<span class="text-[10px] font-bold text-slate-500">EC2-ASG-B</span>
+</div>
+</div>
+</div>
+<!-- Gradient Fade for depth -->
+<div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-surface-container to-transparent pointer-events-none"></div>
+</section>
+<!-- Bottom Section: Metrics & AI Feed -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Metric Chart -->
+<div class="bg-surface-container p-6 rounded-2xl">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">show_chart</span>
+            Resource Orchestration
+          </h3>
+<div class="flex gap-4">
+<div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+<span class="w-2 h-2 rounded-full bg-primary"></span> CPU Load
+            </div>
+<div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+<span class="w-2 h-2 rounded-full border-2 border-dashed border-secondary"></span> AI Baseline
+            </div>
+</div>
+</div>
+<!-- Mock Chart Visualization -->
+<div class="h-64 flex items-end gap-1 relative overflow-hidden">
+<div class="absolute inset-0 border-b border-white/10 flex flex-col justify-between">
+<div class="border-b border-white/5 w-full h-px"></div>
+<div class="border-b border-white/5 w-full h-px"></div>
+<div class="border-b border-white/5 w-full h-px"></div>
+<div class="border-b border-white/5 w-full h-px"></div>
+</div>
+<!-- Baseline Path (Dotted) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none">
+<path class="opacity-50" d="M0 150 Q 50 140, 100 160 T 200 130 T 300 170 T 400 140 T 500 160" fill="none" stroke="#d0bcff" stroke-dasharray="4 4" stroke-width="2"></path>
+</svg>
+<!-- CPU Bars -->
+<div class="flex-1 bg-primary/20 h-1/2 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[55%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-1/2 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-4/5 rounded-t-sm relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright text-[10px] py-1 px-2 rounded-md whitespace-nowrap">82% Spike</div>
+</div>
+<div class="flex-1 bg-primary/20 h-[55%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[65%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[45%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- AI Insights Feed -->
+<div class="bg-surface-container p-6 rounded-2xl overflow-hidden flex flex-col">
+<h3 class="font-headline font-bold text-lg mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">psychology</span>
+          AI Insights Feed
+        </h3>
+<div class="space-y-4 flex-1">
+<!-- Critical Insight -->
+<div class="bg-secondary-container/10 border-l-4 border-secondary p-4 rounded-xl relative group cursor-pointer hover:bg-secondary-container/20 transition-all">
+<div class="flex justify-between items-start mb-1">
+<span class="bg-secondary/20 text-secondary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-widest">Predictive</span>
+<span class="text-slate-500 text-[10px]">2m ago</span>
+</div>
+<p class="text-sm font-medium text-secondary-fixed">
+              AI detected a potential micro-burst in PG-Cluster-01 (92% probability). Auto-Tuning recommended.
+            </p>
+<div class="mt-3 flex gap-2">
+<button class="text-xs bg-secondary text-on-secondary px-3 py-1 rounded font-bold">Apply Tune</button>
+<button class="text-xs text-slate-400 px-3 py-1 hover:text-white transition-colors">Details</button>
+</div>
+</div>
+<!-- Warning Insight -->
+<div class="bg-surface-container-high p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+<div class="flex justify-between items-start mb-1">
+<span class="bg-amber-500/20 text-amber-500 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-widest">Anomaly</span>
+<span class="text-slate-500 text-[10px]">14m ago</span>
+</div>
+<p class="text-sm text-on-surface/80">
+              Read latency on <span class="text-amber-500 font-mono">SEOUL-R2</span> increased by 140% during peak user registration.
+            </p>
+</div>
+<!-- Optimization Insight -->
+<div class="bg-surface-container-high p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+<div class="flex justify-between items-start mb-1">
+<span class="bg-tertiary/20 text-tertiary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-widest">Optimization</span>
+<span class="text-slate-500 text-[10px]">1h ago</span>
+</div>
+<p class="text-sm text-on-surface/80">
+              Query 44A2b can be improved with a composite index. Potential 12% global latency reduction.
+            </p>
+</div>
+</div>
+<button class="mt-4 text-center text-xs font-bold text-primary hover:underline transition-all">View 12 More Insights</button>
+</div>
+</div>
+</main>
+<!-- Bottom FAB Suppression (Hidden as per requirement for Dashboard) -->
+</body></html>

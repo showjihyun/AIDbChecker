@@ -1,0 +1,90 @@
+# ===========================
+# Python (Backend / Engine)
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+*.egg
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ===========================
+# Node.js (Frontend)
+# ===========================
+node_modules/
+.next/
+out/
+.nuxt/
+*.tsbuildinfo
+.vite/
+
+# ===========================
+# IDE / Editor
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.local
+.env.production
+.env.*.local
+*.pem
+*.key
+credentials.json
+service-account.json
+
+# ===========================
+# Docker
+# ===========================
+docker-compose.override.yml
+
+# ===========================
+# Database
+# ===========================
+*.sqlite3
+*.db
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Desktop.ini
+ehthumbs.db
+
+# ===========================
+# Claude Code
+# ===========================
+.claude/todos.json
+
+# ===========================
+# Skills (npx skills 설치 원본)
+# ===========================
+# .agents/ 는 npx skills가 관리하므로 gitignore 가능
+# 단, symlink 대상이므로 필요 시 포함
+# .agents/

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.4);
+            backdrop-filter: blur(24px);
+        }
+        .neural-glow {
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.08);
+        }
+        .heatmap-cell {
+            transition: all 0.2s ease-out;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error-container": "#ffdad6",
+              "primary-container": "#0ea5e9",
+              "primary-fixed": "#c9e6ff",
+              "on-tertiary-fixed-variant": "#005236",
+              "error-container": "#93000a",
+              "on-tertiary-container": "#003b26",
+              "primary": "#89ceff",
+              "inverse-primary": "#006591",
+              "on-background": "#dae2fd",
+              "secondary": "#d0bcff",
+              "inverse-surface": "#dae2fd",
+              "on-primary-fixed": "#001e2f",
+              "surface-container-low": "#131b2e",
+              "surface-bright": "#31394d",
+              "surface-tint": "#89ceff",
+              "tertiary": "#4edea3",
+              "surface-dim": "#0b1326",
+              "on-secondary-container": "#c4abff",
+              "tertiary-container": "#00b17b",
+              "on-tertiary": "#003824",
+              "on-primary-fixed-variant": "#004c6e",
+              "error": "#ffb4ab",
+              "on-primary-container": "#003751",
+              "on-secondary": "#3c0091",
+              "inverse-on-surface": "#283044",
+              "on-error": "#690005",
+              "surface-variant": "#2d3449",
+              "background": "#0b1326",
+              "outline-variant": "#3e4850",
+              "outline": "#88929b",
+              "surface-container-high": "#222a3d",
+              "primary-fixed-dim": "#89ceff",
+              "on-surface-variant": "#bec8d2",
+              "secondary-fixed-dim": "#d0bcff",
+              "on-secondary-fixed": "#23005c",
+              "surface-container-highest": "#2d3449",
+              "surface-container-lowest": "#060e20",
+              "on-surface": "#dae2fd",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary-fixed": "#002113",
+              "surface-container": "#171f33",
+              "secondary-container": "#571bc1",
+              "on-secondary-fixed-variant": "#5516be",
+              "surface": "#0b1326",
+              "secondary-fixed": "#e9ddff",
+              "on-primary": "#00344d",
+              "tertiary-fixed-dim": "#4edea3"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] shadow-[0_0_40px_rgba(14,165,233,0.08)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-sky-500 tracking-tighter font-headline">NeuralDB</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sky-400 border-b-2 border-sky-400 pb-1 font-headline font-bold tracking-tight" href="#">Health: 98%</a>
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-headline font-bold tracking-tight" href="#">On-Premise</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-200 rounded">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col py-6 bg-[#171f33] border-r border-white/5 z-40 mt-16">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-sm">bolt</span>
+</div>
+<div>
+<div class="text-slate-100 font-bold text-lg font-headline">Autonomy Lvl 4</div>
+<div class="text-xs text-slate-400 font-medium">Latency: 12ms</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+<span class="font-medium text-sm">Topology</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px]">troubleshoot</span>
+<span class="font-medium text-sm">Diagnosis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#222a3d] text-sky-400 border-r-4 border-sky-500 transition-colors duration-200 group translate-x-1" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-medium text-sm">ASH Explorer</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="font-medium text-sm">Playbook</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#222a3d] hover:text-slate-100 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="px-6 py-4">
+<button class="w-full py-2 bg-secondary-container text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">bolt</span>
+                NL2SQL Assistant
+            </button>
+</div>
+<div class="px-3 border-t border-white/5 pt-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-medium text-sm">Documentation</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">contact_support</span>
+<span class="font-medium text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 mt-16 p-6 h-[calc(100vh-64px)] overflow-y-auto">
+<div class="flex gap-6 h-full">
+<!-- Center Content -->
+<div class="flex-1 space-y-6">
+<!-- Time-range selector & Mini Chart -->
+<section class="bg-surface-container rounded-xl p-4 neural-glow">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-4">
+<h2 class="font-headline font-bold text-lg text-slate-100">Temporal Zoom</h2>
+<div class="flex bg-surface-container-high rounded-lg p-1">
+<button class="px-3 py-1 text-xs font-bold bg-primary-container text-on-primary-container rounded">1s</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-slate-200">10s</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-slate-200">1m</button>
+</div>
+</div>
+<div class="text-xs font-mono text-slate-400">Range: 2023-11-24 14:32:00 — 14:32:59</div>
+</div>
+<div class="h-16 relative bg-surface-container-lowest rounded overflow-hidden flex items-end">
+<!-- Abstract Wave Pattern -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<img class="w-full h-full object-cover" data-alt="Cyber blue line chart visualization background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAVyFT7hp5C3kv6se7JwwXQ8FdilJ7XfZYfHz3jVYSSQ5xggPHDRozfIknlhIUlqqYimr2Fq0hAzum4G4ZU46eW0fDaIcev8I_DMUGGdiE9rK0R3rgvWk6FoNLRN2NMumquWuMHzqcIMKWXzmblSpz88rxwW6h_eknM4yJe-9oGir3zbfv81SQFxcTm9wbgEFZ9Cf5UUdHWtWK898rHnVpzagQkB7yr1NvqPxnS5jyJ9okQ-N4yhdtOdz2g17nl1N1XR9F3cYGj_Oz"/>
+</div>
+<div class="flex items-end gap-[2px] w-full px-2 h-full items-center">
+<div class="h-4 w-full bg-slate-800 rounded-sm"></div>
+<div class="h-6 w-full bg-slate-800 rounded-sm"></div>
+<div class="h-8 w-full bg-sky-900 rounded-sm"></div>
+<div class="h-12 w-full bg-sky-500 rounded-sm"></div>
+<div class="h-10 w-full bg-sky-700 rounded-sm"></div>
+<div class="h-6 w-full bg-slate-800 rounded-sm"></div>
+<div class="h-14 w-full bg-primary-container rounded-sm border border-primary glow shadow-primary/20 shadow-xl"></div>
+<div class="h-12 w-full bg-sky-500 rounded-sm"></div>
+<div class="h-8 w-full bg-sky-900 rounded-sm"></div>
+<div class="h-4 w-full bg-slate-800 rounded-sm"></div>
+</div>
+<!-- Zoom Slider Handle -->
+<div class="absolute h-full w-24 bg-primary/10 border-x-2 border-primary left-[45%] flex items-center justify-between px-1">
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- ASH Heatmap -->
+<section class="bg-surface-container rounded-xl p-6 neural-glow">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline font-bold text-xl text-slate-100 flex items-center gap-2">
+<span class="material-symbols-outlined text-sky-400">grid_view</span>
+                            Active Session History (ASH) Heatmap
+                        </h2>
+<div class="flex items-center gap-4 text-xs font-medium text-slate-400">
+<span class="flex items-center gap-1"><i class="w-3 h-3 bg-surface-variant rounded-sm"></i> Idle</span>
+<span class="flex items-center gap-1"><i class="w-3 h-3 bg-sky-800 rounded-sm"></i> I/O</span>
+<span class="flex items-center gap-1"><i class="w-3 h-3 bg-secondary rounded-sm"></i> CPU</span>
+<span class="flex items-center gap-1"><i class="w-3 h-3 bg-orange-500 rounded-sm"></i> Lock</span>
+<span class="flex items-center gap-1"><i class="w-3 h-3 bg-error rounded-sm"></i> Critical</span>
+</div>
+</div>
+<div class="grid grid-cols-[80px_1fr] gap-4">
+<div class="flex flex-col justify-around py-4 font-mono text-[10px] text-slate-500 uppercase tracking-widest">
+<span>Network</span>
+<span>I/O</span>
+<span>Lock</span>
+<span>CPU</span>
+</div>
+<div class="grid grid-cols-24 grid-rows-4 gap-1 h-48">
+<!-- Heatmap Generation (Simulated) -->
+<!-- Row 1: Network -->
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<!-- Row 2: I/O -->
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-600 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-500 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-600 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-600 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-500 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-700 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-900 rounded-sm"></div>
+<div class="heatmap-cell bg-sky-800 rounded-sm"></div>
+<!-- Row 3: Lock -->
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-orange-900 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-700 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-500 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-400 rounded-sm"></div>
+<div class="heatmap-cell bg-error rounded-sm glow shadow-error/40"></div>
+<div class="heatmap-cell bg-orange-400 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-500 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-700 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-900 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-orange-900 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-700 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-500 rounded-sm"></div>
+<div class="heatmap-cell bg-orange-700 rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<div class="heatmap-cell bg-surface-variant rounded-sm"></div>
+<!-- Row 4: CPU -->
+<div class="heatmap-cell bg-secondary-container opacity-40 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-60 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-80 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-fixed rounded-sm glow shadow-secondary/20"></div>
+<div class="heatmap-cell bg-secondary-container rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-80 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-60 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-40 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-20 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-40 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-60 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-80 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-fixed rounded-sm glow shadow-secondary/20"></div>
+<div class="heatmap-cell bg-secondary-container rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-80 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-60 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-40 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-20 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-40 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-60 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary-container opacity-80 rounded-sm"></div>
+<div class="heatmap-cell bg-secondary rounded-sm"></div>
+</div>
+</div>
+<div class="flex justify-between items-center mt-4 px-20">
+<span class="text-[10px] font-mono text-slate-500">14:32:00</span>
+<span class="text-[10px] font-mono text-slate-500">14:32:15</span>
+<span class="text-[10px] font-mono text-slate-500">14:32:30</span>
+<span class="text-[10px] font-mono text-slate-500">14:32:45</span>
+<span class="text-[10px] font-mono text-slate-500">14:32:59</span>
+</div>
+</section>
+<!-- Session Detail Table -->
+<section class="bg-surface-container rounded-xl overflow-hidden neural-glow">
+<div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+<h2 class="font-headline font-bold text-slate-100 uppercase tracking-wider text-xs">High Resolution Session Samples</h2>
+<button class="text-xs font-bold text-sky-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-high/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+<tr>
+<th class="px-6 py-3">PID</th>
+<th class="px-6 py-3">Query Snippet</th>
+<th class="px-6 py-3">State</th>
+<th class="px-6 py-3">Wait Event</th>
+<th class="px-6 py-3">Duration</th>
+<th class="px-6 py-3">Action</th>
+</tr>
+</thead>
+<tbody class="text-sm font-medium">
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group">
+<td class="px-6 py-4 font-mono text-sky-400">8829</td>
+<td class="px-6 py-4 font-mono text-xs text-slate-300">SELECT * FROM orders WHERE status = 'PENDING' FOR UPDATE...</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-400 text-[10px] font-bold uppercase">Locked</span>
+</td>
+<td class="px-6 py-4 text-slate-400">enq: TX - row lock contention</td>
+<td class="px-6 py-4 font-mono">1.2s</td>
+<td class="px-6 py-4">
+<button class="text-primary opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+<span class="material-symbols-outlined text-sm">auto_awesome</span> Explain
+                                        </button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group bg-primary/5">
+<td class="px-6 py-4 font-mono text-sky-400">4431</td>
+<td class="px-6 py-4 font-mono text-xs text-slate-300">INSERT INTO telemetry_logs (id, ts, payload) VALUES...</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-sky-900/40 text-sky-400 text-[10px] font-bold uppercase">Active</span>
+</td>
+<td class="px-6 py-4 text-slate-400">db file sequential read</td>
+<td class="px-6 py-4 font-mono">0.4s</td>
+<td class="px-6 py-4">
+<button class="text-primary opacity-100 flex items-center gap-1 transition-opacity">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span> Explain
+                                        </button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group">
+<td class="px-6 py-4 font-mono text-sky-400">1104</td>
+<td class="px-6 py-4 font-mono text-xs text-slate-300">UPDATE inventory SET stock = stock - 1 WHERE sku = 'MAC...</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-secondary-container/40 text-secondary text-[10px] font-bold uppercase">Running</span>
+</td>
+<td class="px-6 py-4 text-slate-400">on CPU</td>
+<td class="px-6 py-4 font-mono">0.1s</td>
+<td class="px-6 py-4">
+<button class="text-primary opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+<span class="material-symbols-outlined text-sm">auto_awesome</span> Explain
+                                        </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Right Sidebar: Wait Event Breakdown -->
+<aside class="w-80 space-y-6">
+<div class="bg-surface-container rounded-xl p-6 neural-glow flex flex-col h-full border-l border-white/5">
+<h3 class="font-headline font-bold text-slate-100 mb-6">Aggregate Wait Breakdown</h3>
+<div class="space-y-8 flex-1">
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold">
+<span class="text-orange-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">lock</span> Lock Contention
+                                </span>
+<span class="text-slate-100">45%</span>
+</div>
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" style="width: 45%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold">
+<span class="text-sky-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">database</span> Disk I/O
+                                </span>
+<span class="text-slate-100">30%</span>
+</div>
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.4)]" style="width: 30%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold">
+<span class="text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">memory</span> CPU Utilization
+                                </span>
+<span class="text-slate-100">25%</span>
+</div>
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary shadow-[0_0_8px_rgba(208,188,255,0.4)]" style="width: 25%"></div>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6 border-t border-white/5">
+<div class="bg-secondary-container/20 rounded-xl p-4 border border-secondary/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-2 opacity-10">
+<span class="material-symbols-outlined text-4xl">auto_awesome</span>
+</div>
+<div class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">bolt</span> AI Insights
+                            </div>
+<p class="text-xs text-slate-300 leading-relaxed">
+                                Detected anomalous lock duration on <span class="font-mono text-secondary">orders_sh_idx</span>. Recommend increasing buffer size or partitioning the table to alleviate I/O bottleneck.
+                            </p>
+<button class="mt-3 w-full py-1.5 bg-secondary text-on-secondary text-[10px] font-bold rounded-lg uppercase tracking-tighter">Apply Optimization</button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- AI Explain Popup (Hidden/Floating State Simulation) -->
+<div class="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none opacity-0 invisible">
+<!-- Hidden logic: In a real app this would toggle with JS -->
+</div>
+<!-- Floating Interpretation Card (Visual Placeholder for Popup) -->
+<div class="fixed bottom-10 right-96 w-96 bg-surface-container-high rounded-xl p-6 shadow-2xl border border-primary/20 glass-panel z-50">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">psychology</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-slate-100">AI Interpretation</h4>
+<p class="text-[10px] text-slate-400 font-mono">ANALYSIS ID: #DB-ASH-4431</p>
+</div>
+<button class="ml-auto text-slate-400">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="space-y-3 text-sm">
+<p class="text-slate-300 leading-relaxed">
+                Session <span class="text-sky-400 font-mono">4431</span> is performing a large-scale <span class="text-tertiary">INSERT</span> operation. The delay is primarily caused by <span class="underline decoration-sky-500/50">db file sequential read</span> which suggests index fragmentation.
+            </p>
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-white/5">
+<p class="text-[10px] font-mono text-slate-400 mb-1">RECOMMENDED SQL:</p>
+<code class="text-xs font-mono text-secondary-fixed-dim">ALTER INDEX idx_telemetry_ts REBUILD ONLINE;</code>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-2 bg-primary-container text-on-primary-container text-xs font-bold rounded-lg">Execute Fix</button>
+<button class="px-4 py-2 bg-surface-variant text-slate-100 text-xs font-bold rounded-lg">Ignore</button>
+</div>
+</div>
+</div>
+</body></html>
