@@ -50,6 +50,7 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | Competitive Analysis | `@AI_DB_Monitor_Competitive_Analysis.md` | 경쟁사 분석 |
 | Contributing | `@CONTRIBUTING.md` | 개발 규칙, 브랜치/커밋 컨벤션 |
 | Agents | `@AGENTS.md` | 에이전트 규칙, 함정, 코드 패턴, 커맨드 |
+| Design System | `@DESIGN.md` | 디자인 시스템 (색상/타이포/레이아웃/모션/컴포넌트 토큰) |
 
 ### docs/ — 설계 문서
 
