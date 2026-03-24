@@ -1,5 +1,6 @@
 // Spec: MVP-DASH-001~005 — Dashboard main page
 import { useState, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { subHours } from 'date-fns';
 import { useInstances } from '@/api/hooks/useInstances';
 import { useMetrics } from '@/api/hooks/useMetrics';
@@ -14,6 +15,7 @@ import { useMetricStore, useLatestMetricsShallow } from '@/stores/metricStore';
 import type { TimeRange } from '@/types/api';
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { data: instances, isLoading: instancesLoading } = useInstances();
   const selectedInstanceId = useMetricStore((s) => s.selectedInstanceId);
   const setSelectedInstanceId = useMetricStore((s) => s.setSelectedInstanceId);
@@ -41,8 +43,8 @@ export function DashboardPage() {
   );
 
   const handleRegister = useCallback(() => {
-    // Navigate to settings in a real implementation
-  }, []);
+    navigate({ to: '/settings' });
+  }, [navigate]);
 
   const activeCount = instances?.filter((i) => i.is_active).length ?? 0;
   const totalCount = instances?.length ?? 0;
