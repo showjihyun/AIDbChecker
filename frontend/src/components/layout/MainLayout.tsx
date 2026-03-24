@@ -73,9 +73,11 @@ function SideNav() {
   return (
     <nav
       className={cn(
-        'fixed top-16 left-0 bottom-0 w-64 z-40',
+        'fixed top-16 left-0 bottom-0 z-40',
+        'w-16 md:w-64',
         'bg-surface-container',
-        'flex flex-col'
+        'flex flex-col',
+        'transition-[width] duration-200 ease-out'
       )}
       aria-label="Main navigation"
     >
@@ -99,13 +101,13 @@ function SideNav() {
               <span className="material-symbols-outlined text-xl">
                 {item.icon}
               </span>
-              {item.label}
+              <span className="hidden md:inline">{item.label}</span>
             </Link>
           );
         })}
       </div>
 
-      <div className="p-3">
+      <div className="p-3 hidden md:block">
         <div className="bg-surface-container-high rounded-lg p-3">
           <p className="text-xs text-on-surface-variant font-medium mb-1">
             NeuralDB v0.1.0
@@ -131,8 +133,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="min-h-screen bg-surface">
       <TopNav />
       <SideNav />
-      <main className="ml-64 pt-16 min-h-screen">
-        <div className="p-8">
+      <main className="ml-16 md:ml-64 pt-16 min-h-screen">
+        <div className="p-4 md:p-8">
           {children}
         </div>
       </main>
