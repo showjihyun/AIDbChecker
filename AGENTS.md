@@ -1,270 +1,377 @@
 # AGENTS.md — NeuralDB Project Intelligence
 
-> 이 문서는 **프로젝트 고유의 맥락, 함정, 판단 기준**을 기록합니다.
-> AI 에이전트(Claude Code, OpenAI Codex, Cursor, Windsurf 등)가 이 프로젝트에서 작업할 때 반드시 참고해야 할 내용입니다.
+> 이 문서는 AI 에이전트(Claude Code, OpenAI Codex, Cursor, Windsurf, GitHub Copilot 등)가
+> 이 프로젝트에서 작업할 때 반드시 참고해야 할 **맥락, 규칙, 함정**을 기록합니다.
 >
-> **`@` 접두사**: 프로젝트 루트 기준 상대 경로. 에이전트는 해당 파일을 읽어 컨텍스트를 확보합니다.
+> **Scope**: 하위 디렉토리에 별도 `AGENTS.md`가 없는 한, 이 파일이 전체 저장소에 적용됩니다.
+> **`@` 접두사**: 프로젝트 루트 기준 상대 경로. 해당 파일을 읽어 컨텍스트를 확보합니다.
 
 ---
 
-## 1. 프로젝트 특이성
+## 1. Quick Reference — Commands
 
-### @1.1 단일 PostgreSQL 16으로 3가지 역할 수행
+> 에이전트가 가장 먼저 참조하는 섹션. 실제 플래그와 옵션을 포함합니다.
 
-이 프로젝트는 PostgreSQL 16 하나로 **메타 DB + 시계열 메트릭 + 벡터 검색**을 모두 처리합니다.
-별도의 TimescaleDB, QuestDB, Pinecone, Weaviate 등을 사용하지 않습니다.
+### Backend (Python / FastAPI)
+
+```bash
+cd backend
+uv sync                                    # 의존성 설치 (pip 금지)
+uv run uvicorn app.main:app --reload       # 개발 서버 (port 8000)
+uv run pytest                              # 전체 테스트
+uv run pytest tests/unit/test_adapter.py   # 단일 파일 테스트
+uv run ruff check .                        # 린트
+uv run ruff format .                       # 포맷
+uv run mypy app/                           # 타입 체크
+uv run alembic upgrade head                # DB 마이그레이션 적용
+uv run alembic revision --autogenerate -m "desc"  # 마이그레이션 생성
+uv run celery -A app.tasks worker -l info  # Celery 워커
+```
+
+### Frontend (React / Vite)
+
+```bash
+cd frontend
+npm install          # 의존성 설치
+npm run dev          # Vite dev server (port 3000)
+npm run build        # Production build
+npm run test         # Vitest 단위 테스트
+npm run test:e2e     # Playwright E2E
+npm run lint         # ESLint
+npm run format       # Prettier
+```
+
+### Infrastructure
+
+```bash
+cd infra/docker
+docker compose up -d postgres valkey kafka   # 인프라만 기동
+docker compose up -d                         # 전체 기동
+docker compose down                          # 전체 중지
+```
+
+---
+
+## 2. Task Boundaries
+
+### ✅ Always Do
+
+- 코드 생성 전 관련 Spec 문서 읽기 (`@docs/specs/`)
+- 생성된 코드에 Spec 참조 주석 명시 (`# Spec: FR-AI-002`)
+- `@docs/TECH_STACK.md`에 있는 기술만 사용
+- 라이선스 확인: Apache 2.0 / MIT / BSD만 허용
+- Python은 `uv` 사용, `async def`, SQLAlchemy 2.0 스타일
+- DB 컬럼: `UUID` PK, `TIMESTAMPTZ`, 커서 기반 페이지네이션
+- 테스트 작성 후 `uv run pytest` / `npm run test` 통과 확인
+- 변경 전 `git status` 확인, 토픽 브랜치에서 작업
+
+### ⚠️ Ask First
+
+- production 의존성 추가 (`uv add` / `npm install`)
+- DB 스키마 변경 (Alembic 마이그레이션 리뷰 필수)
+- 대상 DB에 대한 쓰기 작업 (Playbook + Autonomy Level 체크)
+- `@docs/specs/` 의 Spec 문서 구조 변경
+- Docker/인프라 설정 수정
+- 인증/인가 흐름 변경
+- Autonomy Level 변경
+
+### 🚫 Never Do
+
+- `pip install` 사용 (→ `uv add`)
+- `requirements.txt` 생성 (→ `pyproject.toml` + `uv.lock`)
+- GPL/AGPL/SSPL 라이선스 패키지 도입
+- TimescaleDB 함수 (`time_bucket`, `create_hypertable`) 사용
+- Redis 전용 모듈 (RedisJSON, RediSearch, RedisGraph) 사용
+- Next.js 패턴 (`getServerSideProps`, `next/link`) 사용
+- Grafana/Kibana/MongoDB 등 라이선스 위반 기술 도입
+- `main` 브랜치에 직접 push
+- Spec 없이 기능 구현
+- 대상 DB와 시스템 DB의 커넥션 풀 혼용
+- `dump.rdb`, `*.log`, `.env`, `node_modules/`, `.venv/` 커밋
+- Autonomy check 없이 `execute()` 직접 호출
+
+---
+
+## 3. Project Context
+
+### @3.1 단일 PostgreSQL 16 = 3가지 역할
+
+PostgreSQL 16 하나로 **메타 DB + 시계열 메트릭 + 벡터 검색**을 모두 처리합니다.
 
 | 역할 | 구현 방식 | 참조 |
 |------|----------|------|
-| 메타 DB | 일반 테이블 (표준 CRUD) | @docs/specs/data-model/ERD.md |
+| 메타 DB | 일반 테이블 (CRUD) | @docs/specs/data-model/ERD.md |
 | 시계열 메트릭 | 네이티브 파티셔닝 + pg_partman | @docs/specs/data-model/MIGRATION_SPEC.md |
 | 벡터 검색 | pgvector 확장 | @docs/specs/ai/LIGHTWEIGHT_RAG_SPEC.md |
 
-**함정**:
-- `PARTITION BY RANGE (sampled_at)` 필수. TimescaleDB 함수(`time_bucket` 등) 사용 금지
-- Materialized View + pg_cron으로 다운샘플링. Continuous Aggregate 문법 금지
-- 근거: @docs/ADR/002-postgresql16-unified.md
+**함정**: `PARTITION BY RANGE (sampled_at)` 필수. TimescaleDB Continuous Aggregate 문법 금지. Materialized View + pg_cron으로 다운샘플링.
+근거: @docs/ADR/002-postgresql16-unified.md
 
-### @1.2 Backend 단일 레이어 (Python Only)
+### @3.2 Backend 단일 레이어 (Python Only)
 
-Architecture Spec v3.0의 NestJS + Python 2층 구조는 **v3.2에서 Python/FastAPI 단일 레이어로 통합**.
+Architecture Spec v3.0의 NestJS 2층 구조는 **v3.2에서 Python/FastAPI 단일 레이어로 통합**.
 
-- `architecture-spec-v3.md`의 "NestJS", "Apollo GraphQL", "TypeORM" 언급은 **폐기됨**
-- GraphQL은 **Strawberry** (Python Code-First)로 대체
-- ORM은 **SQLAlchemy 2.0 async** 단일 사용
+- `architecture-spec-v3.md`의 NestJS, Apollo GraphQL, TypeORM 언급은 **폐기됨**
+- GraphQL → **Strawberry** (Python Code-First) / ORM → **SQLAlchemy 2.0 async**
 - 근거: @docs/ADR/001-fastapi-over-nestjs.md
-- 기술 스택 최종 진실: @docs/TECH_STACK.md
+- 최종 진실: @docs/TECH_STACK.md
 
-### @1.3 Valkey ≠ Redis (미세한 차이)
-
-Valkey는 Redis API 99.9% 호환이지만 주의 필요:
+### @3.3 Valkey ≠ Redis
 
 | 항목 | 값 |
 |------|-----|
-| 패키지 | `redis` (Python 클라이언트) → Valkey 서버에 연결 |
-| 환경변수 | `VALKEY_URL`, 연결 문자열은 `redis://valkey:6379/0` |
+| Python 패키지 | `redis` 클라이언트 → Valkey 서버 연결 |
+| 환경변수 | `VALKEY_URL` (연결 문자열은 `redis://valkey:6379/0`) |
 | Docker 이미지 | `valkey/valkey:8-alpine` |
-| Celery 브로커 | `redis://` 프로토콜 (Valkey 수용) |
-| **금지** | Redis 전용 모듈(RedisJSON, RediSearch, RedisGraph) |
+| **금지** | Redis 전용 모듈 (RedisJSON, RediSearch, RedisGraph) |
 
 근거: @docs/ADR/003-valkey-over-redis.md
 
-### @1.4 라이선스 지뢰밭
+### @3.4 라이선스 지뢰밭
 
 독립 솔루션/SaaS 전환 목표 → 허용적 라이선스만 사용.
 
 | 유혹 | 문제 | 대체 |
 |------|------|------|
-| Grafana 임베딩 | AGPL v3 | 자체 React + ECharts 대시보드 |
-| RedisJSON | RSALv2 | 일반 `SET/GET` + JSON 직렬화 |
-| TimescaleDB `time_bucket()` | TSL | PostgreSQL `date_trunc()` + Materialized View |
+| Grafana 임베딩 | AGPL v3 | 자체 React + ECharts |
+| RedisJSON | RSALv2 | `SET/GET` + JSON 직렬화 |
+| TimescaleDB | TSL | `date_trunc()` + Materialized View |
 | Elastic APM / Kibana | SSPL | OpenTelemetry + Prometheus |
 | MongoDB | SSPL | PostgreSQL JSONB |
 
 참조: @ai-db-monitor-license-audit.jsx
 
-### @1.5 2-Tier Hybrid Adapter (수집 전략)
+### @3.5 2-Tier Hybrid Adapter (수집 전략)
 
 | Tier | 이름 | 배포 위치 | 해상도 | Phase |
 |------|------|----------|--------|-------|
-| **Tier 2** | Remote Adapter | NeuralDB 백엔드 | RTT 의존 (1~10초) | Phase 1~2 |
-| **Tier 1** | Lightweight Collector | 대상 DB 서버 | 항상 1초 | Phase 3+ |
+| Tier 2 | Remote Adapter | NeuralDB 백엔드 | RTT 의존 | Phase 1~2 |
+| Tier 1 | Lightweight Collector | 대상 DB 서버 | 항상 1초 | Phase 3+ |
 
-- `BaseAdapter` 인터페이스는 Phase 3의 `PostgreSQLLocalCollector`도 지원 가능하도록 설계
-- Collector 미설치 시 Remote Adapter로 자동 폴백 → 해상도만 다운그레이드
-- 근거: @docs/ADR/006-hybrid-adapter-collection.md
-- 상세 검토: @docs/review/001-adapter-vs-agent-collection.md
+- `BaseAdapter` 인터페이스는 Phase 3의 `PostgreSQLLocalCollector`도 지원
+- `collect_metrics()` / `collect_ash()` 반환 타입이 Phase 3에서도 그대로 사용됨 — 대충 만들지 말 것
+- 근거: @docs/ADR/006-hybrid-adapter-collection.md, @docs/review/001-adapter-vs-agent-collection.md
 
-**함정**: Phase 1에서 Adapter를 대충 만들지 말 것. `collect_metrics()` / `collect_ash()` 반환 타입이 Phase 3에서도 그대로 사용됨.
+### @3.6 1초 수집의 현실적 제약
 
-### @1.6 1초 수집의 현실적 제약
-
-- `pg_stat_activity` 조회는 **읽기 전용 커넥션 풀** 사용
-- ASH 샘플링 쿼리에 `statement_timeout = '500ms'` 설정
-- 수집 실패 시 silent skip (대상 DB 장애를 악화시키지 않음)
-- Hot 메트릭만 1초, Warm은 10초, Cold는 1분 — 모든 메트릭을 1초로 수집하지 않음
+- `pg_stat_activity` 조회 → **읽기 전용 커넥션 풀** 사용
+- ASH 샘플링 쿼리에 `statement_timeout = '500ms'`
+- 수집 실패 → silent skip (대상 DB 장애 악화 방지)
+- Hot 1초 / Warm 10초 / Cold 1분 — 전부 1초로 수집하지 않음
 - 참조: @docs/MVP.md (Section 2.2)
 
-### @1.7 Adaptive Autonomy Level과 코드 분기
+### @3.7 Adaptive Autonomy Level
 
-모든 자동화 코드에는 autonomy level 체크가 필요:
+모든 자동화 코드에 autonomy level 체크 필수:
 
 ```python
-# 모든 remediation action 전에 반드시
+# GOOD — 모든 remediation action 전에 반드시
 if action.risk_level > current_autonomy_level.max_allowed_risk:
     await escalate_to_human(action)
     return
 
 # Level 0: 알림만 / Level 1: 추천 / Level 2: 승인 후 실행
 # Level 3: 실행 후 보고 / Level 4: 완전 자율
+
+# BAD — autonomy check 없이 직접 호출 → 아키텍처 리뷰에서 거부
+await execute(action)
 ```
 
 참조: @docs/specs/agents/AGENT_SPEC.md
 
----
+### @3.8 Online vs Offline AI
 
-## 2. 문서 우선순위 (충돌 시)
-
-```
-1. @docs/TECH_STACK.md                      ← 기술 스택 최종 진실 (v3.2 반영)
-2. @AI_DB_Monitoring_System_PRD_v3.3.md     ← 요구사항 + 방법론
-3. @docs/MVP.md                             ← Phase 1 범위 + 기능 상세
-4. @docs/FRONTEND_DESIGN.md                 ← UI/UX 디자인 토큰
-5. @ai-db-monitor-architecture-spec-v3.md   ← 아키텍처 (일부 구 스택 잔존 주의)
-6. @ai-db-monitor-license-audit.jsx         ← 라이선스 감사 (v3.1, 유효)
-```
-
----
-
-## 3. 코드 생성 시 흔한 실수
-
-### @3.1 Python
-
-| 실수 | 올바른 방식 | 참조 |
-|------|------------|------|
-| `pip install fastapi` | `uv add fastapi` | @docs/ADR/004-uv-over-pip.md |
-| `from sqlalchemy import Column, Integer` | `from sqlalchemy.orm import Mapped, mapped_column` (2.0 스타일) | @docs/TECH_STACK.md |
-| `session.query(Model).filter()` | `select(Model).where()` (2.0 스타일) | |
-| `sync def endpoint()` | `async def endpoint()` (FastAPI async 필수) | |
-| `import redis; r = redis.Redis()` | 연결 URL에 `VALKEY_URL` 환경변수 사용 | @docs/ADR/003-valkey-over-redis.md |
-| `requirements.txt` 생성 | `pyproject.toml` + `uv.lock` 사용 | |
-| `print()` 디버깅 | `structlog` 또는 `logging` + OpenTelemetry | |
-
-### @3.2 Frontend (React)
-
-| 실수 | 올바른 방식 | 참조 |
-|------|------------|------|
-| `next/link`, `next/image` | React SPA — `react-router` 또는 TanStack Router | @docs/ADR/005-react-spa-over-nextjs.md |
-| `getServerSideProps` | TanStack Query로 클라이언트 데이터 페칭 | |
-| `#000000` 배경색 | `#0b1326` (surface 토큰). 순수 검정 금지 | @docs/FRONTEND_DESIGN.md |
-| `border: 1px solid #ccc` | 배경색 차이로 구분 (No-Line Rule) | @docs/FRONTEND_DESIGN.md |
-| `import axios from 'axios'` | TanStack Query + 네이티브 fetch 또는 ky | |
-| `useState` 남용 | 서버 상태는 TanStack Query, 글로벌은 Zustand | @docs/specs/frontend/REACT_HOOKS_SPEC.md |
-
-### @3.3 Database
-
-| 실수 | 올바른 방식 | 참조 |
-|------|------------|------|
-| `SERIAL` / `BIGSERIAL` PK | `UUID` + `gen_random_uuid()` | @docs/specs/data-model/ERD.md |
-| `OFFSET` 페이지네이션 | 커서 기반 페이지네이션 | @docs/specs/api/API_SPEC.md |
-| `SELECT *` | 필요한 컬럼만 명시 | |
-| `CREATE INDEX idx ON big_table(col)` | `CREATE INDEX CONCURRENTLY` | |
-| TimescaleDB `create_hypertable()` | `PARTITION BY RANGE` + pg_partman | @docs/ADR/002-postgresql16-unified.md |
-| `TIMESTAMP` | `TIMESTAMPTZ` (timezone-aware 필수) | @docs/specs/data-model/ERD.md |
-
----
-
-## 4. 환경별 차이
-
-### @4.1 Online vs Offline AI
-
-이 프로젝트는 **인터넷 차단 환경(에어갭)**에서도 동작해야 합니다.
+인터넷 차단 환경(에어갭)에서도 동작해야 합니다.
 
 ```python
-# config.py
 class AIConfig:
     mode: Literal["online", "offline"] = "online"
-    # Online: openai_model = "gpt-4o", claude_model = "claude-sonnet-4-20250514"
-    # Offline: ollama_model = "mistral:7b", vllm_model = "mistral-7b-instruct"
+    # Online: GPT-4o, Claude Sonnet
+    # Offline: Ollama mistral:7b, vLLM
 ```
 
 - 모든 LLM 호출은 `AIConfig.mode`에 따라 분기
-- 하드코딩된 `openai.ChatCompletion.create()` 호출 금지 → LangChain 추상화 사용
+- 하드코딩 `openai.ChatCompletion.create()` 금지 → LangChain 추상화 사용
 - 참조: @docs/specs/ai/COPILOT_SPEC.md
 
-### @4.2 3종 메트릭 흐름 구분
+### @3.9 3종 메트릭 흐름 (가장 혼동하기 쉬움)
 
-| 구분 | 무엇을 | 어떻게 | 어디에 | Prometheus? |
-|------|--------|--------|--------|-------------|
-| **대상 DB 메트릭** | 고객 DB의 CPU, 세션, 쿼리 | 자체 Adapter (1초) | `metric_samples` 테이블 | **미사용** |
-| **자체 시스템 메트릭** | NeuralDB 상태 | OpenTelemetry SDK | **Prometheus** | **사용** |
-| **자체 시스템 트레이스** | API→Agent→DB 분산 추적 | OpenTelemetry SDK | OTel Collector | 해당 없음 |
+| 구분 | 수집 방식 | 저장 | Prometheus? |
+|------|----------|------|-------------|
+| **대상 DB 메트릭** | 자체 Adapter (1초) | `metric_samples` 테이블 | **미사용** |
+| **자체 시스템 메트릭** | OpenTelemetry SDK | **Prometheus** | **사용** |
+| **자체 시스템 트레이스** | OpenTelemetry SDK | OTel Collector | 해당 없음 |
 
-**함정**: 대상 DB 메트릭을 Prometheus에 저장하려 하지 말 것.
-- 1초 해상도 + ASH + Wait Event → Prometheus 15초 scrape로 불가능
-- 대상 DB에 exporter 설치 불가 (고객 환경 변경 불가)
-
-### @4.3 모니터링 대상 DB vs 시스템 자체 DB
-
-| 구분 | 설명 | 커넥션 |
-|------|------|--------|
-| **대상 DB** | 고객의 PostgreSQL/MySQL/MSSQL | 읽기 전용 (`pg_monitor`) |
-| **시스템 DB** | NeuralDB 자체 PostgreSQL 16 | 읽기+쓰기 |
-
-- 대상 DB에 쓰기 작업 → **반드시 Playbook + Autonomy Level 체크**
-- 두 DB의 커넥션 풀을 절대 혼용하지 않음
+**함정**: 대상 DB 메트릭을 Prometheus에 저장하려 하지 말 것 (1초 해상도 + ASH → 15초 scrape 불가).
 
 ---
 
-## 5. Skills 구성
+## 4. Working Guidelines
 
-### @5.1 프로젝트 커스텀 Skills (19종)
+- **최소 변경 원칙**: Spec에 정의된 범위만 구현. 관련 없는 리팩토링을 같은 PR에 섞지 않음
+- **기존 스타일 준수**: 새 패턴을 도입하지 말고 주변 코드와 일치시킴
+- **Backportable 변경**: 커밋은 단일 목적, 원자적으로 유지
+- **코멘트 원칙**: 코드를 재기술하지 말고, 비명시적 동작만 설명
 
-원본: `@skills/` → Claude Code 읽기 위치: `@.claude/skills/`
+---
 
-| Category | Skill | Trigger | 용도 |
-|----------|-------|---------|------|
-| **초기화** | `init-project` | `/init-project [module]` | 프로젝트 구조 스캐폴딩 |
-| **검증** | `review-arch` | `/review-arch [path]` | Spec 준수 여부 검증 |
-| **디자인** | `stitch-sync` | `/stitch-sync [all]` | Google Stitch 디자인 동기화 |
-| **FastAPI** | `gen-fastapi-route` | `/gen-fastapi-route [name] [method]` | API 라우트 + 서비스 + 스키마 |
-| | `gen-pydantic-model` | `/gen-pydantic-model [name]` | Pydantic v2 Request/Response |
-| **DB** | `gen-sqlalchemy-model` | `/gen-sqlalchemy-model [name]` | SQLAlchemy 2.0 ORM 모델 |
-| | `gen-alembic-migration` | `/gen-alembic-migration [desc]` | Alembic 마이그레이션 |
-| | `db-adapter` | `/db-adapter [db-type] [feature] [mode]` | DB 어댑터 플러그인 |
-| **React** | `gen-component` | `/gen-component [name] [screen]` | React 컴포넌트 |
-| | `gen-react-hook` | `/gen-react-hook [name] [type]` | TanStack Query / WebSocket / Zustand 훅 |
-| | `gen-echarts` | `/gen-echarts [chart-type]` | ECharts 차트 |
-| **AI/Agent** | `gen-agent` | `/gen-agent [name] [level]` | LangGraph/CrewAI 에이전트 |
-| | `gen-rag-pipeline` | `/gen-rag-pipeline [kb] [source]` | RAG 파이프라인 (pgvector) |
-| | `gen-mcp-tool` | `/gen-mcp-tool [name] [type]` | MCP Server 도구 |
-| **Infra** | `gen-celery-task` | `/gen-celery-task [name] [schedule]` | Celery 비동기 태스크 |
-| | `gen-websocket` | `/gen-websocket [ns] [events]` | python-socketio 이벤트 핸들러 |
-| | `gen-docker` | `/gen-docker [target]` | Docker/Compose 설정 |
-| **공통** | `gen-playbook` | `/gen-playbook [name] [db-type]` | Playbook-as-Code YAML |
-| | `gen-test` | `/gen-test [path] [type]` | 4-Layer 테스트 |
+## 5. Code Patterns — Good vs Bad
 
-### @5.2 Skills 파일 위치 규칙
+### @5.1 Python
 
+```python
+# GOOD — SQLAlchemy 2.0 async
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import select
+
+async def get_instance(session: AsyncSession, id: UUID) -> DBInstance:
+    stmt = select(DBInstance).where(DBInstance.id == id)
+    result = await session.execute(stmt)
+    return result.scalar_one()
+
+# BAD — Legacy 1.x style
+from sqlalchemy import Column, Integer
+session.query(DBInstance).filter(DBInstance.id == id).first()
 ```
-skills/                    ← 원본 (프로젝트 커스텀, Git 추적)
-.claude/skills/            ← Claude Code가 읽는 위치
+
+```python
+# GOOD — Valkey 연결
+import redis.asyncio as aioredis
+valkey = aioredis.from_url(settings.VALKEY_URL)
+
+# BAD — 하드코딩 Redis
+r = redis.Redis(host="localhost", port=6379)
+```
+
+### @5.2 Frontend (React)
+
+```tsx
+// GOOD — TanStack Query + 디자인 토큰
+import { useQuery } from '@tanstack/react-query';
+
+function Dashboard() {
+  const { data } = useQuery({ queryKey: ['metrics'], queryFn: fetchMetrics });
+  return <div className="bg-[#0b1326]">...</div>;  // surface 토큰
+}
+
+// BAD — Next.js 패턴 + 순수 검정
+import Link from 'next/link';           // React SPA — Next.js 아님
+export async function getServerSideProps() {}  // 존재하지 않음
+<div className="bg-black">             // #000000 금지
+<div className="border border-gray-300"> // No-Line Rule 위반
+```
+
+### @5.3 Database
+
+```sql
+-- GOOD
+CREATE TABLE metric_samples (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sampled_at TIMESTAMPTZ NOT NULL,
+    ...
+) PARTITION BY RANGE (sampled_at);
+
+CREATE INDEX CONCURRENTLY idx_metrics_time ON metric_samples (sampled_at);
+
+-- BAD
+CREATE TABLE metric_samples (
+    id SERIAL PRIMARY KEY,              -- UUID 사용
+    sampled_at TIMESTAMP,               -- TIMESTAMPTZ 사용
+);
+SELECT * FROM metric_samples OFFSET 100; -- 커서 페이지네이션 사용
 ```
 
 ---
 
-## 6. 네이밍 컨벤션
+## 6. Files to Avoid Touching
+
+| 파일/디렉토리 | 이유 |
+|--------------|------|
+| `.env`, `.env.local` | 시크릿 포함 — `.env.example`만 수정 |
+| `uv.lock` | `uv add/remove` 로 자동 갱신 — 직접 수정 금지 |
+| `package-lock.json` | `npm install` 로 자동 갱신 |
+| `.venv/`, `node_modules/` | 런타임 아티팩트 — 커밋 대상 아님 |
+| `dump.rdb`, `*.log`, `*.pid` | 로컬 런타임 잔재물 |
+| `docs/screenshots/*.png` | 바이너리 — 별도 프로세스로 생성 |
+| `ai-db-monitor-architecture-spec-v3.md` | 구 스택 잔존. 참고만 하고 수정하지 말 것. `TECH_STACK.md`가 최종 진실 |
+
+---
+
+## 7. Document Priority (충돌 시)
+
+```
+1. @docs/TECH_STACK.md                      ← 기술 스택 최종 진실
+2. @AI_DB_Monitoring_System_PRD_v3.3.md     ← 요구사항 + 방법론
+3. @docs/MVP.md                             ← Phase 1 범위
+4. @docs/FRONTEND_DESIGN.md                 ← UI/UX 디자인 토큰
+5. @ai-db-monitor-architecture-spec-v3.md   ← 아키텍처 (구 스택 잔존 주의)
+```
+
+---
+
+## 8. Naming Conventions
 
 | 대상 | 컨벤션 | 예시 |
 |------|--------|------|
-| Python 파일/모듈 | snake_case | `metric_collector.py` |
+| Python 파일 | snake_case | `metric_collector.py` |
 | Python 클래스 | PascalCase | `MetricCollector` |
 | Python 상수 | UPPER_SNAKE | `MAX_RETRY_COUNT` |
 | FastAPI 라우터 | kebab-case | `/api/v1/db-instances` |
 | SQLAlchemy 테이블 | snake_case 복수형 | `metric_samples` |
-| React 컴포넌트 | PascalCase | `TopologyMap.tsx` |
-| React 훅 | camelCase + use | `useMetrics.ts` |
+| React 컴포넌트 | PascalCase.tsx | `TopologyMap.tsx` |
+| React 훅 | use + camelCase.ts | `useMetrics.ts` |
 | Zustand 스토어 | camelCase + Store | `incidentStore.ts` |
-| Spec 문서 ID | `FS-{MODULE}-{NNN}` | `FS-DASH-001` |
+| Spec ID | `FS-{MODULE}-{NNN}` | `FS-DASH-001` |
 | 요구사항 ID | `FR-{CATEGORY}-{NNN}` | `FR-AI-002` |
 
 ---
 
-## 7. Spec-Driven Loop 워크플로우
+## 9. Git Workflow
+
+- **브랜치**: `main`에서 분기 → 토픽 브랜치 → PR → main 머지
+- **브랜치 네이밍**: `feature/FS-{ID}-{desc}`, `fix/BUG-{ID}-{desc}`, `spec/FS-{ID}-{desc}`
+- **커밋 형식**: `{type}({scope}): {subject}` + `Spec: {FS-ID}`
+- **PR**: upstream에 직접 push 금지. 항상 fork 또는 토픽 브랜치 경유
+- 상세: @CONTRIBUTING.md
+
+---
+
+## 10. Skills (AI 에이전트 전용)
+
+원본: `@skills/` → Claude Code 읽기 위치: `@.claude/skills/`
+
+| Category | Skill | Trigger |
+|----------|-------|---------|
+| 초기화 | `init-project` | `/init-project [module]` |
+| 검증 | `review-arch` | `/review-arch [path]` |
+| FastAPI | `gen-fastapi-route` | `/gen-fastapi-route [name] [method]` |
+| | `gen-pydantic-model` | `/gen-pydantic-model [name]` |
+| DB | `gen-sqlalchemy-model` | `/gen-sqlalchemy-model [name]` |
+| | `gen-alembic-migration` | `/gen-alembic-migration [desc]` |
+| | `db-adapter` | `/db-adapter [db-type] [feature] [mode]` |
+| React | `gen-component` | `/gen-component [name] [screen]` |
+| | `gen-react-hook` | `/gen-react-hook [name] [type]` |
+| | `gen-echarts` | `/gen-echarts [chart-type]` |
+| AI/Agent | `gen-agent` | `/gen-agent [name] [level]` |
+| | `gen-rag-pipeline` | `/gen-rag-pipeline [kb] [source]` |
+| | `gen-mcp-tool` | `/gen-mcp-tool [name] [type]` |
+| Infra | `gen-celery-task` | `/gen-celery-task [name] [schedule]` |
+| | `gen-websocket` | `/gen-websocket [ns] [events]` |
+| | `gen-docker` | `/gen-docker [target]` |
+| 공통 | `gen-playbook` | `/gen-playbook [name] [db-type]` |
+| | `gen-test` | `/gen-test [path] [type]` |
+| 디자인 | `stitch-sync` | `/stitch-sync [all]` |
+
+---
+
+## 11. Spec-Driven Loop
 
 ```
-Phase 1: 기획 (Spec)
-  ├── 관련 Spec 읽기 (이 문서의 Reference Map 참조)
-  ├── 필요 시 Spec 작성/갱신 → docs/specs/ 에 배치
-  └── Spec 리뷰 (기술 스택, 라이선스, 네이밍 검증)
+기획 (Spec) ──→ 구현 (Code) ──→ 리뷰 (Review)
+    ↑                                ↓
+    └────────── 피드백 ──────────────┘
 
-Phase 2: 구현 (Code)
-  ├── Spec 기반 코드 생성 (Skills 활용)
-  ├── 코드에 Spec 참조 주석 명시 (# Spec: FR-AI-002)
-  └── 단위 테스트 작성
-
-Phase 3: 리뷰 (Review)
-  ├── /review-arch 실행 → Spec 준수 여부 자동 검증
-  ├── 흔한 실수 체크 (Section 3 참조)
-  └── 피드백 → Phase 1로 복귀 (Loop)
+Phase 1: Spec 읽기/작성 → docs/specs/ 에 배치 → 기술/라이선스/네이밍 검증
+Phase 2: Spec 기반 코드 생성 (Skills 활용) → 코드에 Spec 참조 → 테스트 작성
+Phase 3: /review-arch → 흔한 실수 체크 (Section 5) → 피드백 → Phase 1 복귀
 ```

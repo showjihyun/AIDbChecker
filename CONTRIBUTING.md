@@ -1,5 +1,8 @@
 # Contributing to NeuralDB
 
+> **AI 에이전트(Claude Code, Codex 등)는 이 문서 대신 `AGENTS.md`를 우선 참조하세요.**
+> 이 문서는 인간 기여자를 위한 가이드이며, `AGENTS.md`는 에이전트 전용 규칙/함정/코드 패턴을 포함합니다.
+
 ---
 
 ## 1. 개발 방법론

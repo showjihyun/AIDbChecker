@@ -1,20 +1,15 @@
 # NeuralDB — AI-Powered Intelligent DB Monitoring System
 
+> 이 파일은 Claude Code 전용 프로젝트 컨텍스트입니다.
+> 범용 에이전트 규칙은 `@AGENTS.md`를 참조하세요.
+
 ## 방법론: Spec-Driven Harness Engineering
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              Spec-Driven Loop (반복 순환)                 │
-│                                                         │
-│   기획 (Spec) ──→ 구현 (Code) ──→ 리뷰 (Review)         │
-│       ↑                                ↓                │
-│       └────────── 피드백 ──────────────┘                │
-│                                                         │
-│   매 Loop마다:                                          │
-│   1. Spec 읽기/작성 → 2. Spec 기반 코드 생성            │
-│   3. /review-arch 검증 → 4. 피드백 반영 → 1로 복귀      │
-└─────────────────────────────────────────────────────────┘
+기획 (Spec) ──→ 구현 (Code) ──→ 리뷰 (Review) ──→ 피드백 ──→ 기획 (Loop)
 ```
+
+상세 워크플로우: @AGENTS.md Section 11
 
 ## Spec-Driven Rules
 
@@ -22,19 +17,8 @@
 2. **Spec에 없는 기능은 구현하지 않는다**
 3. **Spec에 명시된 기술 스택만 사용한다** → `@docs/TECH_STACK.md`
 4. **생성된 코드에 Spec 참조를 명시한다** (e.g., `# Spec: FR-AI-002`)
-5. **라이선스 정책 준수**: Apache 2.0 / MIT / BSD만 허용, GPL/AGPL/SSPL 금지
+5. **라이선스 정책 준수**: Apache 2.0 / MIT / BSD만 허용
 6. **Spec 없이 구현된 코드는 리뷰에서 거부된다**
-
-## Python Package Manager: uv (MUST)
-
-> pip 사용 금지. 모든 Python 패키지 관리는 반드시 `uv`를 사용한다.
-
-| 금지 | 대체 |
-|------|------|
-| `pip install` | `uv add` |
-| `pip freeze` | `uv lock` |
-| `requirements.txt` | `pyproject.toml` + `uv.lock` |
-| `python -m venv` | `uv venv` 또는 자동 생성 |
 
 ## Tech Stack Summary
 
@@ -44,21 +28,24 @@
 - **Cache**: Valkey (BSD 3-Clause, Redis API 호환)
 - **Messaging**: Apache Kafka
 - **AI/ML**: LangChain / scikit-learn / statsmodels / OpenAI / Ollama
+- **Package Manager**: uv (pip 금지)
+
+Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 
 ---
 
-## 📚 Document Reference Map
+## Document Reference Map
 
 ### Core Documents (프로젝트 루트)
 
 | 문서 | 경로 | 역할 |
 |------|------|------|
 | PRD | `@AI_DB_Monitoring_System_PRD_v3.3.md` | 요구사항 + 방법론 정의 |
-| Architecture | `@ai-db-monitor-architecture-spec-v3.md` | 아키텍처 설계 (일부 구 스택 잔존 주의) |
+| Architecture | `@ai-db-monitor-architecture-spec-v3.md` | 아키텍처 설계 (구 스택 잔존 주의) |
 | License Audit | `@ai-db-monitor-license-audit.jsx` | 라이선스 감사 (v3.1, 유효) |
 | Competitive Analysis | `@AI_DB_Monitor_Competitive_Analysis.md` | 경쟁사 분석 |
 | Contributing | `@CONTRIBUTING.md` | 개발 규칙, 브랜치/커밋 컨벤션 |
-| Agents | `@AGENTS.md` | 프로젝트 특이성, 함정, 판단 기준 |
+| Agents | `@AGENTS.md` | 에이전트 규칙, 함정, 코드 패턴, 커맨드 |
 
 ### docs/ — 설계 문서
 
@@ -127,38 +114,15 @@
 | Diagnosis | `@docs/screen4_diagnosis.html` |
 | Topology Explorer | `@docs/screen5_topology_explorer.html` |
 | Add Database | `@docs/screen6_add_database.html` |
-| Diagnosis Flow | `@docs/specs/ai/DIAGNOSIS_FLOW_USECASE.md` |
 
 ---
 
-## 문서 우선순위 (충돌 시)
+## Document Priority (충돌 시)
 
 ```
-1. docs/TECH_STACK.md          ← 기술 스택 최종 진실
-2. AI_DB_Monitoring_System_PRD_v3.3.md  ← 요구사항 + 방법론
-3. docs/MVP.md                 ← Phase 1 범위
-4. docs/FRONTEND_DESIGN.md     ← UI/UX 디자인 토큰
-5. ai-db-monitor-architecture-spec-v3.md  ← 아키텍처 (구 스택 잔존 주의)
-```
-
-## Frontend Commands
-
-```bash
-cd frontend
-npm install        # Node.js 의존성
-npm run dev        # Vite dev server
-npm run build      # Production build
-npm run test       # Vitest
-npm run lint       # ESLint
-```
-
-## Backend Commands
-
-```bash
-cd backend
-uv sync                              # 의존성 설치
-uv run alembic upgrade head          # DB 마이그레이션
-uv run uvicorn app.main:app --reload # 개발 서버
-uv run pytest                        # 테스트
-uv run ruff check .                  # 린트
+1. @docs/TECH_STACK.md                      ← 기술 스택 최종 진실
+2. @AI_DB_Monitoring_System_PRD_v3.3.md     ← 요구사항 + 방법론
+3. @docs/MVP.md                             ← Phase 1 범위
+4. @docs/FRONTEND_DESIGN.md                 ← UI/UX 디자인 토큰
+5. @ai-db-monitor-architecture-spec-v3.md   ← 아키텍처 (구 스택 잔존 주의)
 ```
