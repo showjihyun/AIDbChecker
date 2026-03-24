@@ -11,14 +11,18 @@ export function useWebSocket() {
   const setWsConnected = useMetricStore((s) => s.setWsConnected);
 
   useEffect(() => {
-    // Fix #4: Connect to /ws/metrics namespace instead of root
+    // Skip WebSocket connection if no backend URL configured
+    if (!WS_URL) {
+      return;
+    }
+
     const socket = io(`${WS_URL}/ws/metrics`, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1_000,
-      reconnectionDelayMax: 5_000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2_000,
+      reconnectionDelayMax: 10_000,
     });
 
     socketRef.current = socket;
