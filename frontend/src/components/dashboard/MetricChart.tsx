@@ -133,7 +133,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           data: connData,
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 2, color: '#d0bcff' },
+          lineStyle: { width: 2, color: '#f59e0b' },  // amber — secondary(#d0bcff) is AI-only
         },
         {
           name: 'TPS',

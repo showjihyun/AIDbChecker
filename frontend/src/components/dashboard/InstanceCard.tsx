@@ -122,7 +122,7 @@ function MetricValue({ label, value, unit, warn, crit }: MetricValueProps) {
       <p className="text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant">
         {label}
       </p>
-      <p className={cn('text-lg font-display font-bold tabular-nums', color)}>
+      <p className={cn('text-lg font-sans font-bold tabular-nums', color)}>
         {displayValue}
         {value != null && (
           <span className="text-xs font-sans font-normal text-on-surface-variant ml-0.5">

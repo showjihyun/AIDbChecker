@@ -32,7 +32,7 @@ export function Badge({ variant, children, className, dot = false }: BadgeProps)
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide',
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold tracking-wide',
         variantStyles[variant],
         className
       )}
