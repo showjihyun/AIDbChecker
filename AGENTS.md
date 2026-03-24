@@ -210,8 +210,32 @@ class AIConfig:
 
 - **최소 변경 원칙**: Spec에 정의된 범위만 구현. 관련 없는 리팩토링을 같은 PR에 섞지 않음
 - **기존 스타일 준수**: 새 패턴을 도입하지 말고 주변 코드와 일치시킴
-- **Backportable 변경**: 커밋은 단일 목적, 원자적으로 유지
+- **Backportable 변경**: 커밋은 단일 목적, 원자적으로 유지. 리네임/이동과 동작 변경을 같은 커밋에 섞지 않음
 - **코멘트 원칙**: 코드를 재기술하지 말고, 비명시적 동작만 설명
+- **에러 메시지 원칙**: 에러는 AI 에이전트가 읽고 즉시 다음 행동을 결정할 수 있도록 작성. "Element not found" → "Element not found. Run X to see available elements."
+
+### Search Before Building (gstack 핵심 원칙)
+
+> 익숙하지 않은 패턴, 인프라, 런타임 기능을 다룰 때 — **먼저 검색하라.**
+> 확인 비용은 0에 가깝다. 확인하지 않는 비용은 더 나쁜 것을 재발명하는 것이다.
+
+**3계층 지식 모델:**
+
+| 계층 | 설명 | 행동 |
+|------|------|------|
+| **Layer 1: Tried & True** | 표준 패턴, 검증된 접근법 | 대부분 알고 있지만 가끔 의심해야 함 |
+| **Layer 2: New & Popular** | 현재 베스트 프랙티스, 블로그, 트렌드 | 검색하되 비판적으로 검증. 대중은 틀릴 수 있음 |
+| **Layer 3: First Principles** | 이 문제에 대한 독자적 추론 | 가장 가치 있음. L1+L2를 이해한 후 전제를 의심 |
+
+**안티패턴:**
+- 런타임에 built-in이 있는데 직접 구현 (Layer 1 miss)
+- 블로그 포스트를 비판 없이 수용 (Layer 2 mania)
+- "당연히 이게 맞다"고 전제를 의심하지 않음 (Layer 3 blindness)
+
+**NeuralDB 적용 예시:**
+- PostgreSQL `date_trunc()` built-in 대신 시계열 라이브러리 도입 시도 → Layer 1 miss
+- "Valkey 대신 DragonflyDB가 트렌드"라는 글 무비판 수용 → Layer 2 mania
+- "1초 수집은 Prometheus로 가능"이라는 전제를 의심 → Layer 3 insight (Section 3.9)
 
 ---
 
@@ -408,14 +432,16 @@ SELECT * FROM metric_samples OFFSET 100; -- 커서 페이지네이션 사용
 docs/specs/ 읽기        → 관련 Spec 존재 여부 확인
 Spec 작성/갱신          → 없으면 새로 작성, 있으면 갱신
 ```
+**출력 → Phase 2 입력**: Spec 문서 (docs/specs/에 저장)
 
 ### Phase 2: Plan — 아키텍처 잠금
 
 ```
 /plan-eng-review       → 아키텍처, 데이터플로우, 엣지케이스, 테스트 계획 잠금
 /plan-design-review    → UI 변경 시 디자인 차원별 평가 (선택)
-출력: 테스트 매트릭스, 실패 모드 분석, ASCII 다이어그램
+/autoplan              → 3-Gate 자동 파이프라인 (선택)
 ```
+**출력 → Phase 3 입력**: 테스트 매트릭스, 실패 모드 분석, 아키텍처 다이어그램
 
 ### Phase 3: Build — Spec 기반 코드 생성
 
@@ -430,7 +456,10 @@ NeuralDB Skills 활용:
   - 코드에 Spec 참조 주석 명시 (# Spec: FR-AI-002)
   - Spec에 없는 기능 구현 금지
   - TECH_STACK.md 기술만 사용
+  - "Boil the Lake": 엣지케이스, 테스트, 에러 경로를 "나중에"로 미루지 말 것
+  - "Search Before Building": 직접 구현 전 built-in/기존 솔루션 검색
 ```
+**출력 → Phase 4 입력**: 구현 코드 + 테스트 코드 (토픽 브랜치에 커밋)
 
 ### Phase 4: Review — 다관점 검증
 
@@ -440,6 +469,7 @@ NeuralDB Skills 활용:
 /cso                   → 보안 감사 (인증/DB 접속 변경 시)
 Section 5 체크          → Good vs Bad 패턴 확인
 ```
+**출력 → Phase 5 입력**: 리뷰 피드백 (수정 필요 시 Phase 3로 복귀)
 
 ### Phase 5: Test — 실행 검증
 
@@ -449,6 +479,7 @@ npm run test           → 프론트엔드 단위 테스트
 /qa                    → 실제 브라우저 테스트 (대시보드, ASH 히트맵)
 /gen-test              → 누락된 엣지케이스 테스트 추가 생성
 ```
+**출력 → Phase 6 입력**: 테스트 통과 확인 + 커버리지 리포트
 
 ### Phase 6: Ship — 릴리스
 
@@ -456,6 +487,7 @@ npm run test           → 프론트엔드 단위 테스트
 /ship                  → 테스트 → 커버리지 확인 → PR 생성 → main 머지
 커밋 형식: {type}({scope}): {subject} + Spec: {FS-ID}
 ```
+**출력 → Phase 7 입력**: 머지된 PR + 릴리스 메트릭
 
 ### Phase 7: Reflect — 회고
 
@@ -463,11 +495,45 @@ npm run test           → 프론트엔드 단위 테스트
 /retro                 → 주간 커밋/LOC 메트릭, 개선점 식별
 피드백 → Phase 1 복귀   → 다음 Sprint Loop 시작
 ```
+**출력 → Phase 1 입력**: 개선점, 프로세스 피드백
 
 ### "Boil the Lake" 원칙 (gstack)
 
-> AI 시대에는 100% 완성도의 비용이 10~100배 낮다.
-> 엣지케이스, 테스트 커버리지, 에러 핸들링을 "나중에"로 미루지 말 것.
->
-> - **Lake** (끓일 수 있음): 단일 모듈, 기능 완성, 엣지케이스 → 완벽히 마무리
-> - **Ocean** (끓일 수 없음): 시스템 전면 재작성, 멀티쿼터 마이그레이션 → 쪼개서 Lake로 분해
+> AI 시대에는 완성도의 한계 비용이 0에 가깝다.
+> "접근법 A (완전, ~150 LOC) vs B (90%, ~80 LOC)" → **항상 A를 선택하라.**
+> 70줄 차이는 AI로 수초 만에 생성된다.
+
+**Lake vs Ocean:**
+- **Lake** (끓일 수 있음): 단일 모듈, 기능 완성, 엣지케이스, 100% 테스트 커버리지 → 완벽히 마무리
+- **Ocean** (끓일 수 없음): 시스템 전면 재작성, 멀티쿼터 마이그레이션 → 쪼개서 Lake로 분해
+
+**안티패턴:**
+- "B가 90% 커버하고 코드가 적으니 B로 하자" → A가 70줄 더 많으면 A를 택하라
+- "테스트는 후속 PR에서 추가하자" → 테스트는 가장 쉽게 끓일 수 있는 lake
+- "이건 2주 걸릴 것 같다" → "인간 팀 2주 / AI 어시스트 ~1시간"으로 표현하라
+
+### AI Effort Compression Table (gstack)
+
+> 추정 또는 논의 시, 항상 인간 팀과 AI 어시스트 양쪽을 병기한다.
+
+| 작업 유형 | 인간 팀 | AI 어시스트 | 압축률 |
+|----------|---------|-----------|--------|
+| 보일러플레이트/스캐폴딩 | 2일 | 15분 | ~100x |
+| 테스트 작성 | 1일 | 15분 | ~50x |
+| 기능 구현 | 1주 | 30분 | ~30x |
+| 버그 수정 + 회귀 테스트 | 4시간 | 15분 | ~20x |
+| 아키텍처/설계 | 2일 | 4시간 | ~5x |
+| 리서치/탐색 | 1일 | 3시간 | ~3x |
+
+### /autoplan — 자동 3-Gate 리뷰 파이프라인 (gstack)
+
+> 개별 스킬을 순차 실행하는 대신, `/autoplan`으로 3-Gate를 한 번에 통과시킬 수 있다.
+
+```
+/autoplan → CEO Review → Design Review → Eng Review → 통합 리포트
+            (/plan-ceo-review) (/plan-design-review) (/plan-eng-review)
+```
+
+- 각 Gate의 출력이 다음 Gate의 입력으로 자동 전달 (Artifact Handoff)
+- NeuralDB에서는 **Plan Phase**에서 사용
+- 단독 사용 시: `/plan-eng-review` 만으로도 충분 (Eng Review가 필수 기본값)
