@@ -3,13 +3,16 @@
 > 이 파일은 Claude Code 전용 프로젝트 컨텍스트입니다.
 > 범용 에이전트 규칙은 `@AGENTS.md`를 참조하세요.
 
-## 방법론: Spec-Driven Harness Engineering
+## 방법론: Spec-Driven Harness Engineering + gstack Sprint
 
 ```
-기획 (Spec) ──→ 구현 (Code) ──→ 리뷰 (Review) ──→ 피드백 ──→ 기획 (Loop)
+Think → Plan → Build → Review → Test → Ship → Reflect (7-Phase Loop)
 ```
 
-상세 워크플로우: @AGENTS.md Section 11
+- Sprint 워크플로우: @AGENTS.md Section 11
+- NeuralDB Skills (19종): @AGENTS.md Section 10 Layer 1
+- gstack Skills (글로벌): @AGENTS.md Section 10 Layer 2
+- gstack 설치 위치: `~/.claude/skills/gstack/`
 
 ## Spec-Driven Rules
 
@@ -31,6 +34,7 @@
 - **Package Manager**: uv (pip 금지)
 
 Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
+"Boil the Lake" 원칙: @AGENTS.md Section 11
 
 ---
 

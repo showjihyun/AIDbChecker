@@ -336,7 +336,12 @@ SELECT * FROM metric_samples OFFSET 100; -- 커서 페이지네이션 사용
 
 ---
 
-## 10. Skills (AI 에이전트 전용)
+## 10. Skills — 2-Layer Architecture
+
+> **Layer 1 (프로젝트)**: NeuralDB Spec-Driven 코드 생성 → `.claude/skills/`
+> **Layer 2 (글로벌)**: gstack 워크플로우 (리뷰/QA/Ship) → `~/.claude/skills/gstack/`
+
+### Layer 1: NeuralDB Project Skills (19종)
 
 원본: `@skills/` → Claude Code 읽기 위치: `@.claude/skills/`
 
@@ -362,16 +367,107 @@ SELECT * FROM metric_samples OFFSET 100; -- 커서 페이지네이션 사용
 | | `gen-test` | `/gen-test [path] [type]` |
 | 디자인 | `stitch-sync` | `/stitch-sync [all]` |
 
+### Layer 2: gstack Workflow Skills (선별 사용)
+
+설치: `~/.claude/skills/gstack/` (글로벌)
+
+| 단계 | Skill | 용도 | 사용 시점 |
+|------|-------|------|----------|
+| **Think** | `/office-hours` | 요구사항 검증, 6가지 강제 질문 | Spec 작성 전 아이디어 검증 |
+| **Plan** | `/plan-eng-review` | 아키텍처/데이터플로우/테스트 매트릭스 잠금 | Spec 완성 후 구현 착수 전 |
+| **Plan** | `/plan-design-review` | 디자인 차원별 0-10 평가 | UI 컴포넌트 구현 전 |
+| **Review** | `/review` | CI 통과하지만 프로덕션에서 깨지는 버그 탐지 | PR 생성 전 |
+| **Review** | `/cso` | OWASP Top 10 + STRIDE 보안 감사 | 인증/인가/DB 접속 코드 변경 시 |
+| **Test** | `/qa` | 실제 Chromium 브라우저 테스트 + 회귀 테스트 자동 생성 | 프론트엔드 기능 완성 후 |
+| **Ship** | `/ship` | 테스트 → 커버리지 → PR 원커맨드 | 기능 완성 + 리뷰 통과 후 |
+| **Reflect** | `/retro` | 주간 회고 + 커밋/LOC 메트릭 | 매주 금요일 |
+| **Safety** | `/guard` | 위험 명령어 경고 + 수정 범위 제한 | DB 마이그레이션, 인프라 변경 시 |
+| **Debug** | `/investigate` | 가설 기반 체계적 디버깅 | 원인 불명 버그 |
+
 ---
 
-## 11. Spec-Driven Loop
+## 11. Spec-Driven Sprint — 7-Phase Loop
+
+> gstack의 Think→Plan→Build→Review→Test→Ship→Reflect과
+> NeuralDB의 Spec-Driven 방법론을 결합한 하이브리드 워크플로우.
 
 ```
-기획 (Spec) ──→ 구현 (Code) ──→ 리뷰 (Review)
-    ↑                                ↓
-    └────────── 피드백 ──────────────┘
-
-Phase 1: Spec 읽기/작성 → docs/specs/ 에 배치 → 기술/라이선스/네이밍 검증
-Phase 2: Spec 기반 코드 생성 (Skills 활용) → 코드에 Spec 참조 → 테스트 작성
-Phase 3: /review-arch → 흔한 실수 체크 (Section 5) → 피드백 → Phase 1 복귀
+ ┌──────────────────────────────────────────────────────────────┐
+ │                    Spec-Driven Sprint                        │
+ │                                                              │
+ │  Think ──→ Plan ──→ Build ──→ Review ──→ Test ──→ Ship      │
+ │    ↑                                                  ↓      │
+ │    └──────────────── Reflect ←────────────────────────┘      │
+ └──────────────────────────────────────────────────────────────┘
 ```
+
+### Phase 1: Think — 요구사항 검증
+
+```
+/office-hours          → 6가지 강제 질문으로 요구사항 검증
+docs/specs/ 읽기        → 관련 Spec 존재 여부 확인
+Spec 작성/갱신          → 없으면 새로 작성, 있으면 갱신
+```
+
+### Phase 2: Plan — 아키텍처 잠금
+
+```
+/plan-eng-review       → 아키텍처, 데이터플로우, 엣지케이스, 테스트 계획 잠금
+/plan-design-review    → UI 변경 시 디자인 차원별 평가 (선택)
+출력: 테스트 매트릭스, 실패 모드 분석, ASCII 다이어그램
+```
+
+### Phase 3: Build — Spec 기반 코드 생성
+
+```
+NeuralDB Skills 활용:
+  /gen-sqlalchemy-model  → ERD.md 기반 ORM 모델
+  /gen-fastapi-route     → API_SPEC.md 기반 엔드포인트
+  /gen-component         → COMPONENT_SPEC.md 기반 React 컴포넌트
+  /gen-test              → TEST_STRATEGY.md 기반 테스트 자동 생성
+
+규칙:
+  - 코드에 Spec 참조 주석 명시 (# Spec: FR-AI-002)
+  - Spec에 없는 기능 구현 금지
+  - TECH_STACK.md 기술만 사용
+```
+
+### Phase 4: Review — 다관점 검증
+
+```
+/review-arch           → Spec 준수 여부 검증 (NeuralDB)
+/review                → 프로덕션 버그 탐지 (gstack)
+/cso                   → 보안 감사 (인증/DB 접속 변경 시)
+Section 5 체크          → Good vs Bad 패턴 확인
+```
+
+### Phase 5: Test — 실행 검증
+
+```
+uv run pytest          → 백엔드 단위/통합 테스트
+npm run test           → 프론트엔드 단위 테스트
+/qa                    → 실제 브라우저 테스트 (대시보드, ASH 히트맵)
+/gen-test              → 누락된 엣지케이스 테스트 추가 생성
+```
+
+### Phase 6: Ship — 릴리스
+
+```
+/ship                  → 테스트 → 커버리지 확인 → PR 생성 → main 머지
+커밋 형식: {type}({scope}): {subject} + Spec: {FS-ID}
+```
+
+### Phase 7: Reflect — 회고
+
+```
+/retro                 → 주간 커밋/LOC 메트릭, 개선점 식별
+피드백 → Phase 1 복귀   → 다음 Sprint Loop 시작
+```
+
+### "Boil the Lake" 원칙 (gstack)
+
+> AI 시대에는 100% 완성도의 비용이 10~100배 낮다.
+> 엣지케이스, 테스트 커버리지, 에러 핸들링을 "나중에"로 미루지 말 것.
+>
+> - **Lake** (끓일 수 있음): 단일 모듈, 기능 완성, 엣지케이스 → 완벽히 마무리
+> - **Ocean** (끓일 수 없음): 시스템 전면 재작성, 멀티쿼터 마이그레이션 → 쪼개서 Lake로 분해
