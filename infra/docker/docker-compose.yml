@@ -1,0 +1,107 @@
+# Spec: MVP.md §7.1
+# NeuralDB Demo v1 — Docker Compose (단일 노드)
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: neuraldb-postgres
+    environment:
+      POSTGRES_DB: neuraldb
+      POSTGRES_USER: neuraldb
+      POSTGRES_PASSWORD: neuraldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuraldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: neuraldb-valkey
+    ports:
+      - "6379:6379"
+    command: valkey-server --maxmemory 1gb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: neuraldb-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
+      VALKEY_URL: redis://valkey:6379/0
+      CELERY_BROKER_URL: redis://valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+      APP_ENV: development
+      APP_DEBUG: "true"
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    restart: always
+
+  celery-worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: neuraldb-celery-worker
+    command: uv run celery -A app.tasks worker -l info -c 4
+    environment:
+      DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
+      VALKEY_URL: redis://valkey:6379/0
+      CELERY_BROKER_URL: redis://valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    restart: always
+
+  celery-beat:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: neuraldb-celery-beat
+    command: uv run celery -A app.tasks beat -l info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
+      VALKEY_URL: redis://valkey:6379/0
+      CELERY_BROKER_URL: redis://valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../infra/docker/Dockerfile.frontend
+    container_name: neuraldb-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  pg_data:
