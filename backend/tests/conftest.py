@@ -26,6 +26,10 @@ from app.db.session import get_session
 from app.main import app
 from app.models.db_instance import DBInstance
 
+# Import all models so Base.metadata is populated (Alembic-style).
+# This import triggers pgvector Vector type registration.
+import app.models  # noqa: F401
+
 
 # Use an in-memory SQLite for unit tests (fast, no external deps).
 # For integration tests, override TEST_DATABASE_URL to point to a real PostgreSQL.
@@ -53,14 +57,34 @@ def event_loop():
     loop.close()
 
 
+def _sqlite_compatible_tables() -> list:
+    """Filter out tables with pgvector columns that SQLite cannot handle."""
+    skip_tables = set()
+    for table in Base.metadata.sorted_tables:
+        for col in table.columns:
+            col_type_str = str(col.type)
+            if "VECTOR" in col_type_str.upper():
+                skip_tables.add(table.name)
+                break
+    return [t for t in Base.metadata.sorted_tables if t.name not in skip_tables]
+
+
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def _create_tables():
-    """Create all tables once per test session, drop at teardown."""
+    """Create all tables once per test session, drop at teardown.
+
+    Skips tables with pgvector Vector columns when running on SQLite.
+    """
+    tables = (
+        _sqlite_compatible_tables()
+        if "sqlite" in TEST_DATABASE_URL
+        else list(Base.metadata.sorted_tables)
+    )
     async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all, tables=tables)
     yield
     async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all, tables=tables)
     await _test_engine.dispose()
 
 
