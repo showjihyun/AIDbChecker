@@ -10,14 +10,14 @@ import {
 } from '@/components/dashboard/InstanceCard';
 import { MetricChart } from '@/components/dashboard/MetricChart';
 import { SystemHealthPanel } from '@/components/dashboard/SystemHealth';
-import { useMetricStore } from '@/stores/metricStore';
+import { useMetricStore, useLatestMetricsShallow } from '@/stores/metricStore';
 import type { TimeRange } from '@/types/api';
 
 export function DashboardPage() {
   const { data: instances, isLoading: instancesLoading } = useInstances();
   const selectedInstanceId = useMetricStore((s) => s.selectedInstanceId);
   const setSelectedInstanceId = useMetricStore((s) => s.setSelectedInstanceId);
-  const latestMetrics = useMetricStore((s) => s.latestMetrics);
+  const latestMetrics = useLatestMetricsShallow();
 
   const [timeRange, setTimeRange] = useState<TimeRange>(() => ({
     from: subHours(new Date(), 1).toISOString(),
@@ -50,31 +50,31 @@ export function DashboardPage() {
   return (
     <div className="space-y-module-gap">
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <SummaryCard
           icon="dns"
           label="Total Instances"
           value={totalCount}
-          accentColor="border-primary-container"
+          accentColor="bg-primary-container"
         />
         <SummaryCard
           icon="group"
           label="Active Monitoring"
           value={activeCount}
-          accentColor="border-primary"
+          accentColor="bg-primary"
         />
         <SummaryCard
           icon="warning"
           label="Anomalies"
           value={0}
-          accentColor="border-error"
+          accentColor="bg-error"
         />
         <SummaryCard
           icon="timer"
           label="Avg Latency"
           value="--"
           suffix="ms"
-          accentColor="border-tertiary"
+          accentColor="bg-tertiary"
         />
       </div>
 
@@ -126,8 +126,11 @@ interface SummaryCardProps {
 function SummaryCard({ icon, label, value, suffix, accentColor }: SummaryCardProps) {
   return (
     <div
-      className={`bg-surface-container p-5 rounded-xl border-l-4 ${accentColor} hover:bg-surface-container-high transition-colors duration-200 ease-out`}
+      className="bg-surface-container rounded-xl overflow-hidden hover:bg-surface-container-high transition-colors duration-200 ease-out flex"
     >
+      {/* Fix #9: Replace border-l-4 with a color strip div (No-Line Rule) */}
+      <div className={`w-1 shrink-0 ${accentColor}`} />
+      <div className="p-5 flex-1">
       <div className="flex items-center gap-2 mb-2">
         <span className="material-symbols-outlined text-lg text-on-surface-variant">
           {icon}
@@ -144,6 +147,7 @@ function SummaryCard({ icon, label, value, suffix, accentColor }: SummaryCardPro
           </span>
         )}
       </p>
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ For production, generate a proper key: `python -c "from cryptography.fernet impo
 """
 
 import base64
+import binascii
 import hashlib
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -28,8 +29,8 @@ def _derive_fernet_key(raw: str) -> bytes:
         # Try using it as-is (if already a valid Fernet key)
         Fernet(raw.encode())
         return raw.encode()
-    except (ValueError, Exception):
-        # Derive via SHA-256 → base64url
+    except (ValueError, binascii.Error):
+        # Derive via SHA-256 -> base64url
         digest = hashlib.sha256(raw.encode()).digest()
         return base64.urlsafe_b64encode(digest)
 

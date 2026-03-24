@@ -81,13 +81,21 @@ async def _check_valkey() -> str:
 
 
 async def _check_celery() -> str:
-    """Check Celery by inspecting active workers via Valkey-backed control."""
+    """Check Celery by inspecting active workers via Valkey-backed control.
+
+    Celery's inspect.ping() is a synchronous blocking call; run it in a
+    thread executor to avoid blocking the async event loop.
+    """
     try:
+        import asyncio
         from app.tasks import celery_app
 
-        # Celery inspect is synchronous; use ping with a short timeout
-        inspector = celery_app.control.inspect(timeout=2)
-        ping_result = inspector.ping()
+        def _sync_ping() -> dict | None:
+            inspector = celery_app.control.inspect(timeout=2)
+            return inspector.ping()
+
+        loop = asyncio.get_running_loop()
+        ping_result = await loop.run_in_executor(None, _sync_ping)
         if ping_result:
             return "up"
         return "down"

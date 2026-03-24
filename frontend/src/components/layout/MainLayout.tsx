@@ -2,6 +2,7 @@
 import { Link, useMatchRoute } from '@tanstack/react-router';
 import { cn } from '@/lib/cn';
 import { useMetricStore } from '@/stores/metricStore';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/common/Badge';
 
 interface NavItem {
@@ -123,6 +124,9 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  // Fix #3: WebSocket connects here so it is always mounted with the layout
+  useWebSocket();
+
   return (
     <div className="min-h-screen bg-surface">
       <TopNav />

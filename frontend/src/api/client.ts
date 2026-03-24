@@ -19,6 +19,18 @@ class ApiClient {
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
+    // Fix #2: Handle 401 — clear token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('neuraldb_token');
+      window.location.href = '/';
+      const error: ApiError = {
+        detail: 'Session expired. Redirecting to login.',
+        code: 'UNAUTHORIZED',
+        status: 401,
+      };
+      throw error;
+    }
+
     if (!response.ok) {
       let errorBody: ApiError;
       try {
@@ -33,11 +45,26 @@ class ApiClient {
       throw errorBody;
     }
 
+    // Fix #6: Return void-safe for 204 No Content
     if (response.status === 204) {
-      return undefined as T;
+      return undefined as unknown as T;
     }
 
     return response.json();
+  }
+
+  // Fix #1: Wrap fetch in try/catch for network errors
+  private async safeFetch(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      const networkError: ApiError = {
+        detail: 'Network error. Check your connection.',
+        code: 'NETWORK_ERROR',
+        status: 0,
+      };
+      throw networkError;
+    }
   }
 
   async get<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -48,7 +75,7 @@ class ApiClient {
       });
     }
 
-    const response = await fetch(url.toString(), {
+    const response = await this.safeFetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -60,7 +87,7 @@ class ApiClient {
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await this.safeFetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,7 +100,7 @@ class ApiClient {
   }
 
   async put<T>(path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await this.safeFetch(`${this.baseUrl}${path}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -85,8 +112,9 @@ class ApiClient {
     return this.handleResponse<T>(response);
   }
 
-  async delete<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+  // Fix #6: delete returns Promise<void>
+  async delete(path: string): Promise<void> {
+    const response = await this.safeFetch(`${this.baseUrl}${path}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -94,7 +122,7 @@ class ApiClient {
       },
     });
 
-    return this.handleResponse<T>(response);
+    await this.handleResponse<void>(response);
   }
 }
 

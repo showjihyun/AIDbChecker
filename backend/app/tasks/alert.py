@@ -69,6 +69,7 @@ async def _send_webhook(webhook_url: str, payload: dict) -> tuple[bool, str]:
     name="app.tasks.alert.send_slack_alert",
     soft_time_limit=30,
     acks_late=True,
+    reject_on_worker_lost=True,
     ignore_result=True,
 )
 def send_slack_alert(webhook_url: str, message_payload: dict) -> None:
@@ -78,14 +79,8 @@ def send_slack_alert(webhook_url: str, message_payload: dict) -> None:
         webhook_url: Decrypted Slack incoming webhook URL.
         message_payload: Slack message payload ({"text": "..."} or blocks format).
     """
-    loop = asyncio.new_event_loop()
-    try:
-        success, message = loop.run_until_complete(
-            _send_webhook(webhook_url, message_payload)
-        )
-        if success:
-            logger.info("alert.slack_sent")
-        else:
-            logger.error("alert.slack_failed", message=message)
-    finally:
-        loop.close()
+    success, message = asyncio.run(_send_webhook(webhook_url, message_payload))
+    if success:
+        logger.info("alert.slack_sent")
+    else:
+        logger.error("alert.slack_failed", message=message)

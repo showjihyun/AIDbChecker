@@ -9,12 +9,18 @@ Namespaces:
 import socketio
 import structlog
 
+from app.config import settings
+
 logger = structlog.get_logger(__name__)
 
-# Create async Socket.io server
-# In production, use Valkey as the message queue backend for multi-worker support
+# Use Valkey (Redis-compatible) as the pub/sub backend so that Socket.io
+# events emitted from Celery workers (separate processes) are delivered to
+# connected WebSocket clients in the FastAPI process.
+mgr = socketio.AsyncRedisManager(settings.VALKEY_URL)
+
 sio = socketio.AsyncServer(
     async_mode="asgi",
+    client_manager=mgr,
     cors_allowed_origins="*",
     namespaces=["/ws/metrics", "/ws/incidents"],
     logger=False,

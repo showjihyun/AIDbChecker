@@ -183,7 +183,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           theme="dark"
         />
       ) : (
-        <div className="h-[300px] flex items-center justify-center rounded-md border border-dashed border-outline-variant">
+        <div className="h-[300px] flex items-center justify-center rounded-md bg-surface-container-high/30">
           <EmptyState
             icon="show_chart"
             message="수집 대기 중..."

@@ -3,12 +3,14 @@
 
 from contextlib import asynccontextmanager
 
+import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.api.v1 import instances, metrics, ash, alerts, system
+from app.websocket.events import sio
 
 
 @asynccontextmanager
@@ -16,10 +18,14 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     """Startup and shutdown events."""
     # Startup
     yield
-    # Shutdown: dispose system engine
-    from app.db.session import system_engine
+    # Shutdown: dispose system engine and all target DB pools
+    from app.db.session import system_engine, _target_pools
 
     await system_engine.dispose()
+
+    for pool_engine in list(_target_pools.values()):
+        await pool_engine.dispose()
+    _target_pools.clear()
 
 
 app = FastAPI(
@@ -47,3 +53,6 @@ app.include_router(metrics.router, prefix="/api/v1", tags=["metrics"])
 app.include_router(ash.router, prefix="/api/v1", tags=["ash"])
 app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
 app.include_router(system.router, prefix="/api/v1", tags=["system"])
+
+# Mount Socket.io ASGI app for WebSocket support
+app.mount("/socket.io", socketio.ASGIApp(sio))

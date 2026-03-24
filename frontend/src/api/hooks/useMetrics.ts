@@ -23,6 +23,7 @@ export function useLatestMetrics(instanceId: string | undefined) {
       apiClient.get<MetricSample>(`/instances/${instanceId}/metrics/latest`),
     enabled: !!instanceId,
     refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
     staleTime: 0,
   });
 }

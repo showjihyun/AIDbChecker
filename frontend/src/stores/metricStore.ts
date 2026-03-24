@@ -1,5 +1,6 @@
 // Spec: MVP-DASH-002 — Real-time metric state via WebSocket
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import type { MetricSample } from '@/types/api';
 
 interface MetricState {
@@ -28,3 +29,8 @@ export const useMetricStore = create<MetricState>((set) => ({
 
   setSelectedInstanceId: (id) => set({ selectedInstanceId: id }),
 }));
+
+// Fix #10: Shallow selector for latestMetrics to prevent unnecessary re-renders
+export function useLatestMetricsShallow() {
+  return useMetricStore(useShallow((s) => s.latestMetrics));
+}

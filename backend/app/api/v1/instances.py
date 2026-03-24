@@ -1,6 +1,7 @@
 # Spec: DM-001, MVP-DASH-001
-"""Instance CRUD API — register, update, delete, test monitored DB instances."""
+"""Instance CRUD API -- register, update, delete, test monitored DB instances."""
 
+import urllib.parse
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -9,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_session
+from app.db.session import get_session, remove_target_pool
 from app.models.db_instance import DBInstance
 from app.schemas.instance import (
     ConnectionTestResponse,
@@ -25,15 +26,32 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
+# Explicit allowlist of fields that can be set via the update endpoint.
+# Prevents setattr from modifying internal/sensitive ORM attributes.
+_ALLOWED_UPDATE_FIELDS = frozenset({
+    "name",
+    "host",
+    "port",
+    "database_name",
+    "cluster_id",
+    "environment",
+    "is_active",
+    "autonomy_level",
+})
+
 
 def _build_dsn(instance: DBInstance) -> str:
-    """Build asyncpg DSN from instance fields + decrypted connection_config."""
+    """Build asyncpg DSN from instance fields + decrypted connection_config.
+
+    Uses urllib.parse.quote_plus() for username and password to handle
+    special characters (@, /, %, :, ?, #) safely in the URI.
+    """
     config = instance.connection_config or {}
     username = decrypt_value(config["username"]) if "username" in config else "neuraldb"
     password = decrypt_value(config["password"]) if "password" in config else ""
     ssl_mode = config.get("sslmode", "prefer")
     return (
-        f"postgresql://{username}:{password}"
+        f"postgresql://{urllib.parse.quote_plus(username)}:{urllib.parse.quote_plus(password)}"
         f"@{instance.host}:{instance.port}/{instance.database_name}"
         f"?sslmode={ssl_mode}"
     )
@@ -63,7 +81,7 @@ async def list_instances(
     session: AsyncSession = Depends(get_session),
 ) -> InstanceListResponse:
     """List all active (non-deleted) DB instances."""
-    # Spec: DM-001 — soft delete filter
+    # Spec: DM-001 -- soft delete filter
     stmt = select(DBInstance).where(DBInstance.deleted_at.is_(None)).order_by(DBInstance.name)
     result = await session.execute(stmt)
     instances = list(result.scalars().all())
@@ -99,7 +117,7 @@ async def create_instance(
             detail=f"Instance name '{body.name}' already exists. Use a unique name.",
         )
 
-    # Spec: ADR-007 — encrypt credentials in connection_config
+    # Spec: ADR-007 -- encrypt credentials in connection_config
     encrypted_config: dict = {}
     for key, value in body.connection_config.items():
         if key in ("username", "password", "ssl_key", "ssl_cert"):
@@ -151,7 +169,7 @@ async def update_instance(
         if field_name == "metadata_extra":
             instance.metadata_ = value
         elif field_name == "connection_config" and value is not None:
-            # Spec: ADR-007 — re-encrypt credentials on update
+            # Spec: ADR-007 -- re-encrypt credentials on update
             encrypted: dict = {}
             for k, v in value.items():
                 if k in ("username", "password", "ssl_key", "ssl_cert"):
@@ -159,8 +177,14 @@ async def update_instance(
                 else:
                     encrypted[k] = v
             instance.connection_config = encrypted
-        else:
+        elif field_name in _ALLOWED_UPDATE_FIELDS:
             setattr(instance, field_name, value)
+        else:
+            logger.warning(
+                "instance.update_field_rejected",
+                instance_id=str(instance_id),
+                field=field_name,
+            )
 
     await session.commit()
     await session.refresh(instance)
@@ -178,11 +202,15 @@ async def delete_instance(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Soft-delete a monitored DB instance."""
-    # Spec: DM-001 — soft delete via deleted_at
+    # Spec: DM-001 -- soft delete via deleted_at
     instance = await _get_instance_or_404(session, instance_id)
     instance.deleted_at = datetime.now(timezone.utc)
     instance.is_active = False
     await session.commit()
+
+    # Clean up any target DB pool associated with this instance
+    await remove_target_pool(instance_id)
+
     logger.info("instance.soft_deleted", instance_id=str(instance.id))
 
 

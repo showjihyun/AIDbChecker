@@ -1,9 +1,14 @@
 # Spec: DM-001, AG-001
 """NeuralDB application configuration via Pydantic Settings."""
 
-from pydantic_settings import BaseSettings
-from pydantic import Field
+from pathlib import Path
 from typing import Literal
+
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings
+
+# Resolve env_file path relative to this file (backend/app/config.py -> backend/.env)
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -17,7 +22,7 @@ class Settings(BaseSettings):
     APP_SECRET_KEY: str = "change-me-in-production"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # System Database (PostgreSQL 16 — meta + metrics + vector)
+    # System Database (PostgreSQL 16 -- meta + metrics + vector)
     DATABASE_URL: str = "postgresql+asyncpg://neuraldb:neuraldb@localhost:5432/neuraldb"
     DB_POOL_SIZE: int = 20
     DB_POOL_OVERFLOW: int = 10
@@ -57,7 +62,31 @@ class Settings(BaseSettings):
         description="Fernet encryption key for target DB credentials",
     )
 
-    model_config = {"env_file": "../.env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    @model_validator(mode="after")
+    def _reject_default_secrets_in_production(self) -> "Settings":
+        """Prevent startup with placeholder secrets in production/staging."""
+        if self.APP_ENV in ("production", "staging"):
+            sentinel = "change-me"
+            violations: list[str] = []
+            if sentinel in self.APP_SECRET_KEY:
+                violations.append("APP_SECRET_KEY")
+            if sentinel in self.JWT_SECRET_KEY:
+                violations.append("JWT_SECRET_KEY")
+            if sentinel in self.CREDENTIAL_ENCRYPTION_KEY:
+                violations.append("CREDENTIAL_ENCRYPTION_KEY")
+            if violations:
+                raise ValueError(
+                    f"Insecure default secrets detected in {self.APP_ENV} mode: "
+                    f"{', '.join(violations)}. "
+                    "Set proper secret values via environment variables or .env file."
+                )
+        return self
+
+    model_config = {
+        "env_file": str(_ENV_FILE),
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 settings = Settings()

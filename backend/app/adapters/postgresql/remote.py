@@ -62,7 +62,7 @@ _SQL_ASH = """
 SELECT
     pid,
     query,
-    queryid AS query_hash,
+    NULL::bigint AS query_hash,  -- queryid is in pg_stat_statements, not pg_stat_activity
     state,
     wait_event_type,
     wait_event,
