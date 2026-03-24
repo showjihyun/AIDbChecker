@@ -17,22 +17,28 @@ Spec 작성 → Spec 리뷰 → Spec 승인 → 코드 구현 → 검증 → 머
 
 ## 2. Branch Strategy
 
+> **GitHub Flow 기반** — main 단일 브랜치 + 토픽 브랜치 PR 머지
+
 ```
-main                    ← 릴리스 가능 상태
-├── develop             ← 통합 브랜치
-│   ├── feature/FS-DASH-001-dashboard-metrics
-│   ├── feature/FS-AI-002-rag-pipeline
-│   ├── fix/BUG-042-ash-sampling-timeout
-│   └── spec/FS-AUTO-003-playbook-schema
-└── release/v1.0.0      ← 릴리스 브랜치
+main                              ← 항상 배포 가능 상태 (push 대상)
+├── feature/FS-DASH-001-metrics   ← 새 기능
+├── fix/BUG-042-ash-timeout       ← 버그 수정
+├── spec/FS-AUTO-003-playbook     ← Spec 문서 작성/수정
+└── hotfix/critical-db-leak       ← 긴급 수정
 ```
 
-| Branch | 용도 | Base |
-|--------|------|------|
-| `feature/FS-{ID}-{description}` | 새 기능 구현 (Spec ID 필수) | develop |
-| `fix/BUG-{ID}-{description}` | 버그 수정 | develop |
-| `spec/FS-{ID}-{description}` | Spec 문서 작성/수정 | develop |
-| `hotfix/{description}` | 긴급 수정 | main |
+| Branch | 용도 | Base | 머지 대상 |
+|--------|------|------|----------|
+| `feature/FS-{ID}-{desc}` | 새 기능 (Spec ID 필수) | main | main (PR) |
+| `fix/BUG-{ID}-{desc}` | 버그 수정 | main | main (PR) |
+| `spec/FS-{ID}-{desc}` | Spec 문서 작성/수정 | main | main (PR) |
+| `hotfix/{desc}` | 긴급 수정 | main | main (PR) |
+
+### Branch Rules
+- **main에 직접 push 금지** — 반드시 토픽 브랜치 → PR → 머지
+- **브랜치 생성 시** 항상 `main`에서 분기
+- **머지 후** 토픽 브랜치 삭제
+- develop / release 브랜치 불필요 (팀 규모가 커지면 재도입)
 
 ---
 
