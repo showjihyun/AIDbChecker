@@ -38,6 +38,8 @@ dependencies = [
     "cryptography>=42.0.0",
     # Logging
     "structlog>=24.0.0",
+    # Vector (pgvector)
+    "pgvector>=0.3.0",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +50,7 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "httpx",  # TestClient
+    "aiosqlite>=0.20.0",  # SQLite async driver for tests
 ]
 
 [tool.ruff]

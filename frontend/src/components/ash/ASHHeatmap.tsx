@@ -47,7 +47,7 @@ export function ASHHeatmap({ data, isLoading, onTimeRangeChange }: ASHHeatmapPro
       }
     }
 
-    const maxValue = Math.max(...heatmapData.map((d) => d[2]), 1);
+    const maxValue = heatmapData.reduce((max, d) => Math.max(max, d[2]), 1);
 
     return {
       backgroundColor: 'transparent',

@@ -56,7 +56,7 @@ export function useDeleteInstance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => apiClient.delete<void>(`/instances/${id}`),
+    mutationFn: (id: string) => apiClient.delete(`/instances/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INSTANCES_KEY });
     },

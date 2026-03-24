@@ -78,9 +78,9 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Instance list */}
-        <div className="col-span-4 space-y-3">
+        <div className="lg:col-span-4 space-y-3">
           <h2 className="text-xs font-semibold tracking-wider uppercase text-on-surface-variant">
             Instances
           </h2>
@@ -102,7 +102,7 @@ export function DashboardPage() {
         </div>
 
         {/* Charts and system health */}
-        <div className="col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           <MetricChart
             data={metricsData}
             isLoading={metricsLoading}

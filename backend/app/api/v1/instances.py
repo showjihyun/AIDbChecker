@@ -8,6 +8,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session, remove_target_pool
@@ -186,7 +187,14 @@ async def update_instance(
                 field=field_name,
             )
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Instance with this name already exists.",
+        )
     await session.refresh(instance)
 
     logger.info("instance.updated", instance_id=str(instance.id))
