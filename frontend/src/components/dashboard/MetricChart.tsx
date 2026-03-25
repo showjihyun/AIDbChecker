@@ -38,10 +38,35 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
   const option = useMemo(() => {
     if (!data || data.length === 0) return null;
 
-    const timestamps = data.map((d) => format(new Date(d.sampled_at), 'HH:mm:ss'));
-    const cpuData = data.map((d) => d.metrics.cpu_usage ?? null);
-    const connData = data.map((d) => d.metrics.active_connections ?? null);
-    const tpsData = data.map((d) => d.metrics.tps ?? null);
+    // Sort by time ascending for delta calculation
+    const sorted = [...data].sort(
+      (a, b) => new Date(a.sampled_at).getTime() - new Date(b.sampled_at).getTime()
+    );
+
+    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), 'HH:mm:ss'));
+
+    // Connections: numbackends is a gauge (current value), not a counter
+    const connData = sorted.map((d) => d.metrics.numbackends ?? d.metrics.active_connections ?? null);
+
+    // TPS: xact_commit is a cumulative counter — compute delta per second
+    const tpsData = sorted.map((d, i) => {
+      if (i === 0) return null; // no previous sample to diff
+      const prev = sorted[i - 1];
+      const currCommit = d.metrics.xact_commit ?? d.metrics.tps ?? 0;
+      const prevCommit = prev.metrics.xact_commit ?? prev.metrics.tps ?? 0;
+      const timeDiffSec =
+        (new Date(d.sampled_at).getTime() - new Date(prev.sampled_at).getTime()) / 1000;
+      if (timeDiffSec <= 0) return null;
+      return Math.round((currCommit - prevCommit) / timeDiffSec);
+    });
+
+    // Buffer Hit Ratio: blks_hit / (blks_hit + blks_read) * 100 — gauge per sample
+    const hitRatioData = sorted.map((d) => {
+      const hit = d.metrics.blks_hit ?? 0;
+      const read = d.metrics.blks_read ?? 0;
+      if (hit + read === 0) return null;
+      return Math.round((hit / (hit + read)) * 10000) / 100; // 2 decimal places
+    });
 
     return {
       backgroundColor: 'transparent',
@@ -54,7 +79,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         axisPointer: { type: 'cross' as const, lineStyle: { color: '#3e4850' } },
       },
       legend: {
-        data: ['CPU %', 'Connections', 'TPS'],
+        data: ['Hit Ratio', 'Connections', 'TPS/s'],
         textStyle: { color: '#bec8d2', fontSize: 11, fontFamily: 'Inter' },
         top: 0,
         right: 0,
@@ -109,9 +134,9 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
       ],
       series: [
         {
-          name: 'CPU %',
+          name: 'Hit Ratio',
           type: 'line' as const,
-          data: cpuData,
+          data: hitRatioData,
           smooth: true,
           symbol: 'none',
           lineStyle: { width: 2, color: '#0ea5e9' },
@@ -133,10 +158,10 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           data: connData,
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 2, color: '#f59e0b' },  // amber — secondary(#d0bcff) is AI-only
+          lineStyle: { width: 2, color: '#f59e0b' },
         },
         {
-          name: 'TPS',
+          name: 'TPS/s',
           type: 'line' as const,
           yAxisIndex: 1,
           data: tpsData,

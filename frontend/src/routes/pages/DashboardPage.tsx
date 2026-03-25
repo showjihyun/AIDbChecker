@@ -2,8 +2,9 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { subHours } from 'date-fns';
+import { useMemo } from 'react';
 import { useInstances } from '@/api/hooks/useInstances';
-import { useMetrics } from '@/api/hooks/useMetrics';
+import { useMetrics, useAllInstancesLatestMetrics } from '@/api/hooks/useMetrics';
 import {
   InstanceCard,
   InstanceCardSkeleton,
@@ -19,7 +20,25 @@ export function DashboardPage() {
   const { data: instances, isLoading: instancesLoading } = useInstances();
   const selectedInstanceId = useMetricStore((s) => s.selectedInstanceId);
   const setSelectedInstanceId = useMetricStore((s) => s.setSelectedInstanceId);
-  const latestMetrics = useLatestMetricsShallow();
+  const wsConnected = useMetricStore((s) => s.wsConnected);
+  const wsLatestMetrics = useLatestMetricsShallow();
+
+  // REST API fallback: poll latest metrics when WebSocket is disconnected
+  const instanceIds = useMemo(
+    () => (instances ?? []).map((i) => i.id),
+    [instances]
+  );
+  const { data: restLatestMetrics } = useAllInstancesLatestMetrics(instanceIds, wsConnected);
+
+  // Merge: prefer WebSocket data (real-time), fall back to REST polling
+  const latestMetrics = useMemo(() => {
+    const merged = { ...(restLatestMetrics ?? {}) };
+    // WebSocket data overwrites REST data (more fresh)
+    for (const [id, metric] of Object.entries(wsLatestMetrics)) {
+      merged[id] = metric;
+    }
+    return merged;
+  }, [wsLatestMetrics, restLatestMetrics]);
 
   const [timeRange, setTimeRange] = useState<TimeRange>(() => ({
     from: subHours(new Date(), 1).toISOString(),

@@ -18,9 +18,10 @@ function getInstanceStatus(
   if (!instance.is_active) return 'critical';
   if (!metric) return 'warning';
 
-  const cpu = metric.metrics.cpu_usage ?? 0;
-  if (cpu >= 90) return 'critical';
-  if (cpu >= 70) return 'warning';
+  // pg_stat_database raw metrics — numbackends as connection proxy
+  const connections = metric.metrics.numbackends ?? metric.metrics.active_connections ?? 0;
+  if (connections >= 200) return 'critical';
+  if (connections >= 100) return 'warning';
   return 'healthy';
 }
 
@@ -68,25 +69,32 @@ export function InstanceCard({
       {metrics ? (
         <div className="grid grid-cols-3 gap-3">
           <MetricValue
-            label="CPU"
-            value={metrics.cpu_usage}
-            unit="%"
-            warn={70}
-            crit={90}
-          />
-          <MetricValue
-            label="Conn"
-            value={metrics.active_connections}
+            label="Connections"
+            value={metrics.numbackends ?? metrics.active_connections}
             unit=""
             warn={100}
             crit={200}
           />
           <MetricValue
-            label="TPS"
-            value={metrics.tps}
+            label="TPS/s"
+            value={metrics.xact_commit ?? metrics.tps}
             unit=""
-            warn={5000}
-            crit={10000}
+            format="compact"
+            warn={999999}
+            crit={999999}
+          />
+          <MetricValue
+            label="Hit Ratio"
+            value={
+              metrics.blks_hit != null && metrics.blks_read != null
+                ? Math.round(
+                    (metrics.blks_hit / (metrics.blks_hit + metrics.blks_read + 0.001)) * 100
+                  )
+                : undefined
+            }
+            unit="%"
+            warn={0}
+            crit={0}
           />
         </div>
       ) : (
@@ -104,10 +112,20 @@ interface MetricValueProps {
   unit: string;
   warn: number;
   crit: number;
+  format?: 'default' | 'compact';
 }
 
-function MetricValue({ label, value, unit, warn, crit }: MetricValueProps) {
-  const displayValue = value != null ? Math.round(value) : '--';
+function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
+}
+
+function MetricValue({ label, value, unit, warn, crit, format: fmt = 'default' }: MetricValueProps) {
+  const displayValue = value != null
+    ? (fmt === 'compact' ? formatCompact(value) : String(Math.round(value)))
+    : '--';
   const color =
     value == null
       ? 'text-outline'

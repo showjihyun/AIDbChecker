@@ -6,11 +6,13 @@ import type { ASHHeatmapData, WaitBreakdown, ActiveSession, TimeRange } from '@/
 export function useASHSessions(instanceId: string | undefined, timeRange: TimeRange) {
   return useQuery({
     queryKey: ['ash', 'sessions', instanceId, timeRange.from, timeRange.to],
-    queryFn: () =>
-      apiClient.get<ActiveSession[]>(`/instances/${instanceId}/ash`, {
+    queryFn: async () => {
+      const res = await apiClient.get<{ items: ActiveSession[]; next_cursor: string | null; has_more: boolean }>(`/instances/${instanceId}/ash`, {
         from: timeRange.from,
         to: timeRange.to,
-      }),
+      });
+      return res.items;
+    },
     enabled: !!instanceId,
     staleTime: 5_000,
   });
