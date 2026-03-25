@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.0] - 2026-03-25 — Demo Ready
+
+### Added
+- **Instance Management Page**: register/list/test/delete PostgreSQL instances with validation form
+- **RegisterInstanceModal**: form with host/port/db/credentials + client-side validation
+- **NL2SQL Chat Widget**: floating bottom-right panel, natural language → SQL → result table
+- **Docker auto-setup**: entrypoint.sh runs migration + seed before uvicorn (one-command startup)
+- **SideNav**: Instances menu item added
+- Dashboard "인스턴스 등록" now navigates to /instances
+
+### Changed
+- Celery workers depend on backend service (ensures migrations complete first)
+- psycopg2-binary moved to main dependencies (Alembic sync driver in Docker)
+
 ## [0.2.1.0] - 2026-03-25 — Tests + Security Hardening
 
 ### Added
