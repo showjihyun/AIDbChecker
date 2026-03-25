@@ -76,11 +76,12 @@ export function InstanceCard({
             crit={200}
           />
           <MetricValue
-            label="TPS"
+            label="Commits"
             value={metrics.xact_commit ?? metrics.tps}
             unit=""
-            warn={5000}
-            crit={10000}
+            format="compact"
+            warn={999999}
+            crit={999999}
           />
           <MetricValue
             label="Hit%"
@@ -111,10 +112,20 @@ interface MetricValueProps {
   unit: string;
   warn: number;
   crit: number;
+  format?: 'default' | 'compact';
 }
 
-function MetricValue({ label, value, unit, warn, crit }: MetricValueProps) {
-  const displayValue = value != null ? Math.round(value) : '--';
+function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
+}
+
+function MetricValue({ label, value, unit, warn, crit, format: fmt = 'default' }: MetricValueProps) {
+  const displayValue = value != null
+    ? (fmt === 'compact' ? formatCompact(value) : String(Math.round(value)))
+    : '--';
   const color =
     value == null
       ? 'text-outline'

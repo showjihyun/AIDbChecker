@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { apiClient } from '@/api/client';
 import { Badge } from '@/components/common/Badge';
-import type { SystemHealth as SystemHealthType, ComponentHealth } from '@/types/api';
+import type { ComponentHealth } from '@/types/api';
 
 function ComponentStatus({
   name,
@@ -43,10 +43,22 @@ function ComponentStatus({
   );
 }
 
+/**
+ * Actual API response: {"db":"up","valkey":"up","celery":"up","status":"healthy"}
+ * Simple flat structure — not the nested components format.
+ */
+interface HealthApiResponse {
+  db: string;
+  valkey: string;
+  celery: string;
+  kafka?: string;
+  status: string;
+}
+
 export function SystemHealthPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => apiClient.get<SystemHealthType>('/system/health'),
+    queryFn: () => apiClient.get<HealthApiResponse>('/system/health'),
     refetchInterval: 10_000,
     staleTime: 5_000,
   });
@@ -67,20 +79,25 @@ export function SystemHealthPanel() {
     );
   }
 
-  const components = data?.components;
+  // Map flat API response to display components
+  const toComponent = (status?: string): ComponentHealth => ({
+    status: status === 'up' ? 'up' : status === 'degraded' ? 'degraded' : 'down',
+    latency_ms: null,
+    details: {},
+  });
 
-  const displayComponents: { name: string; component: ComponentHealth }[] = components
+  const displayComponents: { name: string; component: ComponentHealth }[] = data
     ? [
-        { name: 'Database', component: components.database },
-        { name: 'Valkey', component: components.valkey },
-        { name: 'Celery', component: components.celery },
-        { name: 'Kafka', component: components.kafka },
+        { name: 'Database', component: toComponent(data.db) },
+        { name: 'Valkey', component: toComponent(data.valkey) },
+        { name: 'Celery', component: toComponent(data.celery) },
+        { name: 'Kafka', component: toComponent(data.kafka) },
       ]
     : [
-        { name: 'Database', component: { status: 'down', latency_ms: null, details: {} } },
-        { name: 'Valkey', component: { status: 'down', latency_ms: null, details: {} } },
-        { name: 'Celery', component: { status: 'down', latency_ms: null, details: {} } },
-        { name: 'Kafka', component: { status: 'down', latency_ms: null, details: {} } },
+        { name: 'Database', component: toComponent() },
+        { name: 'Valkey', component: toComponent() },
+        { name: 'Celery', component: toComponent() },
+        { name: 'Kafka', component: toComponent() },
       ];
 
   return (
