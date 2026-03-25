@@ -40,6 +40,7 @@ dependencies = [
     "structlog>=24.0.0",
     # Vector (pgvector)
     "pgvector>=0.3.0",
+    "python-multipart>=0.0.22",
 ]
 
 [project.optional-dependencies]
@@ -68,3 +69,10 @@ testpaths = ["tests"]
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]

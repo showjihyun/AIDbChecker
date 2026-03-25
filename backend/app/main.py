@@ -8,8 +8,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from fastapi import Depends
+
 from app.config import settings
-from app.api.v1 import instances, metrics, ash, alerts, system
+from app.api.v1 import auth, instances, metrics, ash, alerts, system
+from app.api.deps import get_current_user
 from app.websocket.events import sio
 
 
@@ -47,11 +50,17 @@ app.add_middleware(
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-# API Routers
-app.include_router(instances.router, prefix="/api/v1", tags=["instances"])
-app.include_router(metrics.router, prefix="/api/v1", tags=["metrics"])
-app.include_router(ash.router, prefix="/api/v1", tags=["ash"])
-app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
+# Auth router — no JWT required (login/refresh are public)
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
+
+# Protected routers — require valid JWT on every endpoint
+_auth_dep = [Depends(get_current_user)]
+app.include_router(instances.router, prefix="/api/v1", tags=["instances"], dependencies=_auth_dep)
+app.include_router(metrics.router, prefix="/api/v1", tags=["metrics"], dependencies=_auth_dep)
+app.include_router(ash.router, prefix="/api/v1", tags=["ash"], dependencies=_auth_dep)
+app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"], dependencies=_auth_dep)
+
+# System router — intentionally public (health check, metrics)
 app.include_router(system.router, prefix="/api/v1", tags=["system"])
 
 # Mount Socket.io ASGI app for WebSocket support
