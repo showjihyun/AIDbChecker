@@ -11,7 +11,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import Depends
 
 from app.config import settings
-from app.api.v1 import auth, audit, instances, metrics, ash, alerts, incidents, system, users
+from app.api.v1 import auth, audit, baselines, instances, metrics, ash, alerts, incidents, system, users
+from app.api.v1 import nl2sql, rag, mtl
 from app.api.deps import get_current_user
 from app.middleware.audit import AuditLogMiddleware
 from app.websocket.events import sio
@@ -66,6 +67,10 @@ app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"], dependencie
 app.include_router(incidents.router, prefix="/api/v1", tags=["incidents"], dependencies=_auth_dep)
 app.include_router(users.router, prefix="/api/v1", tags=["users"], dependencies=_auth_dep)
 app.include_router(audit.router, prefix="/api/v1", tags=["audit"], dependencies=_auth_dep)
+app.include_router(baselines.router, prefix="/api/v1", tags=["baselines"], dependencies=_auth_dep)
+app.include_router(nl2sql.router, prefix="/api/v1", tags=["nl2sql"], dependencies=_auth_dep)
+app.include_router(rag.router, prefix="/api/v1", tags=["rag"], dependencies=_auth_dep)
+app.include_router(mtl.router, prefix="/api/v1", tags=["mtl"], dependencies=_auth_dep)
 
 # System router — intentionally public (health check, metrics)
 app.include_router(system.router, prefix="/api/v1", tags=["system"])

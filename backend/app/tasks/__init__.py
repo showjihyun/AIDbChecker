@@ -1,8 +1,8 @@
-# Spec: AG-001, MVP-COLLECT-001
-"""Celery application definition with beat schedule for metric collection."""
+# Spec: AG-001, MVP-COLLECT-001, MVP-AI-001
+"""Celery application definition with beat schedule for metric collection and baseline training."""
 
 from celery import Celery
-from celery.schedules import schedule
+from celery.schedules import crontab, schedule
 
 from app.config import settings
 
@@ -28,6 +28,7 @@ celery_app.conf.update(
     task_routes={
         "app.tasks.collect.*": {"queue": "collect"},
         "app.tasks.alert.*": {"queue": "alert"},
+        "app.tasks.analyze.*": {"queue": "analyze"},
     },
 
     # Beat schedule: hot (1s), warm (10s), cold (60s), ash (1s)
@@ -51,6 +52,12 @@ celery_app.conf.update(
             "task": "app.tasks.collect.collect_ash_samples",
             "schedule": schedule(run_every=1.0),
             "options": {"queue": "collect"},
+        },
+        # Spec: MVP-AI-001 -- retrain baselines every 6 hours
+        "retrain-baselines": {
+            "task": "app.tasks.analyze.retrain_baselines",
+            "schedule": crontab(minute=0, hour="*/6"),
+            "options": {"queue": "analyze"},
         },
     },
 )
