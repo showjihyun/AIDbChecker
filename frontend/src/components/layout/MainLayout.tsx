@@ -13,9 +13,11 @@ interface NavItem {
   label: string;
 }
 
+// Spec: FS-DASH-004 — AC-6: Incidents menu in SideNav
 const navItems: NavItem[] = [
   { to: '/', icon: 'dashboard', label: 'Dashboard' },
   { to: '/ash', icon: 'analytics', label: 'ASH Explorer' },
+  { to: '/incidents', icon: 'report_problem', label: 'Incidents' },
   { to: '/settings', icon: 'settings', label: 'Settings' },
 ];
 

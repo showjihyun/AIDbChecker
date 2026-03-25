@@ -185,6 +185,20 @@ async def _collect_metrics_async(category: str) -> None:
     for instance_id, sample in broadcast_items:
         await _broadcast_metric(instance_id, sample)
 
+    # Spec: MVP-AI-002 -- trigger anomaly detection for each hot metric sample
+    if category == "hot" and broadcast_items:
+        try:
+            from app.tasks.analyze import check_anomalies
+
+            for instance_id, sample in broadcast_items:
+                check_anomalies.delay(
+                    str(sample.instance_id),
+                    sample.metrics,
+                    sample.sampled_at.isoformat(),
+                )
+        except Exception:
+            pass  # Best-effort: anomaly check failure must not block collection
+
 
 async def _collect_single_ash(
     instance: DBInstance,

@@ -80,6 +80,40 @@ export interface ComponentHealth {
   details: Record<string, unknown>;
 }
 
+// Spec: FS-DASH-004
+export type IncidentSeverity = 'critical' | 'warning' | 'notice' | 'info';
+export type IncidentStatus = 'open' | 'acknowledged' | 'in_progress' | 'resolved' | 'closed';
+
+export interface Incident {
+  id: string;
+  instance_id: string | null;
+  instance_name: string | null;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  title: string;
+  description: string | null;
+  source: string;
+  metric_type: string | null;
+  metric_value: number | null;
+  baseline_value: number | null;
+  detected_at: string;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+}
+
+export interface IncidentListResponse {
+  items: Incident[];
+  total: number;
+}
+
+export interface IncidentFilters {
+  severity?: IncidentSeverity;
+  status?: IncidentStatus;
+  instance_id?: string;
+  limit?: number;
+  cursor?: string;
+}
+
 export interface ApiError {
   detail: string;
   code: string;
