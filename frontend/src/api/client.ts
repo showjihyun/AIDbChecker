@@ -99,6 +99,19 @@ class ApiClient {
     return this.handleResponse<T>(response);
   }
 
+  async postForm<T>(path: string, formData: URLSearchParams): Promise<T> {
+    const response = await this.safeFetch(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...this.getAuthHeaders(),
+      },
+      body: formData.toString(),
+    });
+
+    return this.handleResponse<T>(response);
+  }
+
   async put<T>(path: string, body?: unknown): Promise<T> {
     const response = await this.safeFetch(`${this.baseUrl}${path}`, {
       method: 'PUT',

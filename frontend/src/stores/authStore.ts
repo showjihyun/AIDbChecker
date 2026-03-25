@@ -79,7 +79,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+      // OAuth2PasswordRequestForm requires form-urlencoded (not JSON)
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+      const response = await apiClient.postForm<LoginResponse>('/auth/login', formData);
       const token = response.access_token;
       const user = decodeJwtPayload(token);
       if (!user) {
@@ -90,7 +94,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token, user, isAuthenticated: true, isLoading: false, error: null });
     } catch (err) {
       const apiError = err as ApiError;
-      const message = apiError?.detail ?? 'Login failed. Please check your credentials.';
+      // detail can be string or array (Pydantic validation errors) — always coerce to string
+      const raw = apiError?.detail;
+      let message: string;
+      if (typeof raw === 'string') {
+        message = raw;
+      } else if (Array.isArray(raw)) {
+        message = (raw as Array<{ msg?: string }>).map((e) => e.msg ?? String(e)).join(', ');
+      } else {
+        message = 'Login failed. Please check your credentials.';
+      }
       set({ isLoading: false, error: message });
     }
   },

@@ -32,17 +32,10 @@ depends_on = None
 
 def upgrade() -> None:
     # ------------------------------------------------------------------
-    # PostgreSQL extensions (safe to call in non-PG environments)
+    # PostgreSQL extensions
+    # Extensions are created by infra/postgres/init.sql at container init.
+    # This migration assumes they are already available.
     # ------------------------------------------------------------------
-    try:
-        op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
-    except Exception:
-        pass  # Non-PostgreSQL environment (e.g., SQLite in tests)
-
-    try:
-        op.execute('CREATE EXTENSION IF NOT EXISTS "pgvector"')
-    except Exception:
-        pass  # pgvector not available
 
     # ==================================================================
     # 1. users (no FK dependencies)
@@ -505,19 +498,24 @@ def upgrade() -> None:
         ["created_at"],
     )
 
-    # On PostgreSQL: convert embedding column to vector(384) and create HNSW index
+    # On PostgreSQL with pgvector: convert embedding to vector(384) and add HNSW index.
+    # Uses SAVEPOINT so a failure does not abort the outer transaction.
+    conn = op.get_bind()
+    conn.execute(sa.text("SAVEPOINT pgvector_check"))
     try:
-        op.execute(
+        conn.execute(sa.text(
             "ALTER TABLE rag_documents "
             "ALTER COLUMN embedding TYPE vector(384) USING embedding::vector(384)"
-        )
-        op.execute(
+        ))
+        conn.execute(sa.text(
             "CREATE INDEX idx_rag_documents_embedding "
             "ON rag_documents USING hnsw (embedding vector_cosine_ops) "
             "WITH (m = 16, ef_construction = 64)"
-        )
+        ))
+        conn.execute(sa.text("RELEASE SAVEPOINT pgvector_check"))
     except Exception:
-        pass  # pgvector not available; embedding stays as LargeBinary
+        conn.execute(sa.text("ROLLBACK TO SAVEPOINT pgvector_check"))
+        # pgvector not available; embedding stays as LargeBinary
 
     # ==================================================================
     # 11. alert_channels (FK: users SET NULL)
@@ -570,14 +568,16 @@ def upgrade() -> None:
     )
 
     # On PostgreSQL: convert severity_filter to actual ARRAY type
+    conn.execute(sa.text("SAVEPOINT array_check"))
     try:
-        op.execute(
+        conn.execute(sa.text(
             "ALTER TABLE alert_channels "
             "ALTER COLUMN severity_filter TYPE VARCHAR[] "
             "USING severity_filter::VARCHAR[]"
-        )
+        ))
+        conn.execute(sa.text("RELEASE SAVEPOINT array_check"))
     except Exception:
-        pass  # Non-PostgreSQL; stays as Text
+        conn.execute(sa.text("ROLLBACK TO SAVEPOINT array_check"))
 
     # ==================================================================
     # 12. alert_policies (no FK to other tables)
@@ -665,11 +665,8 @@ def downgrade() -> None:
     op.drop_table("alert_policies")
     op.drop_table("alert_channels")
 
-    # Drop pgvector HNSW index before dropping table (safe if not exists)
-    try:
-        op.execute("DROP INDEX IF EXISTS idx_rag_documents_embedding")
-    except Exception:
-        pass
+    # Drop pgvector HNSW index before dropping table (safe via IF EXISTS)
+    op.execute(sa.text("DROP INDEX IF EXISTS idx_rag_documents_embedding"))
 
     op.drop_table("rag_documents")
     op.drop_table("nl2sql_histories")
