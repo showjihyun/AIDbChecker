@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1.0] - 2026-03-25
+
+### Fixed
+- ASH heatmap: SQL literal_column fix + frontend bucket→matrix transform
+- ASH sessions/wait-breakdown: correct query params (from_ts/to_ts)
+- System Health: parse flat API response (was expecting nested components)
+- MetricChart: map raw pg_stat fields + delta/s TPS calculation
+- InstanceCard: unified metric labels (Connections, TPS/s, Hit Ratio)
+- WebSocket: connect to current origin when VITE_WS_URL is empty
+- REST fallback: poll latest metrics when WebSocket disconnected
+
 ## [0.3.0.0] - 2026-03-25 — Demo Ready
 
 ### Added
