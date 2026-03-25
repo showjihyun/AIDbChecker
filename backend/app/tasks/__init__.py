@@ -59,6 +59,12 @@ celery_app.conf.update(
             "schedule": crontab(minute=0, hour="*/6"),
             "options": {"queue": "analyze"},
         },
+        # Spec: FS-SCHEMA-001 -- detect DDL changes every 60 seconds
+        "detect-schema-changes": {
+            "task": "app.tasks.schema.detect_schema_changes",
+            "schedule": schedule(run_every=60.0),
+            "options": {"queue": "collect"},
+        },
     },
 )
 
