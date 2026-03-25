@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1.0] - 2026-03-25 — Tests + Security Hardening
+
+### Added
+- 41 new tests (80 total): audit API, incidents API, schema changes API, baseline analyzer, anomaly detector, RAG service, MTL Lite, baselines API
+
+### Security
+- NL2SQL: block dangerous functions (pg_read_file, dblink), sensitive tables (users, audit_logs), multi-statement SQL, enforce SELECT/WITH prefix
+- Incidents: add RBAC to update_incident_status (operator+ required)
+- NL2SQL: remove PostgreSQL error details from client responses
+
 ## [0.2.0.0] - 2026-03-25 — MVP Feature Complete
 
 ### Added
