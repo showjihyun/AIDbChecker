@@ -18,6 +18,7 @@ from app.adapters.base import ActiveSessionSample, BaseAdapter, MetricSample
 logger = structlog.get_logger(__name__)
 
 # SQL: Hot metrics from pg_stat_database (1-second interval)
+# Spec: FS-KPI-001 — added deadlocks for KPI-10 delta/s calculation
 _SQL_HOT_METRICS = """
 SELECT
     numbackends,
@@ -29,9 +30,58 @@ SELECT
     tup_updated,
     tup_deleted,
     blks_hit,
-    blks_read
+    blks_read,
+    deadlocks
 FROM pg_stat_database
 WHERE datname = current_database();
+"""
+
+# Spec: FS-KPI-001 Section 5.1 — Live KPI queries for point-in-time metrics
+_SQL_KPI_EXTRAS = """
+SELECT
+    -- KPI-04: Slow queries (duration > 1s)
+    (SELECT count(*)
+     FROM pg_stat_activity
+     WHERE state = 'active'
+       AND clock_timestamp() - query_start > INTERVAL '1 second'
+       AND backend_type = 'client backend'
+       AND pid <> pg_backend_pid()
+    ) AS slow_query_count,
+
+    -- KPI-07: Active sessions
+    (SELECT count(*)
+     FROM pg_stat_activity
+     WHERE state = 'active'
+       AND backend_type = 'client backend'
+    ) AS active_sessions,
+
+    -- KPI-08: numbackends + max_connections for connection usage
+    (SELECT numbackends
+     FROM pg_stat_database
+     WHERE datname = current_database()
+    ) AS numbackends,
+    (SELECT setting::int
+     FROM pg_settings
+     WHERE name = 'max_connections'
+    ) AS max_connections,
+
+    -- KPI-09: Lock waits
+    (SELECT count(*)
+     FROM pg_stat_activity
+     WHERE wait_event_type = 'Lock'
+    ) AS lock_waits,
+
+    -- KPI-03: Avg response time from pg_stat_statements (if available)
+    (SELECT round(avg(mean_exec_time)::numeric, 3)
+     FROM pg_stat_statements
+     WHERE calls > 0
+    ) AS avg_response_time_ms,
+
+    -- KPI-10: Cumulative deadlocks (for live fallback)
+    (SELECT deadlocks
+     FROM pg_stat_database
+     WHERE datname = current_database()
+    ) AS deadlocks;
 """
 
 # SQL: Warm metrics from pg_stat_user_tables (10-second interval)
@@ -197,6 +247,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
         if row is None:
             return None
 
+        # Spec: FS-KPI-001 — include deadlocks for KPI-10 delta/s calculation
         return MetricSample(
             instance_id=self._instance_id,
             sampled_at=now,
@@ -212,6 +263,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 "tup_deleted": row["tup_deleted"],
                 "blks_hit": row["blks_hit"],
                 "blks_read": row["blks_read"],
+                "deadlocks": row["deadlocks"],
             },
         )
 
@@ -329,3 +381,57 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 error=str(exc),
             )
             return []
+
+    # Spec: FS-KPI-001 Section 5.1 — Live KPI queries
+    async def collect_kpi_extras(self) -> dict | None:
+        """Query live KPI data directly from target DB.
+
+        Returns dict with: slow_query_count, active_sessions, numbackends,
+        max_connections, lock_waits, avg_response_time_ms, deadlocks.
+        Returns None if pool not connected or query fails.
+
+        Note: This uses a read-only connection with statement_timeout=500ms,
+        same as all other adapter queries. The query uses subqueries to
+        minimize round-trips.
+        """
+        if self._pool is None:
+            logger.warning(
+                "adapter.not_connected_kpi",
+                instance_id=str(self._instance_id),
+            )
+            return None
+
+        try:
+            async with self._pool.acquire() as conn:
+                row = await conn.fetchrow(_SQL_KPI_EXTRAS)
+
+            if row is None:
+                return None
+
+            return {
+                "slow_query_count": row["slow_query_count"],
+                "active_sessions": row["active_sessions"],
+                "numbackends": row["numbackends"],
+                "max_connections": row["max_connections"],
+                "lock_waits": row["lock_waits"],
+                "avg_response_time_ms": (
+                    float(row["avg_response_time_ms"])
+                    if row["avg_response_time_ms"] is not None
+                    else None
+                ),
+                "deadlocks": row["deadlocks"],
+            }
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "adapter.kpi_timeout",
+                instance_id=str(self._instance_id),
+            )
+            return None
+        except asyncpg.PostgresError as exc:
+            logger.warning(
+                "adapter.kpi_error",
+                instance_id=str(self._instance_id),
+                error=str(exc),
+            )
+            return None
