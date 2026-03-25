@@ -1,12 +1,14 @@
-// Spec: MVP-DASH-001 — Instance card with status, key metrics
+// Spec: MVP-DASH-001, FS-KPI-001 — Instance card with status, 5 key KPIs
 import { cn } from '@/lib/cn';
 import { Badge } from '@/components/common/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import type { Instance, MetricSample } from '@/types/api';
+import type { KPIResponse } from '@/types/kpi';
 
 interface InstanceCardProps {
   instance: Instance;
   latestMetric?: MetricSample;
+  kpiData?: KPIResponse;
   isSelected: boolean;
   onClick: (id: string) => void;
 }
@@ -34,11 +36,35 @@ const statusLabels = {
 export function InstanceCard({
   instance,
   latestMetric,
+  kpiData,
   isSelected,
   onClick,
 }: InstanceCardProps) {
   const status = getInstanceStatus(instance, latestMetric);
   const metrics = latestMetric?.metrics;
+  const hasData = kpiData || metrics;
+
+  // Derive 5 key KPIs: prefer KPI endpoint, fall back to raw metrics
+  const tpsValue = kpiData?.throughput.tps.value ?? metrics?.xact_commit ?? metrics?.tps;
+  const tpsStatus = kpiData?.throughput.tps.status;
+
+  const hitRatioValue = kpiData
+    ? (kpiData.resource.buffer_hit_ratio.value ?? undefined)
+    : metrics?.blks_hit != null && metrics?.blks_read != null
+      ? Math.round((metrics.blks_hit / (metrics.blks_hit + metrics.blks_read + 0.001)) * 100)
+      : undefined;
+  const hitStatus = kpiData?.resource.buffer_hit_ratio.status;
+
+  const connValue = kpiData
+    ? (kpiData.connection.active_sessions.value ?? undefined)
+    : (metrics?.numbackends ?? metrics?.active_connections);
+  const connStatus = kpiData?.connection.active_sessions.status;
+
+  const lockValue = kpiData?.lock.lock_waits.value ?? undefined;
+  const lockStatus = kpiData?.lock.lock_waits.status;
+
+  const sizeBytes = kpiData?.storage.db_size_bytes.value ?? undefined;
+  const sizeStatus = kpiData?.storage.db_size_bytes.status;
 
   return (
     <button
@@ -66,35 +92,50 @@ export function InstanceCard({
         </Badge>
       </div>
 
-      {metrics ? (
-        <div className="grid grid-cols-3 gap-3">
+      {hasData ? (
+        <div className="grid grid-cols-5 gap-2">
           <MetricValue
-            label="Connections"
-            value={metrics.numbackends ?? metrics.active_connections}
-            unit=""
-            warn={100}
-            crit={200}
-          />
-          <MetricValue
-            label="TPS/s"
-            value={metrics.xact_commit ?? metrics.tps}
-            unit=""
+            label="TPS"
+            value={tpsValue}
+            unit="/s"
             format="compact"
-            warn={999999}
-            crit={999999}
+            warn={5000}
+            crit={10000}
+            kpiStatus={tpsStatus}
           />
           <MetricValue
-            label="Hit Ratio"
-            value={
-              metrics.blks_hit != null && metrics.blks_read != null
-                ? Math.round(
-                    (metrics.blks_hit / (metrics.blks_hit + metrics.blks_read + 0.001)) * 100
-                  )
-                : undefined
-            }
+            label="Hit%"
+            value={hitRatioValue}
             unit="%"
             warn={0}
             crit={0}
+            invertThreshold
+            kpiStatus={hitStatus}
+          />
+          <MetricValue
+            label="Conn"
+            value={connValue}
+            unit=""
+            warn={50}
+            crit={100}
+            kpiStatus={connStatus}
+          />
+          <MetricValue
+            label="Locks"
+            value={lockValue}
+            unit=""
+            warn={5}
+            crit={20}
+            kpiStatus={lockStatus}
+          />
+          <MetricValue
+            label="Size"
+            value={sizeBytes != null ? sizeBytes : undefined}
+            unit=""
+            warn={999999999999}
+            crit={999999999999}
+            format="bytes"
+            kpiStatus={sizeStatus}
           />
         </div>
       ) : (
@@ -112,7 +153,11 @@ interface MetricValueProps {
   unit: string;
   warn: number;
   crit: number;
-  format?: 'default' | 'compact';
+  format?: 'default' | 'compact' | 'bytes';
+  /** When true, lower values are worse (e.g., Hit Ratio: <95 warn, <90 crit) */
+  invertThreshold?: boolean;
+  /** Override color from KPI API status */
+  kpiStatus?: 'normal' | 'warning' | 'critical' | 'unknown';
 }
 
 function formatCompact(n: number): string {
@@ -122,28 +167,63 @@ function formatCompact(n: number): string {
   return String(Math.round(n));
 }
 
-function MetricValue({ label, value, unit, warn, crit, format: fmt = 'default' }: MetricValueProps) {
-  const displayValue = value != null
-    ? (fmt === 'compact' ? formatCompact(value) : String(Math.round(value)))
-    : '--';
-  const color =
-    value == null
-      ? 'text-outline'
-      : value >= crit
-        ? 'text-error'
-        : value >= warn
-          ? 'text-warning'
-          : 'text-on-surface';
+function formatBytes(bytes: number): string {
+  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)}G`;
+  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)}M`;
+  if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)}K`;
+  return `${bytes}B`;
+}
+
+const kpiStatusColorMap: Record<string, string> = {
+  normal: 'text-on-surface',
+  warning: 'text-warning',
+  critical: 'text-error',
+  unknown: 'text-outline',
+};
+
+function MetricValue({
+  label,
+  value,
+  unit,
+  warn,
+  crit,
+  format: fmt = 'default',
+  kpiStatus,
+}: MetricValueProps) {
+  let displayValue: string;
+  if (value == null) {
+    displayValue = '--';
+  } else if (fmt === 'bytes') {
+    displayValue = formatBytes(value);
+  } else if (fmt === 'compact') {
+    displayValue = formatCompact(value);
+  } else {
+    displayValue = String(Math.round(value));
+  }
+
+  // Use KPI API status if available, otherwise fall back to threshold comparison
+  let color: string;
+  if (kpiStatus) {
+    color = kpiStatusColorMap[kpiStatus] ?? 'text-on-surface';
+  } else if (value == null) {
+    color = 'text-outline';
+  } else if (value >= crit) {
+    color = 'text-error';
+  } else if (value >= warn) {
+    color = 'text-warning';
+  } else {
+    color = 'text-on-surface';
+  }
 
   return (
-    <div>
-      <p className="text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant">
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant truncate">
         {label}
       </p>
-      <p className={cn('text-lg font-sans font-bold tabular-nums', color)}>
+      <p className={cn('text-base font-sans font-bold tabular-nums', color)}>
         {displayValue}
-        {value != null && (
-          <span className="text-xs font-sans font-normal text-on-surface-variant ml-0.5">
+        {value != null && unit && fmt !== 'bytes' && (
+          <span className="text-[10px] font-sans font-normal text-on-surface-variant ml-0.5">
             {unit}
           </span>
         )}
@@ -171,8 +251,8 @@ export function InstanceCardSkeleton({ count = 3 }: InstanceCardSkeletonProps) {
             </div>
             <div className="h-6 w-16 bg-surface-container-high rounded-md" />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {Array.from({ length: 3 }).map((_, j) => (
+          <div className="grid grid-cols-5 gap-2">
+            {Array.from({ length: 5 }).map((_, j) => (
               <div key={j}>
                 <div className="h-3 w-8 bg-surface-container-high rounded-sm" />
                 <div className="h-6 w-12 bg-surface-container-high rounded-sm mt-1" />
