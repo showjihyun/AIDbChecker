@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0.0] - 2026-03-25 — DB KPI Dashboard
+
+### Added
+- **DB KPI Spec** (FS-KPI-001): 5 categories, 12 key performance indicators
+- **KPI Calculator**: delta-based TPS/QPS/IOPS/Deadlocks, live slow queries/active sessions/locks
+- **GET /api/v1/instances/{id}/kpi**: real-time 12-KPI endpoint with status thresholds
+- **KPI Overview Panel**: 5-category dashboard panel with color-coded status
+- **InstanceCard extended**: 5 KPIs (TPS, Hit%, Conn, Locks, Size) up from 3
+- **Adapter extension**: deadlocks in hot metrics + collect_kpi_extras() for live queries
+
 ## [0.3.1.0] - 2026-03-25
 
 ### Fixed
