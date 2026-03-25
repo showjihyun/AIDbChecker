@@ -118,7 +118,8 @@ async def get_ash_heatmap(
         from_ts = to_ts - timedelta(minutes=10)
 
     # Spec: ADR-002 — use date_trunc + modular arithmetic, NOT time_bucket
-    bucket_expr = text(
+    from sqlalchemy import literal_column
+    bucket_expr = literal_column(
         "date_trunc('second', sampled_at) "
         "- (EXTRACT(SECOND FROM sampled_at)::int % 10) * INTERVAL '1 second'"
     )
@@ -126,7 +127,7 @@ async def get_ash_heatmap(
     stmt = (
         select(
             bucket_expr.label("bucket_start"),
-            func.coalesce(ActiveSession.wait_event_type, "CPU").label("wait_event_type"),
+            func.coalesce(ActiveSession.wait_event_type, literal_column("'CPU'")).label("wait_event_type"),
             func.count().label("cnt"),
         )
         .where(
@@ -134,8 +135,8 @@ async def get_ash_heatmap(
             ActiveSession.sampled_at >= from_ts,
             ActiveSession.sampled_at < to_ts,
         )
-        .group_by(text("bucket_start"), text("wait_event_type"))
-        .order_by(text("bucket_start"))
+        .group_by(literal_column("1"), literal_column("2"))
+        .order_by(literal_column("1"))
     )
 
     result = await session.execute(stmt)
