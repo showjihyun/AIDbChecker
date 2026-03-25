@@ -6,11 +6,13 @@ import type { MetricSample, TimeRange } from '@/types/api';
 export function useMetrics(instanceId: string | undefined, timeRange: TimeRange) {
   return useQuery({
     queryKey: ['metrics', instanceId, timeRange.from, timeRange.to],
-    queryFn: () =>
-      apiClient.get<MetricSample[]>(`/instances/${instanceId}/metrics`, {
+    queryFn: async () => {
+      const res = await apiClient.get<{ items: MetricSample[]; next_cursor: string | null; has_more: boolean }>(`/instances/${instanceId}/metrics`, {
         from: timeRange.from,
         to: timeRange.to,
-      }),
+      });
+      return res.items;
+    },
     enabled: !!instanceId,
     staleTime: 5_000,
   });
