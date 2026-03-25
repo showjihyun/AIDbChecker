@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0.0] - 2026-03-25 — MVP Feature Complete
+
+### Added
+- **Audit Log Middleware**: auto-logs POST/PUT/DELETE with WHO/WHAT/WHEN (Spec: FS-ADMIN-003)
+- **Incident List API + Page**: severity filter tabs, ACK/Resolve buttons, real-time updates (Spec: FS-DASH-004)
+- **AI Auto-Baselining**: STL decomposition + Isolation Forest per time bucket, 6h retrain (Spec: MVP-AI-001)
+- **Anomaly Detection**: z-score severity classification, 30-min cooldown, auto incident creation (Spec: MVP-AI-002)
+- **NL2SQL**: LangChain LLM (online=GPT-4o, offline=Ollama), write-query rejection, 5s timeout (Spec: FR-AI-003)
+- **Lightweight RAG**: sentence-transformers embeddings, pgvector cosine search, Valkey caching (Spec: FR-AI-002)
+- **MTL Lite RCA**: 4-head JSON prediction (anomaly/cause/severity/actions), confidence scoring (Spec: FR-AI-010)
+- **Schema Change Detection**: information_schema polling every 60s, snapshot diff (Spec: FS-SCHEMA-001)
+- **Settings Page**: 4-section card layout with config display (Spec: MVP.md §6)
+- **3 new Feature Specs**: AUDIT_LOG_SPEC, INCIDENT_LIST_SPEC, SCHEMA_CHANGE_SPEC
+
 ## [0.1.4.0] - 2026-03-25
 
 ### Fixed
