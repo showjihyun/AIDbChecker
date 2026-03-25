@@ -22,7 +22,7 @@ class ApiClient {
     // Fix #2: Handle 401 — clear token and redirect to login
     if (response.status === 401) {
       localStorage.removeItem('neuraldb_token');
-      window.location.href = '/';
+      window.location.href = '/login';
       const error: ApiError = {
         detail: 'Session expired. Redirecting to login.',
         code: 'UNAUTHORIZED',
