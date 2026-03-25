@@ -11,7 +11,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import Depends
 
 from app.config import settings
-from app.api.v1 import auth, instances, metrics, ash, alerts, system
+from app.api.v1 import auth, instances, metrics, ash, alerts, system, users
 from app.api.deps import get_current_user
 from app.websocket.events import sio
 
@@ -59,6 +59,7 @@ app.include_router(instances.router, prefix="/api/v1", tags=["instances"], depen
 app.include_router(metrics.router, prefix="/api/v1", tags=["metrics"], dependencies=_auth_dep)
 app.include_router(ash.router, prefix="/api/v1", tags=["ash"], dependencies=_auth_dep)
 app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"], dependencies=_auth_dep)
+app.include_router(users.router, prefix="/api/v1", tags=["users"], dependencies=_auth_dep)
 
 # System router — intentionally public (health check, metrics)
 app.include_router(system.router, prefix="/api/v1", tags=["system"])

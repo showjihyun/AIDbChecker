@@ -58,12 +58,16 @@ def event_loop():
 
 
 def _sqlite_compatible_tables() -> list:
-    """Filter out tables with pgvector columns that SQLite cannot handle."""
+    """Filter out tables with PostgreSQL-only column types that SQLite cannot handle.
+
+    Skips tables containing pgvector VECTOR columns or PostgreSQL JSONB columns.
+    """
+    _PG_ONLY_TYPES = {"VECTOR", "JSONB"}
     skip_tables = set()
     for table in Base.metadata.sorted_tables:
         for col in table.columns:
-            col_type_str = str(col.type)
-            if "VECTOR" in col_type_str.upper():
+            col_type_str = str(col.type).upper()
+            if any(pg_type in col_type_str for pg_type in _PG_ONLY_TYPES):
                 skip_tables.add(table.name)
                 break
     return [t for t in Base.metadata.sorted_tables if t.name not in skip_tables]
