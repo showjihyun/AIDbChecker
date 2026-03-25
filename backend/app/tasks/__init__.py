@@ -68,5 +68,10 @@ celery_app.conf.update(
     },
 )
 
-# Autodiscover tasks in app.tasks.* modules
-celery_app.autodiscover_tasks(["app.tasks"])
+# Explicitly include all task modules so Celery workers can find them
+celery_app.conf.include = [
+    "app.tasks.collect",
+    "app.tasks.alert",
+    "app.tasks.analyze",
+    "app.tasks.schema",
+]
