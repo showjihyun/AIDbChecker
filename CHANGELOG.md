@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3.0] - 2026-03-25
+
+### Added
+- Initial Alembic migration: 13 MVP tables with indexes, FK cascades, pgvector HNSW (Spec: DM-001, DM-MIG-001)
+- Frontend login page with JWT auth, route guards, and localStorage persistence (Spec: MVP-ADMIN-001)
+- Zustand auth store with login/logout/refresh actions
+- User profile dropdown with sign-out in TopNav
+- TanStack Router auth guards: unauthenticated users redirected to /login
+
 ## [0.1.2.0] - 2026-03-25
 
 ### Added
