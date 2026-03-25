@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.deps import require_role
 from app.db.session import get_session
 from app.models.incident import Incident
 from app.models.db_instance import DBInstance
@@ -118,7 +119,11 @@ async def get_incident(
 
 
 # Spec: FS-DASH-004 — AC-3: status update (ACK / Resolve)
-@router.put("/incidents/{incident_id}/status", response_model=IncidentResponse)
+@router.put(
+    "/incidents/{incident_id}/status",
+    response_model=IncidentResponse,
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
+)
 async def update_incident_status(
     incident_id: UUID,
     body: IncidentStatusUpdate,

@@ -89,8 +89,7 @@ async def nl2sql_query(
         )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Generated SQL failed to execute: {exc}. "
-            "Try rephrasing your question.",
+            detail="SQL execution failed. Try rephrasing your question.",
         )
 
     if len(rows) >= 1000:
