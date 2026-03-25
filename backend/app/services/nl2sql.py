@@ -22,7 +22,21 @@ logger = structlog.get_logger(__name__)
 # Spec: FR-AI-003 — SQL keywords that indicate write operations (NEVER execute)
 _WRITE_KEYWORDS = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|"
-    r"COPY|VACUUM|REINDEX|CLUSTER|COMMENT|LOCK|DISCARD|REASSIGN)\b",
+    r"COPY|VACUUM|REINDEX|CLUSTER|COMMENT|LOCK|DISCARD|REASSIGN|"
+    r"DO|EXECUTE|CALL|PERFORM)\b",
+    re.IGNORECASE,
+)
+
+# Dangerous functions that can exfiltrate data or read files even in read-only mode
+_DANGEROUS_FUNCTIONS = re.compile(
+    r"\b(pg_read_file|pg_read_binary_file|pg_stat_file|lo_get|lo_export|"
+    r"dblink|pg_execute_server_program|query_to_xml|xpath)\b",
+    re.IGNORECASE,
+)
+
+# Sensitive tables that NL2SQL must NEVER query
+_BLOCKED_TABLES = re.compile(
+    r"\b(users|audit_logs|alert_channels|alert_policies|rag_documents)\b",
     re.IGNORECASE,
 )
 
@@ -104,15 +118,39 @@ def _get_llm():
 
 
 def _validate_sql_readonly(sql: str) -> None:
-    """Reject any SQL that contains write operations.
+    """Reject any SQL that contains write operations or dangerous functions.
 
-    Raises ValueError if write keywords are detected.
-    This is a critical safety check — NEVER execute write queries.
+    Defense-in-depth: multiple layers beyond SET default_transaction_read_only.
     """
+    # Block write operations
     if _WRITE_KEYWORDS.search(sql):
         raise ValueError(
-            "Generated SQL contains write operations (INSERT/UPDATE/DELETE/DROP/ALTER). "
-            "Only SELECT queries are allowed. Rephrase your question as a read-only query."
+            "Generated SQL contains write operations. "
+            "Only SELECT queries are allowed."
+        )
+    # Block dangerous functions (data exfiltration via pg_read_file etc.)
+    if _DANGEROUS_FUNCTIONS.search(sql):
+        raise ValueError(
+            "Generated SQL contains restricted functions. "
+            "Only standard SELECT queries are allowed."
+        )
+    # Block queries against sensitive tables
+    if _BLOCKED_TABLES.search(sql):
+        raise ValueError(
+            "Generated SQL references restricted tables. "
+            "Only monitoring data tables (metric_samples, active_sessions, "
+            "incidents, baselines, schema_changes) are queryable."
+        )
+    # Block multi-statement (semicolons)
+    if ";" in sql.strip():
+        raise ValueError(
+            "Multi-statement SQL is not allowed. Use a single SELECT query."
+        )
+    # Must start with SELECT (after whitespace)
+    stripped = sql.strip().upper()
+    if not stripped.startswith("SELECT") and not stripped.startswith("WITH"):
+        raise ValueError(
+            "Only SELECT or WITH (CTE) queries are allowed."
         )
 
 
