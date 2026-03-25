@@ -43,7 +43,7 @@ export function DashboardPage() {
   );
 
   const handleRegister = useCallback(() => {
-    navigate({ to: '/settings' });
+    navigate({ to: '/instances' });
   }, [navigate]);
 
   const activeCount = instances?.filter((i) => i.is_active).length ?? 0;

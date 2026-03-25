@@ -6,6 +6,7 @@ import { useMetricStore } from '@/stores/metricStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/common/Badge';
+import { NL2SQLChat } from '@/components/nl2sql/NL2SQLChat';
 
 interface NavItem {
   to: string;
@@ -16,6 +17,7 @@ interface NavItem {
 // Spec: FS-DASH-004 — AC-6: Incidents menu in SideNav
 const navItems: NavItem[] = [
   { to: '/', icon: 'dashboard', label: 'Dashboard' },
+  { to: '/instances', icon: 'dns', label: 'Instances' },
   { to: '/ash', icon: 'analytics', label: 'ASH Explorer' },
   { to: '/incidents', icon: 'report_problem', label: 'Incidents' },
   { to: '/settings', icon: 'settings', label: 'Settings' },
@@ -218,6 +220,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
+      {/* Spec: MVP.md §6 — NL2SQL floating chat widget, always visible when authenticated */}
+      <NL2SQLChat />
     </div>
   );
 }
