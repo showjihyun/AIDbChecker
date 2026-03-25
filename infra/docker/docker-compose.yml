@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile
     container_name: neuraldb-backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
       VALKEY_URL: redis://valkey:6379/0
@@ -69,7 +69,7 @@ services:
     container_name: neuraldb-celery-worker
     # Skip entrypoint migration/seed — backend service handles that
     entrypoint: []
-    command: ["uv", "run", "celery", "-A", "app.tasks", "worker", "-l", "info", "-c", "4"]
+    command: ["uv", "run", "celery", "-A", "app.tasks", "worker", "-l", "info", "--pool", "solo", "-Q", "celery,collect,alert,analyze"]
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
       VALKEY_URL: redis://valkey:6379/0
@@ -107,6 +107,8 @@ services:
       context: ../../frontend
       dockerfile: ../infra/docker/Dockerfile.frontend
     container_name: neuraldb-frontend
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "3000:80"
     depends_on:

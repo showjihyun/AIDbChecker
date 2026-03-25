@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.base import ActiveSessionSample, MetricSample
 from app.adapters.postgresql.remote import PostgreSQLRemoteAdapter
-from app.db.session import AsyncSessionLocal
+from app.db.session import create_worker_session
 from app.models.active_session import ActiveSession as ActiveSessionModel
 from app.models.db_instance import DBInstance
 from app.models.metric import MetricSample as MetricSampleModel
@@ -147,7 +147,7 @@ async def _collect_metrics_async(category: str) -> None:
     Collects from all instances in parallel via asyncio.gather(),
     then batch-persists all results in a single commit.
     """
-    async with AsyncSessionLocal() as session:
+    async with create_worker_session()() as session:
         instances = await _get_active_instances(session)
 
     if not instances:
@@ -177,7 +177,7 @@ async def _collect_metrics_async(category: str) -> None:
                 broadcast_items.append((instances[i].id, sample))
 
     if rows_to_add:
-        async with AsyncSessionLocal() as session:
+        async with create_worker_session()() as session:
             session.add_all(rows_to_add)
             await session.commit()
 
@@ -247,7 +247,7 @@ async def _collect_ash_async() -> None:
     Collects from all instances in parallel via asyncio.gather(),
     then batch-persists all results in a single commit.
     """
-    async with AsyncSessionLocal() as session:
+    async with create_worker_session()() as session:
         instances = await _get_active_instances(session)
 
     if not instances:
@@ -270,7 +270,7 @@ async def _collect_ash_async() -> None:
         all_rows.extend(result)
 
     if all_rows:
-        async with AsyncSessionLocal() as session:
+        async with create_worker_session()() as session:
             session.add_all(all_rows)
             await session.commit()
 
@@ -284,6 +284,7 @@ async def _collect_ash_async() -> None:
 )
 def collect_hot_metrics() -> None:
     """Collect hot metrics (1-second interval) for all active instances."""
+    _adapter_cache.clear()  # Each asyncio.run() creates a new event loop
     asyncio.run(_collect_metrics_async("hot"))
 
 
@@ -296,6 +297,7 @@ def collect_hot_metrics() -> None:
 )
 def collect_warm_metrics() -> None:
     """Collect warm metrics (10-second interval) for all active instances."""
+    _adapter_cache.clear()
     asyncio.run(_collect_metrics_async("warm"))
 
 
@@ -308,6 +310,7 @@ def collect_warm_metrics() -> None:
 )
 def collect_cold_metrics() -> None:
     """Collect cold metrics (1-minute interval) for all active instances."""
+    _adapter_cache.clear()
     asyncio.run(_collect_metrics_async("cold"))
 
 
@@ -320,4 +323,5 @@ def collect_cold_metrics() -> None:
 )
 def collect_ash_samples() -> None:
     """Collect ASH samples (1-second interval) for all active instances."""
+    _adapter_cache.clear()
     asyncio.run(_collect_ash_async())

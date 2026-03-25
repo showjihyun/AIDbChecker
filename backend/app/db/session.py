@@ -76,3 +76,21 @@ async def get_session() -> AsyncSession:  # type: ignore[misc]
     """FastAPI dependency -- yields a System DB session."""
     async with AsyncSessionLocal() as session:
         yield session
+
+
+def create_worker_session() -> async_sessionmaker[AsyncSession]:
+    """Create a fresh async session factory for Celery workers.
+
+    Each asyncio.run() call in a Celery task creates a new event loop,
+    which is incompatible with the module-level engine's connection pool.
+    This function creates a new engine bound to the current event loop.
+    """
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        pool_size=5,
+        max_overflow=2,
+        pool_timeout=10,
+        pool_recycle=1800,
+        echo=settings.DB_ECHO,
+    )
+    return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
