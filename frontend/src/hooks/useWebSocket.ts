@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useMetricStore } from '@/stores/metricStore';
 
+// When VITE_WS_URL is empty, connect to the current host (works with nginx proxy).
+// Only truly skip if explicitly set to "disabled".
 const WS_URL = import.meta.env.VITE_WS_URL ?? '';
 
 export function useWebSocket() {
@@ -11,18 +13,19 @@ export function useWebSocket() {
   const setWsConnected = useMetricStore((s) => s.setWsConnected);
 
   useEffect(() => {
-    // Skip WebSocket connection if no backend URL configured
-    if (!WS_URL) {
+    if (WS_URL === 'disabled') {
       return;
     }
 
-    const socket = io(`${WS_URL}/ws/metrics`, {
+    // Empty string = connect to current origin (relative path via nginx proxy)
+    const baseUrl = WS_URL || undefined;
+    const socket = io(baseUrl ? `${baseUrl}/ws/metrics` : '/ws/metrics', {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2_000,
-      reconnectionDelayMax: 10_000,
+      reconnectionDelayMax: 15_000,
     });
 
     socketRef.current = socket;

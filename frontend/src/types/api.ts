@@ -21,16 +21,24 @@ export interface MetricSample {
   instance_id: string;
   sampled_at: string;
   category: 'hot' | 'warm' | 'cold';
-  metrics: {
+  metrics: Record<string, number | undefined> & {
+    // Computed/standardized fields (Phase 2+)
     cpu_usage?: number;
     memory_usage?: number;
     active_connections?: number;
     tps?: number;
     buffer_hit_ratio?: number;
-    disk_read_iops?: number;
-    disk_write_iops?: number;
-    wal_generation_rate?: number;
-    replication_lag_ms?: number;
+    // Raw pg_stat_database fields (Phase 1 — directly from adapter)
+    numbackends?: number;
+    xact_commit?: number;
+    xact_rollback?: number;
+    blks_hit?: number;
+    blks_read?: number;
+    tup_returned?: number;
+    tup_fetched?: number;
+    tup_inserted?: number;
+    tup_updated?: number;
+    tup_deleted?: number;
   };
 }
 

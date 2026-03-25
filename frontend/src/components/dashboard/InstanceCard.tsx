@@ -18,9 +18,10 @@ function getInstanceStatus(
   if (!instance.is_active) return 'critical';
   if (!metric) return 'warning';
 
-  const cpu = metric.metrics.cpu_usage ?? 0;
-  if (cpu >= 90) return 'critical';
-  if (cpu >= 70) return 'warning';
+  // pg_stat_database raw metrics — numbackends as connection proxy
+  const connections = metric.metrics.numbackends ?? metric.metrics.active_connections ?? 0;
+  if (connections >= 200) return 'critical';
+  if (connections >= 100) return 'warning';
   return 'healthy';
 }
 
@@ -68,25 +69,31 @@ export function InstanceCard({
       {metrics ? (
         <div className="grid grid-cols-3 gap-3">
           <MetricValue
-            label="CPU"
-            value={metrics.cpu_usage}
-            unit="%"
-            warn={70}
-            crit={90}
-          />
-          <MetricValue
             label="Conn"
-            value={metrics.active_connections}
+            value={metrics.numbackends ?? metrics.active_connections}
             unit=""
             warn={100}
             crit={200}
           />
           <MetricValue
             label="TPS"
-            value={metrics.tps}
+            value={metrics.xact_commit ?? metrics.tps}
             unit=""
             warn={5000}
             crit={10000}
+          />
+          <MetricValue
+            label="Hit%"
+            value={
+              metrics.blks_hit != null && metrics.blks_read != null
+                ? Math.round(
+                    (metrics.blks_hit / (metrics.blks_hit + metrics.blks_read + 0.001)) * 100
+                  )
+                : undefined
+            }
+            unit="%"
+            warn={0}
+            crit={0}
           />
         </div>
       ) : (
