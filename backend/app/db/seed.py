@@ -6,6 +6,7 @@ Usage:
 """
 
 import asyncio
+import os
 
 import structlog
 from sqlalchemy import select
@@ -16,8 +17,8 @@ from app.models.user import User
 
 logger = structlog.get_logger(__name__)
 
-DEFAULT_ADMIN_EMAIL = "admin@neuraldb.local"
-DEFAULT_ADMIN_PASSWORD = "NeuralDB@2026!"
+DEFAULT_ADMIN_EMAIL = os.getenv("SEED_ADMIN_EMAIL", "admin@neuraldb.local")
+DEFAULT_ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "change-me-in-production")
 DEFAULT_ADMIN_NAME = "System Administrator"
 
 
