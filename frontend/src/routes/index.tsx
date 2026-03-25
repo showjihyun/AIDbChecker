@@ -11,6 +11,7 @@ import { DashboardPage } from '@/routes/pages/DashboardPage';
 import { ASHExplorerPage } from '@/routes/pages/ASHExplorerPage';
 import { SettingsPage } from '@/routes/pages/SettingsPage';
 import { IncidentsPage } from '@/routes/pages/IncidentsPage';
+import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -67,6 +68,12 @@ const incidentsRoute = createRoute({
   component: IncidentsPage,
 });
 
+const instancesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/instances',
+  component: InstancesManagementPage,
+});
+
 const settingsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/settings',
@@ -75,7 +82,7 @@ const settingsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, settingsRoute]),
+  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, settingsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

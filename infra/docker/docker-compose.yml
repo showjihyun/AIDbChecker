@@ -49,6 +49,12 @@ services:
       APP_ENV: development
       APP_DEBUG: "true"
       CORS_ORIGINS: '["http://localhost:3000"]'
+      # Entrypoint: PostgreSQL connection for pg_isready + Alembic sync driver
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: neuraldb
+      # Seed script default admin password
+      SEED_ADMIN_PASSWORD: "NeuralDB@2026!"
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,15 +67,17 @@ services:
       context: ../../backend
       dockerfile: Dockerfile
     container_name: neuraldb-celery-worker
-    command: uv run celery -A app.tasks worker -l info -c 4
+    # Skip entrypoint migration/seed — backend service handles that
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "app.tasks", "worker", "-l", "info", "-c", "4"]
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
       VALKEY_URL: redis://valkey:6379/0
       CELERY_BROKER_URL: redis://valkey:6379/1
       CELERY_RESULT_BACKEND: redis://valkey:6379/2
     depends_on:
-      postgres:
-        condition: service_healthy
+      backend:
+        condition: service_started
       valkey:
         condition: service_healthy
     restart: always
@@ -79,15 +87,17 @@ services:
       context: ../../backend
       dockerfile: Dockerfile
     container_name: neuraldb-celery-beat
-    command: uv run celery -A app.tasks beat -l info
+    # Skip entrypoint migration/seed — backend service handles that
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "app.tasks", "beat", "-l", "info"]
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
       VALKEY_URL: redis://valkey:6379/0
       CELERY_BROKER_URL: redis://valkey:6379/1
       CELERY_RESULT_BACKEND: redis://valkey:6379/2
     depends_on:
-      postgres:
-        condition: service_healthy
+      backend:
+        condition: service_started
       valkey:
         condition: service_healthy
     restart: always

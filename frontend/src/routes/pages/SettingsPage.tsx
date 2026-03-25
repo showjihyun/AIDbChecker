@@ -100,7 +100,7 @@ export function SettingsPage() {
             {
               label: 'Registered Instances',
               detail: 'View, add, or modify database connections',
-              to: '/',
+              to: '/instances',
             },
             {
               label: 'Connection Testing',
@@ -112,7 +112,7 @@ export function SettingsPage() {
             },
           ]}
           actionLabel="Manage Instances"
-          actionTo="/"
+          actionTo="/instances"
         />
 
         {/* Alert Channels */}
