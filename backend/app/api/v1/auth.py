@@ -1,6 +1,8 @@
 # Spec: MVP-ADMIN-001 — JWT Authentication endpoints
 """Auth endpoints: login, token refresh, current user info."""
 
+import app.utils.bcrypt_patch  # noqa: F401 — must be imported before passlib
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status

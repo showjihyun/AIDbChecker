@@ -1,12 +1,13 @@
 -- Spec: DM-MIG-001
--- NeuralDB PostgreSQL 16 초기화 — Extensions + pg_partman setup
+-- NeuralDB PostgreSQL 16 초기화 — Extensions
 
--- Required extensions
+-- Required extensions (always available in pgvector/pgvector:pg16 image)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";          -- pgvector
-CREATE EXTENSION IF NOT EXISTS "pg_partman";       -- auto partitioning
--- pg_cron은 shared_preload_libraries에서 로드 필요 (Docker 설정)
--- CREATE EXTENSION IF NOT EXISTS "pg_cron";
 
--- pg_stat_statements (보통 이미 활성화)
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+-- Optional extensions: pg_partman, pg_cron, pg_stat_statements
+-- These require installation in the Docker image or shared_preload_libraries.
+-- Enable them manually when the image supports them:
+-- CREATE EXTENSION IF NOT EXISTS "pg_partman";
+-- CREATE EXTENSION IF NOT EXISTS "pg_cron";
+-- CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";

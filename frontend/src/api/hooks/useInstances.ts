@@ -13,7 +13,10 @@ const INSTANCES_KEY = ['instances'] as const;
 export function useInstances() {
   return useQuery({
     queryKey: INSTANCES_KEY,
-    queryFn: () => apiClient.get<Instance[]>('/instances'),
+    queryFn: async () => {
+      const res = await apiClient.get<{ items: Instance[]; total: number }>('/instances');
+      return res.items;
+    },
     staleTime: 30_000,
   });
 }

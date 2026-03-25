@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4.0] - 2026-03-25
+
+### Fixed
+- Alembic migration: SAVEPOINT wrapping for pgvector/ARRAY type conversions (prevents transaction abort)
+- Alembic env.py: sync psycopg2 driver as default (asyncpg segfaults on Windows)
+- init.sql: disable pg_partman/pg_stat_statements extensions (not in base Docker image)
+- bcrypt 5.x + passlib compatibility patch for runtime (not just tests)
+- Login form: use form-urlencoded for OAuth2PasswordRequestForm (was JSON)
+- Auth error handling: coerce Pydantic validation error arrays to string
+- useInstances hook: parse `{items, total}` paginated response format
+- API client: add `postForm()` method for form-urlencoded requests
+
 ## [0.1.3.0] - 2026-03-25
 
 ### Added
