@@ -27,6 +27,7 @@ dependencies = [
     # AI/ML
     "langchain>=0.3.0",
     "langchain-openai>=0.2.0",
+    "langchain-community>=0.3.0",
     "scikit-learn>=1.4.0",
     "statsmodels>=0.14.0",
     "sentence-transformers>=3.0.0",
