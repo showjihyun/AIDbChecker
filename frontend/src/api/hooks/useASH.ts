@@ -31,15 +31,19 @@ interface HeatmapApiResponse {
   bucket_interval_seconds: number;
 }
 
+/** Format timestamp to HH:MM:SS label */
+function toTimeLabel(isoString: string): string {
+  const t = new Date(isoString);
+  return `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
+}
+
 /** Transform flat bucket list into the 2D matrix format the ASHHeatmap component expects */
 function transformHeatmapData(raw: HeatmapApiResponse): ASHHeatmapData {
   const timeSet = new Set<string>();
   const eventSet = new Set<string>();
 
   for (const b of raw.buckets) {
-    const t = new Date(b.bucket_start);
-    const label = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
-    timeSet.add(label);
+    timeSet.add(toTimeLabel(b.bucket_start));
     eventSet.add(b.wait_event_type);
   }
 
@@ -52,9 +56,7 @@ function transformHeatmapData(raw: HeatmapApiResponse): ASHHeatmapData {
   const values: number[][] = wait_event_types.map(() => new Array(time_buckets.length).fill(0));
 
   for (const b of raw.buckets) {
-    const t = new Date(b.bucket_start);
-    const label = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
-    const xi = timeIndex.get(label);
+    const xi = timeIndex.get(toTimeLabel(b.bucket_start));
     const yi = eventIndex.get(b.wait_event_type);
     if (xi != null && yi != null) {
       values[yi][xi] = b.count;

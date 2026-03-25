@@ -118,7 +118,7 @@ async def get_ash_heatmap(
         from_ts = to_ts - timedelta(minutes=10)
 
     # Spec: ADR-002 — use date_trunc + modular arithmetic, NOT time_bucket
-    from sqlalchemy import literal_column
+    from sqlalchemy import literal_column  # noqa: E402 — needed here for label() support
     bucket_expr = literal_column(
         "date_trunc('second', sampled_at) "
         "- (EXTRACT(SECOND FROM sampled_at)::int % 10) * INTERVAL '1 second'"
