@@ -79,7 +79,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         axisPointer: { type: 'cross' as const, lineStyle: { color: '#3e4850' } },
       },
       legend: {
-        data: ['Hit Ratio %', 'Connections', 'TPS/s'],
+        data: ['Hit Ratio', 'Connections', 'TPS/s'],
         textStyle: { color: '#bec8d2', fontSize: 11, fontFamily: 'Inter' },
         top: 0,
         right: 0,
@@ -134,7 +134,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
       ],
       series: [
         {
-          name: 'Hit Ratio %',
+          name: 'Hit Ratio',
           type: 'line' as const,
           data: hitRatioData,
           smooth: true,

@@ -69,14 +69,14 @@ export function InstanceCard({
       {metrics ? (
         <div className="grid grid-cols-3 gap-3">
           <MetricValue
-            label="Conn"
+            label="Connections"
             value={metrics.numbackends ?? metrics.active_connections}
             unit=""
             warn={100}
             crit={200}
           />
           <MetricValue
-            label="Commits"
+            label="TPS/s"
             value={metrics.xact_commit ?? metrics.tps}
             unit=""
             format="compact"
@@ -84,7 +84,7 @@ export function InstanceCard({
             crit={999999}
           />
           <MetricValue
-            label="Hit%"
+            label="Hit Ratio"
             value={
               metrics.blks_hit != null && metrics.blks_read != null
                 ? Math.round(
