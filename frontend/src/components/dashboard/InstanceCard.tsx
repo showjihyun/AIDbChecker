@@ -174,11 +174,12 @@ function formatBytes(bytes: number): string {
   return `${bytes}B`;
 }
 
+// Spec: FS-KPI-001 §4.3 — 3-stage traffic light
 const kpiStatusColorMap: Record<string, string> = {
-  normal: 'text-on-surface',
-  warning: 'text-warning',
-  critical: 'text-error',
-  unknown: 'text-outline',
+  normal: 'text-tertiary',    // 🟢 Healthy — green
+  warning: 'text-warning',    // 🟡 Warning — amber
+  critical: 'text-error',     // 🔴 Critical — red
+  unknown: 'text-outline',    // ⚪ Unknown — gray
 };
 
 function MetricValue({

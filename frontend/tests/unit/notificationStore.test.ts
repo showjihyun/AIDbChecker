@@ -109,7 +109,7 @@ describe('notificationStore', () => {
   // --- FIFO max 50 ---
 
   it('enforces max 50 notifications (FIFO)', () => {
-    const store = useNotificationStore.getState();
+    useNotificationStore.getState();
 
     for (let i = 0; i < 55; i++) {
       useNotificationStore.getState().addNotification({
