@@ -2,6 +2,8 @@
 import { create } from 'zustand';
 
 const MAX_NOTIFICATIONS = 50;
+/** How long to suppress duplicate notifications after read/clear (ms) */
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface Notification {
   id: string;
@@ -14,10 +16,17 @@ export interface Notification {
   instanceName?: string;
 }
 
+/** Key used for deduplication */
+function dedupKey(title: string, instanceName?: string): string {
+  return `${title}::${instanceName ?? ''}`;
+}
+
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
   panelOpen: boolean;
+  /** Tracks recently seen notification keys with timestamp to prevent re-adding */
+  _seenKeys: Map<string, number>;
   addNotification: (
     n: Omit<Notification, 'id' | 'timestamp' | 'read'>
   ) => boolean;
@@ -35,16 +44,25 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   panelOpen: false,
+  _seenKeys: new Map(),
 
   addNotification: (n) => {
     const state = get();
+    const key = dedupKey(n.title, n.instanceName);
+    const now = Date.now();
 
-    // Deduplicate: skip if same title+instanceName already exists and unread
+    // Check _seenKeys for recent duplicates (survives clearAll)
+    const lastSeen = state._seenKeys.get(key);
+    if (lastSeen && now - lastSeen < DEDUP_WINDOW_MS) {
+      return false;
+    }
+
+    // Also check existing notifications in array
     const isDuplicate = state.notifications.some(
       (existing) =>
-        !existing.read &&
         existing.title === n.title &&
-        existing.instanceName === n.instanceName
+        existing.instanceName === n.instanceName &&
+        now - existing.timestamp.getTime() < DEDUP_WINDOW_MS
     );
     if (isDuplicate) return false;
 
@@ -55,6 +73,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       read: false,
     };
 
+    // Record in _seenKeys
+    const newSeenKeys = new Map(state._seenKeys);
+    newSeenKeys.set(key, now);
+    // Prune old entries (> DEDUP_WINDOW_MS)
+    for (const [k, ts] of newSeenKeys) {
+      if (now - ts > DEDUP_WINDOW_MS) newSeenKeys.delete(k);
+    }
+
     set((s) => {
       const updated = [notification, ...s.notifications].slice(
         0,
@@ -63,6 +89,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return {
         notifications: updated,
         unreadCount: updated.filter((x) => !x.read).length,
+        _seenKeys: newSeenKeys,
       };
     });
     return true;
@@ -82,5 +109,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({
       notifications: [],
       unreadCount: 0,
+      // _seenKeys preserved intentionally — prevents re-adding cleared notifications
     }),
 }));

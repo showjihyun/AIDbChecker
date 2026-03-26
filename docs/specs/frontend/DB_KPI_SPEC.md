@@ -337,7 +337,7 @@ TopNav 알림 아이콘(🔔) 클릭 시 드롭다운 패널 표시:
 
 - 미읽음 알림 수: 🔔 아이콘에 빨간 배지로 표시
 - 최대 50개 알림 (FIFO)
-- 동일 title+instanceName 중복 방지
+- 동일 title+instanceName 중복 방지 (5분 윈도우 기반 — §6.6 참조)
 - action 필드가 있으면 monospace 코드 블록 + 복사 버튼 표시
 
 ### 6.5 Notification Store (Zustand)
@@ -355,6 +355,25 @@ interface Notification {
 }
 ```
 
+### 6.6 Deduplication Strategy (Time-Window Based)
+
+KPI 폴링(5초)마다 동일 advisory가 반복 발생하므로, 알림 중복 방지에 **시간 윈도우 기반 전략**을 사용합니다.
+
+**Dedup Key**: `title + instanceName`
+**Window**: 5분 (300초)
+
+| 시나리오 | 동작 |
+|----------|------|
+| 동일 key가 5분 이내 재발생 | 차단 (return false) |
+| 동일 key가 5분 경과 후 재발생 | 허용 (advisory 지속 시 재알림) |
+| `markAllRead()` 후 동일 key 재발생 | 5분 이내면 차단 |
+| `clearAll()` 후 동일 key 재발생 | 5분 이내면 차단 (`_seenKeys` 보존) |
+| 다른 instanceName의 동일 title | 허용 (별개 key) |
+
+**구현**: `_seenKeys: Map<string, number>` — key별 마지막 추가 시각을 기록. `clearAll()` 시에도 보존되어 폴링에 의한 즉시 재추가를 방지합니다. 5분 이상 경과한 엔트리는 자동 정리됩니다.
+
+**근거**: KPI 폴링이 5초 간격이므로, `markAllRead` 또는 `clearAll` 직후 5초 뒤에 동일 advisory가 즉시 재등록되는 UX 문제를 해결합니다.
+
 ---
 
 ## 7. 인수 기준
@@ -370,3 +389,4 @@ interface Notification {
 - [ ] AC-9: Toast 알림이 화면 우상단에 표시되고 자동 닫힘 (info 8초, warning 12초)
 - [ ] AC-10: Notification Panel에서 advisory 목록 확인 + SQL action 복사 가능
 - [ ] AC-11: 알림 벨에 미읽음 수 빨간 배지 표시
+- [ ] AC-12: markAllRead/clearAll 후 5분 이내 동일 advisory 재등록 차단 (시간 윈도우 dedup)

@@ -8,6 +8,7 @@ function resetStore() {
     notifications: [],
     unreadCount: 0,
     panelOpen: false,
+    _seenKeys: new Map(),
   });
 }
 
@@ -81,7 +82,7 @@ describe('notificationStore', () => {
     expect(useNotificationStore.getState().notifications).toHaveLength(2);
   });
 
-  it('allows duplicate title after original is marked read', () => {
+  it('suppresses duplicate within 5-min window even after markAllRead', () => {
     const store = useNotificationStore.getState();
 
     store.addNotification({
@@ -94,7 +95,7 @@ describe('notificationStore', () => {
     // Mark all read
     useNotificationStore.getState().markAllRead();
 
-    // Now same title+instance should be accepted
+    // Same title+instance within 5-min window should be suppressed
     const added = useNotificationStore.getState().addNotification({
       level: 'info',
       title: 'Baseline Updated',
@@ -102,8 +103,8 @@ describe('notificationStore', () => {
       instanceName: 'pg-prod-01',
     });
 
-    expect(added).toBe(true);
-    expect(useNotificationStore.getState().notifications).toHaveLength(2);
+    expect(added).toBe(false);
+    expect(useNotificationStore.getState().notifications).toHaveLength(1);
   });
 
   // --- FIFO max 50 ---
