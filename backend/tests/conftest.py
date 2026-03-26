@@ -148,6 +148,80 @@ async def client(async_session: AsyncSession) -> AsyncGenerator[AsyncClient, Non
     fastapi_app.dependency_overrides.clear()
 
 
+# ---------------------------------------------------------------------------
+# Spec-Driven Test Infrastructure (TEST-STRATEGY-001)
+# ---------------------------------------------------------------------------
+
+def spec_ref(spec_id: str, ac: str):
+    """Attach Spec reference marker to a test for AC tracking.
+
+    Usage:
+        @spec_ref("FS-AI-010", "AC-1")
+        async def test_mtl_predict_returns_4_heads():
+            ...
+    """
+    return pytest.mark.spec(spec_id=spec_id, ac=ac)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "spec(spec_id, ac): Spec reference marker")
+    config.addinivalue_line("markers", "warn_no_spec: Test has no Spec reference")
+
+
+# Global mapping: nodeid -> [(spec_id, ac)] built during collection.
+_spec_markers_by_nodeid: dict[str, list[tuple[str, str]]] = {}
+
+
+def pytest_collection_modifyitems(config, items):
+    """Collect spec markers and tag tests without Spec references."""
+    _spec_markers_by_nodeid.clear()
+    for item in items:
+        markers = list(item.iter_markers("spec"))
+        if markers:
+            _spec_markers_by_nodeid[item.nodeid] = [
+                (m.kwargs["spec_id"], m.kwargs["ac"]) for m in markers
+            ]
+        else:
+            item.add_marker(pytest.mark.warn_no_spec)
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Output Spec AC coverage summary after test run."""
+    spec_results: dict[str, list[str]] = {}
+
+    for status_key, label in [("passed", "PASS"), ("failed", "FAIL"), ("skipped", "SKIP")]:
+        for report in terminalreporter.stats.get(status_key, []):
+            # Only count the "call" phase (not setup/teardown)
+            if getattr(report, "when", None) != "call" and label != "SKIP":
+                continue
+            nodeid = report.nodeid
+            for spec_id, ac in _spec_markers_by_nodeid.get(nodeid, []):
+                key = f"{spec_id} {ac}"
+                spec_results.setdefault(key, []).append(label)
+
+    if spec_results:
+        terminalreporter.write_sep("=", "SPEC ACCEPTANCE CRITERIA SUMMARY")
+        for spec_ac, results in sorted(spec_results.items()):
+            fail_count = sum(1 for r in results if r == "FAIL")
+            pass_count = sum(1 for r in results if r == "PASS")
+            if fail_count > 0:
+                status = "FAIL"
+            elif pass_count > 0:
+                status = "PASS"
+            else:
+                status = "SKIP"
+            terminalreporter.write_line(
+                f"  {status} {spec_ac} ({len(results)} tests)"
+            )
+
+        total_acs = len(spec_results)
+        passing_acs = sum(
+            1 for r in spec_results.values()
+            if all(x == "PASS" for x in r)
+        )
+        terminalreporter.write_line(f"\n  ACs passing: {passing_acs}/{total_acs}")
+
+
 @pytest_asyncio.fixture
 async def sample_instance(async_session: AsyncSession) -> DBInstance:
     """Create and return a sample DBInstance for testing."""

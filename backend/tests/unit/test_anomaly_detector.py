@@ -11,11 +11,13 @@ from uuid import uuid4
 import pytest
 
 from app.analyzers.anomaly import AnomalyDetector, _is_in_cooldown, _set_cooldown
+from tests.conftest import spec_ref
 
 
 class TestAnomalyDetectorCheck:
     """Tests for AnomalyDetector.check with mocked dependencies."""
 
+    @spec_ref("MVP-AI-002", "AC-3")
     @pytest.mark.asyncio
     async def test_check_skips_when_no_baseline(self) -> None:
         """When no baseline exists, detect_anomaly returns (0.0, None) and
@@ -46,6 +48,7 @@ class TestAnomalyDetectorCheck:
 
         assert incidents == []
 
+    @spec_ref("MVP-AI-003", "AC-4")
     @pytest.mark.asyncio
     async def test_cooldown_prevents_duplicate_incidents(self) -> None:
         """When cooldown is active for a metric, no new incident is created

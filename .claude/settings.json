@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_FILE_PATH\"; if echo \"$FILE\" | grep -qE \"docs/specs/.*\\.md$|backend/app/(api|services|agents|adapters|models|schemas)/.*\\.py$\"; then echo \"[SPEC-TEST-SYNC] Spec 또는 코드 변경 감지: $FILE — /gen-test로 테스트 재생성을 권장합니다. TEST_STRATEGY.md §4 참조.\"; fi'"
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_FILE_PATH\"; if echo \"$FILE\" | grep -qE \"docs/specs/.*\\.md$\"; then echo \"[HARNESS] Spec 변경 감지: $FILE\"; cd backend && PYTHONPATH=. uv run python -m scripts.gen_spec_tests 2>/dev/null | tail -3; echo \"[HARNESS] 누락된 AC 테스트 스텁이 자동 생성되었습니다.\"; elif echo \"$FILE\" | grep -qE \"backend/app/(api|services|agents|adapters|models|schemas)/.*\\.py$\"; then echo \"[HARNESS] 코드 변경 감지: $FILE — 관련 Spec AC 테스트를 확인하세요.\"; fi'"
           }
         ]
       }

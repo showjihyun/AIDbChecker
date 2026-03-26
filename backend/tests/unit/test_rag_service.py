@@ -12,17 +12,20 @@ import pytest
 
 from app.schemas.rag import RAGSearchResult
 from app.services.rag import format_for_prompt, search_similar
+from tests.conftest import spec_ref
 
 
 class TestFormatForPrompt:
     """Tests for format_for_prompt — pure function, no mocks needed."""
 
+    @spec_ref("FS-AI-RAG-001", "AC-5")
     def test_format_for_prompt_empty(self) -> None:
         """Empty results list returns the 'no similar' sentinel string."""
         # Spec: FS-AI-RAG-001 Section 3.3
         result = format_for_prompt([])
         assert result == "No similar past incidents found."
 
+    @spec_ref("FS-AI-RAG-001", "AC-5")
     def test_format_for_prompt_with_results(self) -> None:
         """Non-empty results are formatted with similarity, summary, and optional fields."""
         # Spec: FS-AI-RAG-001 Section 3.3
@@ -61,6 +64,7 @@ class TestFormatForPrompt:
         assert "Root Cause:" not in output.split("Similar Incident #2")[1] or \
                output.count("Root Cause:") == 1
 
+    @spec_ref("FS-AI-RAG-001", "AC-5")
     def test_format_for_prompt_single_result_no_optional_fields(self) -> None:
         """Single result with no root_cause/resolution still formats correctly."""
         results = [
@@ -86,6 +90,7 @@ class TestFormatForPrompt:
 class TestSearchSimilarFallback:
     """Tests for search_similar with mocked embedding and DB."""
 
+    @spec_ref("FS-AI-RAG-001", "AC-2")
     @pytest.mark.asyncio
     async def test_search_similar_no_pgvector(self) -> None:
         """When pgvector query fails (e.g., extension not installed),

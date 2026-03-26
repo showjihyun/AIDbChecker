@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import _create_access_token, pwd_context
 from app.models.user import User
+from tests.conftest import spec_ref
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +92,7 @@ async def viewer_user(async_session: AsyncSession) -> User:
 class TestListUsers:
     """GET /api/v1/users"""
 
+    @spec_ref("MVP-ADMIN-002", "AC-6")
     async def test_list_users_returns_items_and_total(
         self, client: AsyncClient, admin_user: User
     ) -> None:
@@ -135,6 +137,7 @@ class TestListUsers:
 class TestCreateUser:
     """POST /api/v1/users"""
 
+    @spec_ref("MVP-ADMIN-002", "AC-6")
     async def test_create_user_success(
         self, client: AsyncClient, admin_user: User
     ) -> None:
@@ -382,6 +385,7 @@ class TestDeleteUser:
 class TestRBAC:
     """All user management endpoints require super_admin role."""
 
+    @spec_ref("MVP-ADMIN-002", "AC-6")
     async def test_list_users_as_viewer_returns_403(
         self, client: AsyncClient, viewer_user: User
     ) -> None:
@@ -438,6 +442,7 @@ class TestRBAC:
         )
         assert resp.status_code == 403
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     async def test_unauthenticated_request_returns_401(
         self, client: AsyncClient
     ) -> None:
