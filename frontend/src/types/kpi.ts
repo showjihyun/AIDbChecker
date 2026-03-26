@@ -35,6 +35,13 @@ export interface KPIStorage {
   replication_lag_sec: KPIValue;
 }
 
+export interface KPIAdvisory {
+  level: 'info' | 'warning' | 'error';
+  title: string;
+  message: string;
+  action?: string | null;
+}
+
 export interface KPIResponse {
   instance_id: string;
   timestamp: string;
@@ -43,4 +50,5 @@ export interface KPIResponse {
   connection: KPIConnection;
   lock: KPILock;
   storage: KPIStorage;
+  advisories: KPIAdvisory[];
 }

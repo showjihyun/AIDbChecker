@@ -47,7 +47,11 @@ export function DashboardPage() {
     to: new Date().toISOString(),
   }));
 
-  const { data: kpiData } = useInstanceKPI(selectedInstanceId ?? undefined);
+  const selectedInstance = instances?.find((i) => i.id === selectedInstanceId);
+  const { data: kpiData } = useInstanceKPI(
+    selectedInstanceId ?? undefined,
+    selectedInstance?.name
+  );
 
   const { data: metricsData, isLoading: metricsLoading } = useMetrics(
     selectedInstanceId ?? undefined,

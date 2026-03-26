@@ -66,6 +66,19 @@ class StorageKPI(BaseModel):
     replication_lag_sec: KPIValue = Field(description="KPI-12: Replication lag (seconds)")
 
 
+class KPIAdvisory(BaseModel):
+    """Advisory message attached to KPI response.
+
+    Indicates missing extensions, misconfigurations, or
+    informational notes about the monitored instance.
+    """
+
+    level: Literal["info", "warning", "error"]
+    title: str
+    message: str
+    action: str | None = None  # e.g., "CREATE EXTENSION pg_stat_statements;"
+
+
 class KPIResponse(BaseModel):
     """Full KPI response — 5 categories, 12 indicators.
 
@@ -79,5 +92,6 @@ class KPIResponse(BaseModel):
     connection: ConnectionKPI
     lock: LockKPI
     storage: StorageKPI
+    advisories: list[KPIAdvisory] = []
 
     model_config = {"from_attributes": True}

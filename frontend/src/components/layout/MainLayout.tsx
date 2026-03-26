@@ -4,8 +4,11 @@ import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { cn } from '@/lib/cn';
 import { useMetricStore } from '@/stores/metricStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/common/Badge';
+import { NotificationPanel } from '@/components/common/NotificationPanel';
+import { ToastContainer } from '@/components/common/Toast';
 import { NL2SQLChat } from '@/components/nl2sql/NL2SQLChat';
 
 interface NavItem {
@@ -30,6 +33,8 @@ function TopNav() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const togglePanel = useNotificationStore((s) => s.togglePanel);
 
   // Close menu on outside click
   useEffect(() => {
@@ -74,14 +79,30 @@ function TopNav() {
           {wsConnected ? 'Live' : 'Disconnected'}
         </Badge>
 
-        <button
-          className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 ease-out"
-          aria-label="Notifications"
-        >
-          <span className="material-symbols-outlined text-xl">
-            notifications
-          </span>
-        </button>
+        <div className="relative">
+          <button
+            className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 ease-out relative"
+            aria-label="Notifications"
+            onClick={togglePanel}
+          >
+            <span className="material-symbols-outlined text-xl">
+              notifications
+            </span>
+            {unreadCount > 0 && (
+              <span
+                className={cn(
+                  'absolute -top-1 -right-1 min-w-[16px] h-4 px-1',
+                  'bg-error text-on-error rounded-full',
+                  'text-[10px] font-bold flex items-center justify-center',
+                  'leading-none'
+                )}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationPanel />
+        </div>
 
         {/* Account button with dropdown */}
         <div className="relative" ref={menuRef}>
@@ -222,6 +243,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </main>
       {/* Spec: MVP.md §6 — NL2SQL floating chat widget, always visible when authenticated */}
       <NL2SQLChat />
+      <ToastContainer />
     </div>
   );
 }

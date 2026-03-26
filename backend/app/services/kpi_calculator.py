@@ -24,6 +24,7 @@ from app.adapters.postgresql.remote import PostgreSQLRemoteAdapter
 from app.models.metric import MetricSample
 from app.schemas.kpi import (
     ConnectionKPI,
+    KPIAdvisory,
     KPIResponse,
     KPIValue,
     LockKPI,
@@ -327,6 +328,37 @@ class KPICalculator:
                     # leave as None
                     pass
 
+        # --- Collect advisories ---
+        advisories: list[KPIAdvisory] = []
+
+        # Advisory: pg_stat_statements not installed (avg_response_time is None)
+        if avg_rt_val is None and adapter is not None:
+            advisories.append(
+                KPIAdvisory(
+                    level="warning",
+                    title="pg_stat_statements 미설치",
+                    message=(
+                        "Avg Response Time, Top Slow Queries 등 "
+                        "쿼리 성능 분석에 필요한 확장이 설치되어 있지 않습니다."
+                    ),
+                    action="CREATE EXTENSION IF NOT EXISTS pg_stat_statements;",
+                )
+            )
+
+        # Advisory: Replication not configured
+        if replication_lag_val is None:
+            advisories.append(
+                KPIAdvisory(
+                    level="info",
+                    title="Replication 미구성",
+                    message=(
+                        "이 인스턴스에 Replication이 구성되어 있지 않습니다. "
+                        "단일 인스턴스 모드입니다."
+                    ),
+                    action=None,
+                )
+            )
+
         # --- Assemble response ---
         return KPIResponse(
             instance_id=instance_id,
@@ -365,6 +397,7 @@ class KPICalculator:
                     "replication_lag_sec", replication_lag_val, "sec"
                 ),
             ),
+            advisories=advisories,
         )
 
     @staticmethod
