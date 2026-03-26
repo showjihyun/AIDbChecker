@@ -18,17 +18,77 @@ from tests.conftest import spec_ref
 # ---------------------------------------------------------------------------
 # Imports from production code under test
 # ---------------------------------------------------------------------------
-from app.services.rag import format_for_prompt
+from app.services.rag import format_for_prompt, embed_incident, _build_incident_content
 from app.schemas.rag import RAGSearchResult, RAGStatusResponse
 
 
 # ---------------------------------------------------------------------------
-# AC-1: Embedding auto-generated on incident creation (Integration)
+# AC-1: Embedding auto-generated on incident creation
 # ---------------------------------------------------------------------------
 @spec_ref("FS-AI-RAG-001", "AC-1")
-async def test_fs_ai_rag_001_ac1_5_pgvector():
-    """FS-AI-RAG-001 AC-1: 인시던트 생성 시 5초 이내에 pgvector 임베딩이 자동 생성됨"""
-    pytest.skip("Integration test -- requires live DB + Celery task execution")
+async def test_fs_ai_rag_001_ac1_embed_incident_logic():
+    """FS-AI-RAG-001 AC-1: embed_incident() constructs a RAGDocument with embedding field.
+
+    Verifies the embedding pipeline logic without requiring live pgvector:
+    - _build_incident_content builds correct text
+    - embed_incident calls _compute_embedding and creates RAGDocument
+    - The resulting document has source_type='incident' and a non-empty embedding
+    """
+    from app.models.incident import Incident
+
+    incident_id = uuid4()
+    instance_id = uuid4()
+
+    # Build a mock incident with all fields the content builder expects
+    incident = MagicMock(spec=Incident)
+    incident.id = incident_id
+    incident.instance_id = instance_id
+    incident.severity = "critical"
+    incident.source = "ai_baseline"
+    incident.title = "CPU spike on pg-prod-01"
+    incident.description = "CPU usage exceeded 95% for 5 minutes"
+    incident.metric_type = "cpu_usage"
+    incident.metric_value = 95.2
+    incident.baseline_value = 42.0
+    incident.metadata_ = {"resolution": "Added index on orders.created_at"}
+
+    # Verify _build_incident_content produces correct text
+    content = _build_incident_content(incident)
+    assert "Severity: critical" in content
+    assert "Title: CPU spike on pg-prod-01" in content
+    assert "Description: CPU usage exceeded 95%" in content
+    assert "Metric: cpu_usage" in content
+    assert "Metric Value: 95.2" in content
+    assert "Baseline Value: 42.0" in content
+    assert "Resolution: Added index" in content
+
+    # Mock the embedding computation (returns 384-dim vector)
+    fake_embedding = [0.1] * 384
+
+    # Mock the session to return no existing document (new insert path)
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.add = MagicMock()
+    mock_session.flush = AsyncMock()
+
+    with patch("app.services.rag._compute_embedding", return_value=fake_embedding):
+        doc = await embed_incident(mock_session, incident)
+
+    # Verify the document was constructed correctly
+    assert doc.source_type == "incident"
+    assert doc.source_id == incident_id
+    assert doc.embedding == fake_embedding
+    assert len(doc.embedding) == 384
+    assert "CPU spike" in doc.content
+    assert doc.metadata_["severity"] == "critical"
+    assert doc.metadata_["instance_id"] == str(instance_id)
+    assert doc.metadata_["resolution"] == "Added index on orders.created_at"
+
+    # Verify session.add was called (new document)
+    mock_session.add.assert_called_once_with(doc)
+    mock_session.flush.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -188,12 +248,41 @@ async def test_fs_ai_rag_001_ac6_resolution():
 
 
 # ---------------------------------------------------------------------------
-# AC-7: HNSW index used (Integration)
+# AC-7: HNSW index / vector column verification
 # ---------------------------------------------------------------------------
 @spec_ref("FS-AI-RAG-001", "AC-7")
-async def test_fs_ai_rag_001_ac7_pgvector_hnsw_explain():
-    """FS-AI-RAG-001 AC-7: pgvector HNSW 인덱스 사용이 EXPLAIN에서 확인됨"""
-    pytest.skip("Integration test -- requires live PostgreSQL with pgvector")
+async def test_fs_ai_rag_001_ac7_vector_column_defined():
+    """FS-AI-RAG-001 AC-7: RAGDocument ORM model defines Vector(384) column type.
+
+    Verifies that the pgvector HNSW index requirement is structurally supported
+    by confirming the ORM model has the correct vector column type. The actual
+    HNSW index usage (EXPLAIN) requires a live PostgreSQL with pgvector.
+    """
+    from app.models.rag_document import RAGDocument
+    from pgvector.sqlalchemy import Vector
+
+    # Verify the embedding column exists and uses pgvector Vector type
+    embedding_col = RAGDocument.__table__.c.embedding
+    assert embedding_col is not None, "RAGDocument must have an 'embedding' column"
+
+    # Verify it is a Vector type with 384 dimensions
+    col_type = embedding_col.type
+    assert isinstance(col_type, Vector), (
+        f"embedding column should be pgvector Vector type, got {type(col_type)}"
+    )
+    assert col_type.dim == 384, (
+        f"embedding vector dimensions should be 384, got {col_type.dim}"
+    )
+
+    # Verify the table has the source index (structural prerequisite for HNSW)
+    index_names = [idx.name for idx in RAGDocument.__table__.indexes]
+    assert "idx_rag_documents_source" in index_names
+    assert "idx_rag_documents_created" in index_names
+
+    # Note: The HNSW index itself is created in Alembic migration (not via ORM),
+    # as it requires specific WITH parameters (m=16, ef_construction=64).
+    # The EXPLAIN verification (live pgvector) is covered by integration tests
+    # in test_db_tables.py::test_hnsw_index_exists.
 
 
 # ---------------------------------------------------------------------------
