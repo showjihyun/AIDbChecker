@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.3.0] - 2026-03-26
+
+### Added
+- AC coverage 52%→69% (60/87 ACs passing, 16 stubs converted)
+- DEMO_GUIDE.md — 5-minute demo scenario with 6 scenes
+- Docker full E2E verified (clean restart, login, register, KPI, ASH)
+
 ## [0.4.2.0] - 2026-03-26
 
 ### Added
