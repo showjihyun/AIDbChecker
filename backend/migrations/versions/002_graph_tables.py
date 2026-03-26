@@ -60,23 +60,22 @@ def upgrade() -> None:
     op.create_index("idx_graph_nodes_type", "graph_nodes", ["node_type"])
     op.create_index("idx_graph_nodes_instance", "graph_nodes", ["instance_id"])
 
-    # Convert embedding column to vector(384) and add HNSW index on PostgreSQL
+    # Convert embedding to vector(384) and metadata to JSONB.
+    # pgvector extension must be created in init.sql or prior migration.
     conn = op.get_bind()
-    conn.execute(sa.text("SAVEPOINT graph_pgvector_check"))
-    try:
-        conn.execute(sa.text(
-            "ALTER TABLE graph_nodes "
-            "ALTER COLUMN embedding TYPE vector(384) USING embedding::vector(384)"
-        ))
-        conn.execute(sa.text(
-            "CREATE INDEX idx_graph_nodes_embedding "
-            "ON graph_nodes USING hnsw (embedding vector_cosine_ops) "
-            "WITH (m = 16, ef_construction = 64)"
-        ))
-        conn.execute(sa.text("RELEASE SAVEPOINT graph_pgvector_check"))
-    except Exception:
-        conn.execute(sa.text("ROLLBACK TO SAVEPOINT graph_pgvector_check"))
-        # pgvector not available; embedding stays as LargeBinary
+    conn.execute(sa.text(
+        "ALTER TABLE graph_nodes "
+        "ALTER COLUMN embedding TYPE vector(384) USING NULL"
+    ))
+    conn.execute(sa.text(
+        "ALTER TABLE graph_nodes "
+        "ALTER COLUMN metadata TYPE jsonb USING metadata::jsonb"
+    ))
+    conn.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_graph_nodes_embedding "
+        "ON graph_nodes USING hnsw (embedding vector_cosine_ops) "
+        "WITH (m = 16, ef_construction = 64)"
+    ))
 
     # ==================================================================
     # 2. graph_edges (FK: graph_nodes CASCADE on both sides)

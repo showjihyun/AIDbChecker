@@ -71,14 +71,12 @@ async def build_graph(
             detail=f"DB instance {body.instance_id} not found.",
         )
 
-    # Build target DB connection pool via asyncpg
+    # Build target DB connection pool via asyncpg (with Fernet decryption)
     import asyncpg
 
-    dsn = (
-        f"postgresql://{instance.connection_config.get('username', 'postgres')}"
-        f":{instance.connection_config.get('password', '')}"
-        f"@{instance.host}:{instance.port}/{instance.database_name}"
-    )
+    from app.utils.dsn import build_target_dsn
+
+    dsn = build_target_dsn(instance)
 
     try:
         pool = await asyncpg.create_pool(

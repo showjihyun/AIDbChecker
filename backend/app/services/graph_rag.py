@@ -18,6 +18,8 @@ import time
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
+import json
+
 import structlog
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,14 +55,16 @@ def _get_embedding_model():
     return _embedding_model
 
 
-def _compute_embedding(text_content: str) -> list[float]:
+def _compute_embedding(text_content: str) -> str:
     """Generate embedding vector for the given text.
 
     Spec: FS-AI-NL2SQL-001 -- 384-dim via all-MiniLM-L6-v2.
+    Returns pgvector-compatible string "[0.1,0.2,...]" for use in raw SQL
+    with ::vector cast (avoids asyncpg type registration issues).
     """
     model = _get_embedding_model()
     embedding = model.encode(text_content, normalize_embeddings=True)
-    return embedding.tolist()
+    return "[" + ",".join(str(float(x)) for x in embedding) + "]"
 
 
 # ---------------------------------------------------------------------------
@@ -182,19 +186,26 @@ class SchemaGraphBuilder:
             if comment:
                 desc_text += f" -- {comment}"
 
-            embedding = _compute_embedding(desc_text)
+            embedding_str = _compute_embedding(desc_text)
+            node_id = uuid4()
 
-            node = GraphNode(
-                id=uuid4(),
-                node_type="table",
-                name=full_name,
-                description=comment or None,
-                metadata_extra={"schema": schema, "table": tname},
-                embedding=embedding,
-                instance_id=instance_id,
+            # Use raw SQL with ::vector cast to avoid asyncpg type registration
+            await session.execute(
+                text("""
+                    INSERT INTO graph_nodes (id, node_type, name, description, metadata, embedding, instance_id)
+                    VALUES (:id, :node_type, :name, :description, CAST(:metadata AS jsonb), CAST(:embedding AS vector), :instance_id)
+                """),
+                {
+                    "id": node_id,
+                    "node_type": "table",
+                    "name": full_name,
+                    "description": comment or None,
+                    "metadata": json.dumps({"schema": schema, "table": tname}),
+                    "embedding": embedding_str,
+                    "instance_id": instance_id,
+                },
             )
-            session.add(node)
-            table_nodes[f"{schema}.{tname}"] = node.id
+            table_nodes[f"{schema}.{tname}"] = node_id
             node_count += 1
 
         await session.flush()
@@ -229,25 +240,31 @@ class SchemaGraphBuilder:
             if comment:
                 desc_text += f" -- {comment}"
 
-            embedding = _compute_embedding(desc_text)
+            embedding_str = _compute_embedding(desc_text)
+            col_id = uuid4()
 
-            col_node = GraphNode(
-                id=uuid4(),
-                node_type="column",
-                name=full_col,
-                description=comment or None,
-                metadata_extra={
-                    "schema": schema,
-                    "table": tname,
-                    "column": cname,
-                    "data_type": dtype,
-                    "is_nullable": row["is_nullable"],
+            await session.execute(
+                text("""
+                    INSERT INTO graph_nodes (id, node_type, name, description, metadata, embedding, instance_id)
+                    VALUES (:id, :node_type, :name, :description, CAST(:metadata AS jsonb), CAST(:embedding AS vector), :instance_id)
+                """),
+                {
+                    "id": col_id,
+                    "node_type": "column",
+                    "name": full_col,
+                    "description": comment or None,
+                    "metadata": json.dumps({
+                        "schema": schema,
+                        "table": tname,
+                        "column": cname,
+                        "data_type": dtype,
+                        "is_nullable": row["is_nullable"],
+                    }),
+                    "embedding": embedding_str,
+                    "instance_id": instance_id,
                 },
-                embedding=embedding,
-                instance_id=instance_id,
             )
-            session.add(col_node)
-            column_nodes[f"{schema}.{tname}.{cname}"] = col_node.id
+            column_nodes[f"{schema}.{tname}.{cname}"] = col_id
             node_count += 1
 
             # HAS_COLUMN edge: table -> column
@@ -256,7 +273,7 @@ class SchemaGraphBuilder:
                 edge = GraphEdge(
                     id=uuid4(),
                     source_id=table_nodes[table_key],
-                    target_id=col_node.id,
+                    target_id=col_id,
                     edge_type="has_column",
                     metadata_extra={"data_type": dtype},
                 )
@@ -350,19 +367,30 @@ class SchemaGraphBuilder:
             Tuple of (node_id, edges_created).
         """
         desc_text = f"Metric: {name} -- {description}"
-        embedding = _compute_embedding(desc_text)
+        embedding_str = _compute_embedding(desc_text)
+        node_id = uuid4()
 
-        metric_node = GraphNode(
-            id=uuid4(),
-            node_type="metric",
-            name=name,
-            description=description,
-            metadata_extra={"source_columns": source_columns},
-            embedding=embedding,
-            instance_id=instance_id,
+        await session.execute(
+            text("""
+                INSERT INTO graph_nodes (id, node_type, name, description, metadata, embedding, instance_id)
+                VALUES (:id, :node_type, :name, :description, CAST(:metadata AS jsonb), CAST(:embedding AS vector), :instance_id)
+            """),
+            {
+                "id": node_id,
+                "node_type": "metric",
+                "name": name,
+                "description": description,
+                "metadata": json.dumps({"source_columns": source_columns}),
+                "embedding": embedding_str,
+                "instance_id": instance_id,
+            },
         )
-        session.add(metric_node)
         await session.flush()
+
+        # Create a lightweight ORM reference for edge creation
+        class _NodeRef:
+            id = node_id
+        metric_node = _NodeRef()
 
         edges_created = 0
         for col_ref in source_columns:
@@ -422,18 +450,24 @@ class SchemaGraphBuilder:
             Tuple of (node_id, edges_created).
         """
         desc_text = f"Concept: {name} -- {description}"
-        embedding = _compute_embedding(desc_text)
+        embedding_str = _compute_embedding(desc_text)
+        node_id = uuid4()
 
-        concept_node = GraphNode(
-            id=uuid4(),
-            node_type="concept",
-            name=name,
-            description=description,
-            metadata_extra={"related_metrics": related_metrics},
-            embedding=embedding,
-            instance_id=instance_id,
+        await session.execute(
+            text("""
+                INSERT INTO graph_nodes (id, node_type, name, description, metadata, embedding, instance_id)
+                VALUES (:id, :node_type, :name, :description, CAST(:metadata AS jsonb), CAST(:embedding AS vector), :instance_id)
+            """),
+            {
+                "id": node_id,
+                "node_type": "concept",
+                "name": name,
+                "description": description,
+                "metadata": json.dumps({"related_metrics": related_metrics}),
+                "embedding": embedding_str,
+                "instance_id": instance_id,
+            },
         )
-        session.add(concept_node)
         await session.flush()
 
         edges_created = 0
@@ -448,7 +482,7 @@ class SchemaGraphBuilder:
             if metric_node:
                 edge = GraphEdge(
                     id=uuid4(),
-                    source_id=concept_node.id,
+                    source_id=node_id,
                     target_id=metric_node.id,
                     edge_type="concept_map",
                     metadata_extra={},
@@ -468,7 +502,7 @@ class SchemaGraphBuilder:
             name=name,
             edges=edges_created,
         )
-        return concept_node.id, edges_created
+        return node_id, edges_created
 
 
 # ---------------------------------------------------------------------------
@@ -513,17 +547,18 @@ class GraphRAGRetriever:
             logger.error("graph_rag.retrieve_embedding_failed", error=str(exc))
             return SubgraphContext()
 
-        embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+        # Convert numpy array to pgvector string format for raw SQL
+        embedding_str = "[" + ",".join(str(float(v)) for v in query_embedding) + "]"
 
         # Step 2: pgvector cosine similarity search for top_k nodes
         sql = text("""
             SELECT
                 id, node_type, name, metadata AS metadata_extra,
-                1 - (embedding <=> :query_vec::vector) AS similarity
+                1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
             FROM graph_nodes
             WHERE instance_id = :instance_id
               AND embedding IS NOT NULL
-            ORDER BY embedding <=> :query_vec::vector
+            ORDER BY embedding <=> CAST(:query_vec AS vector)
             LIMIT :top_k
         """)
 
