@@ -547,8 +547,8 @@ class GraphRAGRetriever:
             logger.error("graph_rag.retrieve_embedding_failed", error=str(exc))
             return SubgraphContext()
 
-        # Convert numpy array to pgvector string format for raw SQL
-        embedding_str = "[" + ",".join(str(float(v)) for v in query_embedding) + "]"
+        # _compute_embedding already returns pgvector string "[0.1,0.2,...]"
+        embedding_str = query_embedding
 
         # Step 2: pgvector cosine similarity search for top_k nodes
         sql = text("""
