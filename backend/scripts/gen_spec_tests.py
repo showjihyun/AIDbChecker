@@ -344,6 +344,9 @@ def main() -> None:
         spec_id, acs = parse_spec_file(spec_file)
         if not spec_id or not acs:
             continue
+        # Skip template spec IDs (e.g., "FS-" from SPEC_TEMPLATE.md)
+        if spec_id.endswith("-") or len(spec_id) < 4:
+            continue
 
         total_specs += 1
         total_acs += len(acs)

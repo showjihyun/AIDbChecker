@@ -46,15 +46,20 @@ _BLOCKED_TABLES = re.compile(
 )
 
 # Spec: FR-AI-003 — PostgreSQL schema context for the LLM prompt
-_NL2SQL_SYSTEM_PROMPT = """You are a PostgreSQL SQL expert for NeuralDB monitoring system.
+_NL2SQL_SYSTEM_PROMPT = """You are a PostgreSQL 16 SQL expert for NeuralDB, an AI-powered database monitoring system.
 Convert the user's natural language question into a single read-only SQL query.
 
-RULES:
-- Generate ONLY SELECT statements. NEVER generate INSERT, UPDATE, DELETE, DROP, ALTER, or any DDL/DML.
-- Use PostgreSQL 16 syntax.
-- Always include reasonable LIMIT (default 100) to prevent excessive results.
-- Use explicit column names instead of SELECT *.
-- Return ONLY the SQL query, no explanations or markdown.
+CRITICAL RULES:
+1. Generate ONLY a single SELECT (or WITH...SELECT) statement.
+2. NEVER use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, or any DDL/DML.
+3. Always add LIMIT (default 100) unless the user asks for a specific count or aggregate.
+4. Prefer explicit column names over SELECT *.
+5. Return ONLY the raw SQL query — no markdown fences, no explanations, no comments.
+6. For JSONB columns (e.g., metrics), use ->> operator: metrics->>'cpu_usage'
+7. For time-based queries, use NOW() - INTERVAL '...' for relative time ranges.
+8. metric_samples.metrics is JSONB. To extract numeric values, ALWAYS cast: (metrics->>'key')::numeric
+   Available keys: numbackends, xact_commit, xact_rollback, blks_hit, blks_read, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, deadlocks, db_size.
+   Example: SELECT (metrics->>'numbackends')::int AS connections FROM metric_samples LIMIT 5
 
 DATABASE SCHEMA (NeuralDB system tables):
 
@@ -266,6 +271,8 @@ async def execute_readonly_sql(
             sql=sql[:200],
             elapsed_ms=elapsed_ms,
         )
+        # Rollback the failed transaction so session can be reused (e.g., history save)
+        await session.rollback()
         raise RuntimeError(
             f"SQL execution failed: {exc}. Verify the query is valid."
         ) from exc
@@ -285,17 +292,23 @@ def get_model_name() -> str:
 # ---------------------------------------------------------------------------
 
 # Spec: FS-AI-NL2SQL-001 — GraphRAG system prompt template (subgraph injected)
-_GRAPHRAG_SYSTEM_PROMPT_TEMPLATE = """You are a PostgreSQL SQL expert for NeuralDB monitoring system.
+_GRAPHRAG_SYSTEM_PROMPT_TEMPLATE = """You are a PostgreSQL 16 SQL expert for NeuralDB, an AI-powered database monitoring system.
 Convert the user's natural language question into a single read-only SQL query.
 
-RULES:
-- Generate ONLY SELECT statements. NEVER generate INSERT, UPDATE, DELETE, DROP, ALTER, or any DDL/DML.
-- Use PostgreSQL 16 syntax.
-- Always include reasonable LIMIT (default 100) to prevent excessive results.
-- Use explicit column names instead of SELECT *.
-- Return ONLY the SQL query, no explanations or markdown.
-- Use the join paths provided to construct correct JOINs.
+CRITICAL RULES:
+1. Generate ONLY a single SELECT (or WITH...SELECT) statement.
+2. NEVER use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, or any DDL/DML.
+3. Always add LIMIT (default 100) unless the user asks for a specific count or aggregate.
+4. Prefer explicit column names over SELECT *.
+5. Return ONLY the raw SQL query — no markdown fences, no explanations, no comments.
+6. Use the join paths below to construct correct JOINs between tables.
+7. For JSONB columns (e.g., metrics), use ->> operator to extract values: metrics->>'cpu_usage'
+8. For time-based queries, use NOW() - INTERVAL '...' for relative time ranges.
+9. metric_samples.metrics is JSONB. To extract numeric values, ALWAYS cast: (metrics->>'key')::numeric
+   Available keys: numbackends, xact_commit, xact_rollback, blks_hit, blks_read, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, deadlocks, db_size.
+   Example: SELECT (metrics->>'numbackends')::int AS connections FROM metric_samples LIMIT 5
 
+RELEVANT SCHEMA (extracted via GraphRAG):
 {schema_context}
 """
 
