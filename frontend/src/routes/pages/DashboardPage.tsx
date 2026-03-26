@@ -5,7 +5,7 @@ import { subHours } from 'date-fns';
 import { useMemo } from 'react';
 import { useInstances } from '@/api/hooks/useInstances';
 import { useMetrics, useAllInstancesLatestMetrics } from '@/api/hooks/useMetrics';
-import { useInstanceKPI } from '@/api/hooks/useKPI';
+import { useInstanceKPI, useAllInstancesKPI } from '@/api/hooks/useKPI';
 import {
   InstanceCard,
   InstanceCardSkeleton,
@@ -47,8 +47,12 @@ export function DashboardPage() {
     to: new Date().toISOString(),
   }));
 
+  // KPI for ALL instances (accurate values on every card)
+  const { data: allKpiData } = useAllInstancesKPI(instanceIds);
+
+  // KPI for selected instance (faster polling + advisory notifications)
   const selectedInstance = instances?.find((i) => i.id === selectedInstanceId);
-  const { data: kpiData } = useInstanceKPI(
+  const { data: selectedKpiData } = useInstanceKPI(
     selectedInstanceId ?? undefined,
     selectedInstance?.name
   );
@@ -123,7 +127,11 @@ export function DashboardPage() {
                 key={instance.id}
                 instance={instance}
                 latestMetric={latestMetrics[instance.id]}
-                kpiData={selectedInstanceId === instance.id ? kpiData : undefined}
+                kpiData={
+                  selectedInstanceId === instance.id
+                    ? (selectedKpiData ?? allKpiData?.[instance.id])
+                    : allKpiData?.[instance.id]
+                }
                 isSelected={selectedInstanceId === instance.id}
                 onClick={handleInstanceClick}
               />

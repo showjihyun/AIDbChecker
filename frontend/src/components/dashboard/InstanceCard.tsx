@@ -44,17 +44,15 @@ export function InstanceCard({
   const metrics = latestMetric?.metrics;
   const hasData = kpiData || metrics;
 
-  // Derive 5 key KPIs: prefer KPI endpoint, fall back to raw metrics
-  const tpsValue = kpiData?.throughput.tps.value ?? metrics?.xact_commit ?? metrics?.tps;
+  // Derive 5 key KPIs from KPI API only — never show raw cumulative counters
+  // Raw metrics (xact_commit, blks_hit) are cumulative and misleading as display values
+  const tpsValue = kpiData?.throughput.tps.value ?? undefined;
   const tpsStatus = kpiData?.throughput.tps.status;
 
-  const hitRatioValue = kpiData
-    ? (kpiData.resource.buffer_hit_ratio.value ?? undefined)
-    : metrics?.blks_hit != null && metrics?.blks_read != null
-      ? Math.round((metrics.blks_hit / (metrics.blks_hit + metrics.blks_read + 0.001)) * 100)
-      : undefined;
+  const hitRatioValue = kpiData?.resource.buffer_hit_ratio.value ?? undefined;
   const hitStatus = kpiData?.resource.buffer_hit_ratio.status;
 
+  // Conn: KPI active_sessions preferred, raw numbackends as fallback (it's a gauge, safe to show)
   const connValue = kpiData
     ? (kpiData.connection.active_sessions.value ?? undefined)
     : (metrics?.numbackends ?? metrics?.active_connections);

@@ -257,12 +257,30 @@ export default class SpecReporter implements Reporter {
 | | AC-10 | - | `NotificationPanel.test.tsx::copy_action` | Component |
 | | AC-11 | - | `MainLayout.test.tsx::unread_badge` | Component |
 
-### 3.3 Phase 2 Specs → 테스트 (사전 정의)
+### 3.2.2 NL2SQL Spec → 테스트
+
+| Spec | AC | Backend Test | Frontend Test | Layer |
+|------|-----|-------------|---------------|-------|
+| **FS-AI-NL2SQL-001** | | | | |
+| | AC-1 | `test_nl2sql_spec.py::test_query_returns_sql_and_results` | - | API |
+| | AC-2 | `test_nl2sql_spec.py::test_write_keyword_rejected` | - | Unit |
+| | AC-3 | `test_nl2sql_spec.py::test_dangerous_function_rejected` | - | Unit |
+| | AC-4 | `test_nl2sql_spec.py::test_blocked_table_rejected` | - | Unit |
+| | AC-5 | `test_nl2sql_spec.py::test_statement_timeout` | - | Unit |
+| | AC-6 | `test_nl2sql_spec.py::test_result_row_limit` | - | Unit |
+| | AC-7 | `test_nl2sql_spec.py::test_history_saved` | - | API |
+| | AC-8 | `test_nl2sql_spec.py::test_uses_llm_provider_manager` | - | Unit |
+| | AC-9 | - | `NL2SQLChat.test.ts::instance_id_required` | Component |
+| | AC-10 | - | `NL2SQLChat.test.ts::model_and_time_displayed` | Component |
+
+### 3.3 Phase 2 Specs → 테스트
 
 | Spec | 테스트 파일 | 상태 |
 |------|-----------|------|
-| FS-AI-012 (DB Copilot) | `test_copilot.py`, `test_copilot_api.py` | Phase 2 대기 |
-| FS-AI-013 (LLM Observability) | `test_llm_obs.py`, `test_llm_obs_api.py`, `AIHealth.test.tsx` | Phase 2 대기 |
+| FS-AI-012 (DB Copilot) | `test_ai_012_spec.py` | ✅ 구현 (5/6 AC) |
+| FS-AI-013 (LLM Observability) | `test_ai_013_spec.py` | ✅ 구현 (7/7 AC) |
+| FS-AI-LLM-001 (LLM Provider) | `test_ai_llm_001_spec.py` | ✅ 구현 (8/8 AC) |
+| FS-AI-TUNE-001 (Tuning Agent) | `test_tuning_agent_spec.py` | ✅ 구현 (8/8 AC) |
 
 ---
 

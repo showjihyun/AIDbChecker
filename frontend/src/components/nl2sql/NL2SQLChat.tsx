@@ -2,15 +2,28 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/cn';
 import { apiClient } from '@/api/client';
+import { useMetricStore } from '@/stores/metricStore';
 
+/** Matches backend NL2SQLQueryResponse schema exactly */
+interface NL2SQLApiResponse {
+  sql: string;
+  result_rows: unknown[][];
+  result_columns: string[];
+  execution_time_ms: number;
+  ai_model: string;
+  warning: string | null;
+}
+
+/** Internal display format */
 interface NL2SQLResult {
-  natural_query: string;
   generated_sql: string;
   execution_result: {
     columns: string[];
     rows: unknown[][];
   } | null;
-  error: string | null;
+  execution_time_ms: number;
+  ai_model: string;
+  warning: string | null;
 }
 
 interface ChatEntry {
@@ -29,6 +42,7 @@ export function NL2SQLChat() {
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedInstanceId = useMetricStore((s) => s.selectedInstanceId);
 
   // Auto-scroll to bottom on new entries
   useEffect(() => {
@@ -61,24 +75,42 @@ export function NL2SQLChat() {
     setInput('');
 
     try {
-      const result = await apiClient.post<NL2SQLResult>('/nl2sql/query', {
+      if (!selectedInstanceId) {
+        throw { detail: '인스턴스를 먼저 선택하세요. 대시보드에서 인스턴스를 클릭한 후 질의하세요.' };
+      }
+
+      const apiResponse = await apiClient.post<NL2SQLApiResponse>('/nl2sql/query', {
         question: trimmed,
+        instance_id: selectedInstanceId,
       });
+
+      // Transform backend response to display format
+      const result: NL2SQLResult = {
+        generated_sql: apiResponse.sql,
+        execution_result:
+          apiResponse.result_columns.length > 0
+            ? { columns: apiResponse.result_columns, rows: apiResponse.result_rows }
+            : null,
+        execution_time_ms: apiResponse.execution_time_ms,
+        ai_model: apiResponse.ai_model,
+        warning: apiResponse.warning,
+      };
+
       setEntries((prev) =>
         prev.map((e) =>
           e.id === entryId ? { ...e, result, isLoading: false } : e
         )
       );
     } catch (err) {
-      const message =
-        (err as { detail?: string })?.detail ?? 'Failed to process query.';
+      const raw = (err as { detail?: string | object })?.detail;
+      const message = typeof raw === 'string' ? raw : 'Failed to process query.';
       setEntries((prev) =>
         prev.map((e) =>
           e.id === entryId ? { ...e, error: message, isLoading: false } : e
         )
       );
     }
-  }, [input]);
+  }, [input, selectedInstanceId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -181,12 +213,17 @@ export function NL2SQLChat() {
                   <div className="space-y-2">
                     {/* Generated SQL */}
                     <div className="bg-surface-container-high rounded-lg overflow-hidden">
-                      <div className="px-3 py-1.5 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-xs text-primary">
-                          code
-                        </span>
-                        <span className="text-[10px] font-semibold text-on-surface-variant tracking-wider uppercase">
-                          Generated SQL
+                      <div className="px-3 py-1.5 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-xs text-primary">
+                            code
+                          </span>
+                          <span className="text-[10px] font-semibold text-on-surface-variant tracking-wider uppercase">
+                            Generated SQL
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-outline">
+                          {entry.result.ai_model} · {entry.result.execution_time_ms}ms
                         </span>
                       </div>
                       <pre className="px-3 pb-2 text-[11px] text-on-surface font-mono whitespace-pre-wrap break-all leading-relaxed">
@@ -194,15 +231,16 @@ export function NL2SQLChat() {
                       </pre>
                     </div>
 
+                    {/* Warning */}
+                    {entry.result.warning && (
+                      <div className="bg-warning/10 text-warning text-xs rounded-lg px-3 py-2">
+                        {entry.result.warning}
+                      </div>
+                    )}
+
                     {/* Result table */}
                     {entry.result.execution_result && (
                       <ResultTable data={entry.result.execution_result} />
-                    )}
-
-                    {entry.result.error && (
-                      <div className="bg-error/10 text-error text-xs rounded-lg px-3 py-2">
-                        {entry.result.error}
-                      </div>
                     )}
                   </div>
                 )}
@@ -220,7 +258,7 @@ export function NL2SQLChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about your database..."
+              placeholder={selectedInstanceId ? "Ask about your database..." : "인스턴스를 먼저 선택하세요"}
               className={cn(
                 'flex-1 bg-surface-container-high rounded-lg',
                 'px-3 py-2 text-xs text-on-surface',

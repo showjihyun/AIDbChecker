@@ -113,6 +113,25 @@ ANTHROPIC_API_KEY=
 GOOGLE_API_KEY=
 ```
 
+### 4.1 Docker 환경에서 Ollama 접근
+
+> **중요**: Ollama가 호스트(Windows/Mac)에서 실행되고 NeuralDB Backend가 Docker 컨테이너에서
+> 실행되는 경우, 컨테이너 내부의 `localhost`는 컨테이너 자신을 가리킵니다.
+> 호스트의 Ollama에 접근하려면 **`host.docker.internal`** 을 사용해야 합니다.
+
+```yaml
+# infra/docker/docker-compose.yml
+backend:
+  environment:
+    OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+```
+
+| 실행 환경 | OLLAMA_BASE_URL |
+|-----------|----------------|
+| 로컬 개발 (uv run uvicorn) | `http://localhost:11434` (기본값) |
+| Docker Compose | `http://host.docker.internal:11434` |
+| Kubernetes | `http://ollama-service:11434` (서비스 DNS) |
+
 ---
 
 ## 5. 프론트엔드 Settings UI
