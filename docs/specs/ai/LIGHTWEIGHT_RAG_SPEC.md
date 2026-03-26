@@ -7,6 +7,9 @@
 - **상태**: Approved
 - **선행 Spec**: DM-001 (ERD — `rag_documents` 테이블)
 - **사용 Spec**: FS-AI-010 (MTL RCA에 RAG 결과 제공)
+- **구현 파일**:
+  - Backend: `backend/app/services/rag.py`, `backend/app/api/v1/rag.py`
+  - Test: `backend/tests/unit/test_ai_rag_001_spec.py`
 
 ---
 

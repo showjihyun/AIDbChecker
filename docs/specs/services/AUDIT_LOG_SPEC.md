@@ -6,6 +6,9 @@
 - **우선순위**: P0 (MVP)
 - **상태**: Approved
 - **선행 Spec**: DM-001 (audit_logs 테이블), API-001 (인증)
+- **구현 파일**:
+  - Backend: `backend/app/middleware/audit.py`, `backend/app/api/v1/audit.py`
+  - Test: `backend/tests/unit/test_admin_003_spec.py`
 
 ---
 
