@@ -6,6 +6,10 @@
 - **우선순위**: P1 (MVP)
 - **상태**: Approved
 - **선행 Spec**: DM-001 (incidents 테이블), API-001 (인시던트 API)
+- **구현 파일**:
+  - Backend: `backend/app/api/v1/incidents.py`
+  - Frontend: `frontend/src/routes/pages/IncidentsPage.tsx`
+  - Test: `backend/tests/unit/test_dash_004_spec.py`
 
 ---
 

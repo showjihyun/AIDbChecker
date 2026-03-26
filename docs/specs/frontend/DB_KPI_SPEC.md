@@ -7,6 +7,10 @@
 - **상태**: Approved
 - **선행 Spec**: DM-001 (metric_samples), AG-001 (PostgreSQL Adapter)
 - **참조**: `docs/etc/DB 핵심 성능지표.txt`
+- **구현 파일**:
+  - Backend: `backend/app/api/v1/kpi.py`, `backend/app/services/kpi_calculator.py`
+  - Frontend: `frontend/src/components/dashboard/KPIOverviewPanel.tsx`
+  - Test: `backend/tests/unit/test_kpi_001_spec.py`
 
 ---
 

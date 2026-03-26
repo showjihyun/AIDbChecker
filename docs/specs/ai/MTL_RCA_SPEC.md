@@ -7,6 +7,9 @@
 - **상태**: Approved
 - **선행 Spec**: FS-AI-001 (Auto-Baselining), DM-001 (ERD)
 - **사용 Spec**: FS-AI-011 (Confidence Score), FS-AI-RAG-001 (Lightweight RAG)
+- **구현 파일**:
+  - Backend: `backend/app/services/mtl_lite.py`, `backend/app/api/v1/mtl.py`
+  - Test: `backend/tests/unit/test_ai_010_spec.py`
 
 ---
 
