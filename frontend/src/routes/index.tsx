@@ -13,6 +13,7 @@ import { SettingsPage } from '@/routes/pages/SettingsPage';
 import { LLMSettingsPage } from '@/routes/pages/LLMSettingsPage';
 import { IncidentsPage } from '@/routes/pages/IncidentsPage';
 import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
+import { TuningPage } from '@/routes/pages/TuningPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -87,9 +88,15 @@ const llmSettingsRoute = createRoute({
   component: LLMSettingsPage,
 });
 
+const tuningRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/tuning',
+  component: TuningPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, settingsRoute, llmSettingsRoute]),
+  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, tuningRoute, settingsRoute, llmSettingsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
