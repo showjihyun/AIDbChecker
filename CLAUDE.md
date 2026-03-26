@@ -81,7 +81,7 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | 카테고리 | 경로 | Spec 목록 |
 |----------|------|----------|
 | **Agents** | `@docs/specs/agents/` | AGENT_SPEC.md |
-| **AI** | `@docs/specs/ai/` | CONFIDENCE_SCORE_SPEC.md, COPILOT_SPEC.md, DIAGNOSIS_FLOW_USECASE.md, LIGHTWEIGHT_RAG_SPEC.md, LLM_OBSERVABILITY_SPEC.md, MTL_RCA_SPEC.md |
+| **AI** | `@docs/specs/ai/` | CONFIDENCE_SCORE_SPEC.md, COPILOT_SPEC.md, DIAGNOSIS_FLOW_USECASE.md, LIGHTWEIGHT_RAG_SPEC.md, LLM_OBSERVABILITY_SPEC.md, LLM_PROVIDER_SPEC.md, MTL_RCA_SPEC.md, NL2SQL_SPEC.md, DB_TUNING_AGENT_SPEC.md |
 | **API** | `@docs/specs/api/` | API_SPEC.md, ERROR_CODES_SPEC.md, GRAPHQL_SCHEMA.md |
 | **Config** | `@docs/specs/config/` | SETTINGS_SPEC.md |
 | **Data Model** | `@docs/specs/data-model/` | ERD.md, MIGRATION_SPEC.md |
