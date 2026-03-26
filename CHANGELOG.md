@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0.0] - 2026-03-25 — DB KPI Dashboard
+
+### Added
+- **DB KPI Spec** (FS-KPI-001): 5 categories, 12 key performance indicators
+- **KPI Calculator**: delta-based TPS/QPS/IOPS/Deadlocks, live slow queries/active sessions/locks
+- **GET /api/v1/instances/{id}/kpi**: real-time 12-KPI endpoint with status thresholds
+- **KPI Overview Panel**: 5-category dashboard panel with color-coded status
+- **InstanceCard extended**: 5 KPIs (TPS, Hit%, Conn, Locks, Size) up from 3
+- **Adapter extension**: deadlocks in hot metrics + collect_kpi_extras() for live queries
+
+## [0.3.1.0] - 2026-03-25
+
+### Fixed
+- ASH heatmap: SQL literal_column fix + frontend bucket→matrix transform
+- ASH sessions/wait-breakdown: correct query params (from_ts/to_ts)
+- System Health: parse flat API response (was expecting nested components)
+- MetricChart: map raw pg_stat fields + delta/s TPS calculation
+- InstanceCard: unified metric labels (Connections, TPS/s, Hit Ratio)
+- WebSocket: connect to current origin when VITE_WS_URL is empty
+- REST fallback: poll latest metrics when WebSocket disconnected
+
 ## [0.3.0.0] - 2026-03-25 — Demo Ready
 
 ### Added

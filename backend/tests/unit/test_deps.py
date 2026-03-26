@@ -19,6 +19,7 @@ from app.api.deps import get_current_user, require_role
 from app.api.v1.auth import _create_access_token, _create_token, pwd_context
 from app.config import settings
 from app.models.user import User
+from tests.conftest import spec_ref
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +57,7 @@ async def _insert_user(
 class TestGetCurrentUser:
     """Tests for the get_current_user dependency."""
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     async def test_valid_token_returns_user(
         self, async_session: AsyncSession
     ) -> None:
@@ -69,6 +71,7 @@ class TestGetCurrentUser:
         assert result.email == user.email
         assert result.role == user.role
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     async def test_expired_token_returns_401(
         self, async_session: AsyncSession
     ) -> None:
@@ -112,6 +115,7 @@ class TestGetCurrentUser:
 
         assert exc_info.value.status_code == 401
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     async def test_inactive_user_returns_401(
         self, async_session: AsyncSession
     ) -> None:
@@ -177,6 +181,7 @@ class TestGetCurrentUser:
 class TestRequireRole:
     """Tests for the require_role dependency factory."""
 
+    @spec_ref("MVP-ADMIN-002", "AC-6")
     async def test_matching_role_allows_access(
         self, async_session: AsyncSession
     ) -> None:
@@ -197,6 +202,7 @@ class TestRequireRole:
         result = await checker(current_user=user)
         assert result.id == user.id
 
+    @spec_ref("MVP-ADMIN-002", "AC-6")
     async def test_wrong_role_raises_403(
         self, async_session: AsyncSession
     ) -> None:

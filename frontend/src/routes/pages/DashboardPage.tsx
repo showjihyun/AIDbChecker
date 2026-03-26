@@ -1,15 +1,17 @@
-// Spec: MVP-DASH-001~005 — Dashboard main page
+// Spec: MVP-DASH-001~005, FS-KPI-001 — Dashboard main page
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { subHours } from 'date-fns';
 import { useMemo } from 'react';
 import { useInstances } from '@/api/hooks/useInstances';
 import { useMetrics, useAllInstancesLatestMetrics } from '@/api/hooks/useMetrics';
+import { useInstanceKPI } from '@/api/hooks/useKPI';
 import {
   InstanceCard,
   InstanceCardSkeleton,
   InstanceCardEmpty,
 } from '@/components/dashboard/InstanceCard';
+import { KPIOverviewPanel } from '@/components/dashboard/KPIOverviewPanel';
 import { MetricChart } from '@/components/dashboard/MetricChart';
 import { SystemHealthPanel } from '@/components/dashboard/SystemHealth';
 import { useMetricStore, useLatestMetricsShallow } from '@/stores/metricStore';
@@ -44,6 +46,12 @@ export function DashboardPage() {
     from: subHours(new Date(), 1).toISOString(),
     to: new Date().toISOString(),
   }));
+
+  const selectedInstance = instances?.find((i) => i.id === selectedInstanceId);
+  const { data: kpiData } = useInstanceKPI(
+    selectedInstanceId ?? undefined,
+    selectedInstance?.name
+  );
 
   const { data: metricsData, isLoading: metricsLoading } = useMetrics(
     selectedInstanceId ?? undefined,
@@ -115,6 +123,7 @@ export function DashboardPage() {
                 key={instance.id}
                 instance={instance}
                 latestMetric={latestMetrics[instance.id]}
+                kpiData={selectedInstanceId === instance.id ? kpiData : undefined}
                 isSelected={selectedInstanceId === instance.id}
                 onClick={handleInstanceClick}
               />
@@ -122,8 +131,11 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* Charts and system health */}
+        {/* KPI overview + Charts + system health */}
         <div className="lg:col-span-8 space-y-6">
+          {selectedInstanceId && (
+            <KPIOverviewPanel instanceId={selectedInstanceId} />
+          )}
           <MetricChart
             data={metricsData}
             isLoading={metricsLoading}

@@ -20,6 +20,7 @@ from app.api.v1.auth import _create_access_token, pwd_context
 from app.models.db_instance import DBInstance
 from app.models.incident import Incident
 from app.models.user import User
+from tests.conftest import spec_ref
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +130,7 @@ async def db_instance(async_session: AsyncSession) -> DBInstance:
 class TestListIncidents:
     """GET /api/v1/incidents"""
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_list_incidents_empty(
         self, client: AsyncClient, auth_user: User
     ) -> None:
@@ -145,7 +146,7 @@ class TestListIncidents:
         assert body["total"] == 0
         assert body["items"] == []
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_list_incidents_with_data(
         self,
         client: AsyncClient,
@@ -168,7 +169,7 @@ class TestListIncidents:
         ids = [item["id"] for item in body["items"]]
         assert str(incident.id) in ids
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_list_incidents_filter_by_severity(
         self,
         client: AsyncClient,
@@ -202,7 +203,7 @@ class TestListIncidents:
 class TestGetIncident:
     """GET /api/v1/incidents/{incident_id}"""
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_get_incident_detail(
         self,
         client: AsyncClient,
@@ -226,7 +227,7 @@ class TestGetIncident:
         assert body["severity"] == incident.severity
         assert body["status"] == "open"
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_get_incident_not_found(
         self, client: AsyncClient, auth_user: User
     ) -> None:
@@ -247,7 +248,7 @@ class TestGetIncident:
 class TestUpdateIncidentStatus:
     """PUT /api/v1/incidents/{incident_id}/status"""
 
-    # Spec: FS-DASH-004 AC-3
+    @spec_ref("FS-DASH-004", "AC-3")
     async def test_update_incident_status_acknowledge(
         self,
         client: AsyncClient,
@@ -270,7 +271,7 @@ class TestUpdateIncidentStatus:
         assert body["status"] == "acknowledged"
         assert body["acknowledged_at"] is not None
 
-    # Spec: FS-DASH-004 AC-3
+    @spec_ref("FS-DASH-004", "AC-3")
     async def test_update_incident_status_resolve(
         self,
         client: AsyncClient,
@@ -293,7 +294,7 @@ class TestUpdateIncidentStatus:
         assert body["status"] == "resolved"
         assert body["resolved_at"] is not None
 
-    # Spec: FS-DASH-004 AC-3
+    @spec_ref("FS-DASH-004", "AC-3")
     async def test_update_incident_invalid_status(
         self,
         client: AsyncClient,
@@ -321,7 +322,7 @@ class TestUpdateIncidentStatus:
 class TestIncidentsAuth:
     """Authentication requirements for incident endpoints."""
 
-    # Spec: FS-DASH-004 AC-1
+    @spec_ref("FS-DASH-004", "AC-1")
     async def test_incidents_require_auth(
         self, client: AsyncClient
     ) -> None:

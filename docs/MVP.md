@@ -57,6 +57,7 @@
 | MVP-DASH-003 | ASH Timeline | FR-DASH-003 | 1초 ASH 히트맵 (Wait Event 카테고리별). 시간 드릴다운 (시→분→초) |
 | MVP-DASH-004 | 인시던트 목록 | FR-DASH-001 | 활성 인시던트 리스트 (severity 필터, 시간순) |
 | MVP-DASH-005 | System Health | FR-SELF-001 | NeuralDB 자체 상태 (DB/Valkey/Kafka/Celery UP/DOWN) |
+| MVP-DASH-006 | DB KPI Overview | FS-KPI-001 | 인스턴스별 12개 핵심 성능 지표 (5 카테고리) + Advisory 알림 |
 
 **디자인 참조**: `docs/FRONTEND_DESIGN.md`
 - Screen 1 (Topology) → MVP에서는 토폴로지 맵 대신 인스턴스 카드 그리드

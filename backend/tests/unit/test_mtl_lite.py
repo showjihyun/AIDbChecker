@@ -13,11 +13,13 @@ import pytest
 
 from app.schemas.mtl import AnomalyType, SeverityLevel
 from app.services.mtl_lite import _compute_overall_confidence, predict
+from tests.conftest import spec_ref
 
 
 class TestComputeOverallConfidence:
     """Tests for _compute_overall_confidence — pure math, no mocks."""
 
+    @spec_ref("FS-AI-010", "AC-2")
     def test_compute_overall_confidence_weighted_average(self) -> None:
         """Confidence is weighted: anomaly=0.25, root_cause=0.35,
         severity=0.15, action=0.25.
@@ -43,6 +45,7 @@ class TestComputeOverallConfidence:
         # total = 0.225 + 0.28 + 0.105 + 0.20 = 0.81
         assert result == 0.81
 
+    @spec_ref("FS-AI-010", "AC-2")
     def test_compute_overall_confidence_zero_actions(self) -> None:
         """When no suggested actions exist, action_confidence is 0.0."""
         prediction = {
@@ -73,6 +76,7 @@ class TestComputeOverallConfidence:
         result = _compute_overall_confidence(prediction)
         assert result == 0.0
 
+    @spec_ref("FS-AI-010", "AC-2")
     def test_compute_overall_confidence_clamped_to_1(self) -> None:
         """Result is clamped to [0.0, 1.0] even if inputs sum > 1.0."""
         prediction = {
@@ -89,6 +93,7 @@ class TestComputeOverallConfidence:
 class TestPredictGracefulFallback:
     """Tests for predict function falling back on LLM failure."""
 
+    @spec_ref("FS-AI-010", "AC-5")
     @pytest.mark.asyncio
     async def test_predict_graceful_fallback(self) -> None:
         """When LLM call fails, predict returns a valid fallback response

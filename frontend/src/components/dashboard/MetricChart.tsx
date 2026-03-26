@@ -60,12 +60,16 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
       return Math.round((currCommit - prevCommit) / timeDiffSec);
     });
 
-    // Buffer Hit Ratio: blks_hit / (blks_hit + blks_read) * 100 — gauge per sample
-    const hitRatioData = sorted.map((d) => {
-      const hit = d.metrics.blks_hit ?? 0;
-      const read = d.metrics.blks_read ?? 0;
-      if (hit + read === 0) return null;
-      return Math.round((hit / (hit + read)) * 10000) / 100; // 2 decimal places
+    // Buffer Hit Ratio: delta-based (same as TPS) to show recent-interval ratio,
+    // not the cumulative average which always converges to ~100%.
+    const hitRatioData = sorted.map((d, i) => {
+      if (i === 0) return null;
+      const prev = sorted[i - 1];
+      const deltaHit = (d.metrics.blks_hit ?? 0) - (prev.metrics.blks_hit ?? 0);
+      const deltaRead = (d.metrics.blks_read ?? 0) - (prev.metrics.blks_read ?? 0);
+      const total = deltaHit + deltaRead;
+      if (total <= 0) return 100; // no I/O in this interval = 100% cache
+      return Math.round((deltaHit / total) * 10000) / 100;
     });
 
     return {

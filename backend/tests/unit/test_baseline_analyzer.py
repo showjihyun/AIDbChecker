@@ -12,13 +12,13 @@ from uuid import uuid4
 import pytest
 
 from app.analyzers.baseline import BaselineAnalyzer, classify_time_bucket
+from tests.conftest import spec_ref
 
 
 class TestClassifyTimeBucket:
     """Tests for classify_time_bucket pure function — no DB needed."""
 
-    # Spec: MVP-AI-001 — weekday_business: Mon-Fri 09:00-18:00
-
+    @spec_ref("MVP-AI-001", "AC-3")
     def test_time_bucket_weekday_business(self) -> None:
         """Mon-Fri 09:00-17:59 classifies as weekday_business."""
         # Wednesday 10:30 UTC
@@ -36,6 +36,7 @@ class TestClassifyTimeBucket:
         assert dt_end.weekday() == 4  # Friday
         assert classify_time_bucket(dt_end) == "weekday_business"
 
+    @spec_ref("MVP-AI-001", "AC-3")
     def test_time_bucket_weekday_night(self) -> None:
         """Mon-Fri outside 09-18 classifies as weekday_night."""
         # Tuesday 08:59 — just before business hours
@@ -57,6 +58,7 @@ class TestClassifyTimeBucket:
         dt_late = datetime(2026, 3, 25, 23, 30, 0, tzinfo=timezone.utc)
         assert classify_time_bucket(dt_late) == "weekday_night"
 
+    @spec_ref("MVP-AI-001", "AC-3")
     def test_time_bucket_weekend(self) -> None:
         """Saturday and Sunday classify as weekend regardless of hour."""
         # Saturday 10:00 (business hours but weekend)
@@ -77,10 +79,10 @@ class TestClassifyTimeBucket:
 class TestDetectAnomaly:
     """Tests for BaselineAnalyzer.detect_anomaly with mocked DB baseline lookup."""
 
+    @spec_ref("MVP-AI-002", "AC-3")
     @pytest.mark.asyncio
     async def test_detect_anomaly_critical(self) -> None:
         """Value >3 sigma from mean returns 'critical' severity."""
-        # Spec: MVP-AI-002 — >3sigma = critical
         analyzer = BaselineAnalyzer()
         mock_baseline = MagicMock()
         mock_baseline.mean = 50.0
@@ -98,10 +100,10 @@ class TestDetectAnomaly:
         assert z_score > 3.0
         assert severity == "critical"
 
+    @spec_ref("MVP-AI-002", "AC-3")
     @pytest.mark.asyncio
     async def test_detect_anomaly_warning(self) -> None:
         """Value >2 sigma but <=3 sigma returns 'warning' severity."""
-        # Spec: MVP-AI-002 — >2sigma = warning
         analyzer = BaselineAnalyzer()
         mock_baseline = MagicMock()
         mock_baseline.mean = 50.0
@@ -119,6 +121,7 @@ class TestDetectAnomaly:
         assert 2.0 < z_score <= 3.0
         assert severity == "warning"
 
+    @spec_ref("MVP-AI-002", "AC-3")
     @pytest.mark.asyncio
     async def test_detect_anomaly_normal(self) -> None:
         """Value within 1.5 sigma returns None severity (normal)."""
@@ -139,6 +142,7 @@ class TestDetectAnomaly:
         assert z_score < 1.5
         assert severity is None
 
+    @spec_ref("MVP-AI-002", "AC-3")
     @pytest.mark.asyncio
     async def test_detect_anomaly_no_baseline(self) -> None:
         """No baseline exists: returns (0.0, None) without error."""

@@ -1,7 +1,6 @@
 # Spec: DM-001, MVP-DASH-001
 """Instance CRUD API -- register, update, delete, test monitored DB instances."""
 
-import urllib.parse
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -12,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session, remove_target_pool
+from app.utils.dsn import build_target_dsn
 from app.models.db_instance import DBInstance
 from app.schemas.instance import (
     ConnectionTestResponse,
@@ -39,23 +39,6 @@ _ALLOWED_UPDATE_FIELDS = frozenset({
     "is_active",
     "autonomy_level",
 })
-
-
-def _build_dsn(instance: DBInstance) -> str:
-    """Build asyncpg DSN from instance fields + decrypted connection_config.
-
-    Uses urllib.parse.quote_plus() for username and password to handle
-    special characters (@, /, %, :, ?, #) safely in the URI.
-    """
-    config = instance.connection_config or {}
-    username = decrypt_value(config["username"]) if "username" in config else "neuraldb"
-    password = decrypt_value(config["password"]) if "password" in config else ""
-    ssl_mode = config.get("sslmode", "prefer")
-    return (
-        f"postgresql://{urllib.parse.quote_plus(username)}:{urllib.parse.quote_plus(password)}"
-        f"@{instance.host}:{instance.port}/{instance.database_name}"
-        f"?sslmode={ssl_mode}"
-    )
 
 
 def _to_response(instance: DBInstance) -> InstanceResponse:
@@ -240,7 +223,7 @@ async def test_connection(
             "Only PostgreSQL is supported in MVP.",
         )
 
-    dsn = _build_dsn(instance)
+    dsn = build_target_dsn(instance)
     adapter = PostgreSQLRemoteAdapter(instance_id=instance.id, dsn=dsn)
     success, message = await adapter.test_connection()
 

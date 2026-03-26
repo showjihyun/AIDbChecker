@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import _create_access_token, pwd_context
 from app.models.audit_log import AuditLog
 from app.models.user import User
+from tests.conftest import spec_ref
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +108,7 @@ async def viewer_user(async_session: AsyncSession) -> User:
 class TestListAuditLogs:
     """GET /api/v1/audit-logs"""
 
-    # Spec: FS-ADMIN-003 AC-5
+    @spec_ref("FS-ADMIN-003", "AC-5")
     async def test_list_audit_logs_as_super_admin(
         self, client: AsyncClient, async_session: AsyncSession, admin_user: User
     ) -> None:
@@ -129,7 +130,7 @@ class TestListAuditLogs:
         assert body["total"] >= 2
         assert len(body["items"]) >= 2
 
-    # Spec: FS-ADMIN-003 AC-5
+    @spec_ref("FS-ADMIN-003", "AC-5")
     async def test_list_audit_logs_as_viewer_returns_403(
         self, client: AsyncClient, viewer_user: User
     ) -> None:
@@ -140,7 +141,7 @@ class TestListAuditLogs:
         )
         assert resp.status_code == 403
 
-    # Spec: FS-ADMIN-003 AC-5
+    @spec_ref("FS-ADMIN-003", "AC-5")
     async def test_audit_log_filters_by_resource_type(
         self, client: AsyncClient, async_session: AsyncSession, admin_user: User
     ) -> None:
@@ -162,7 +163,7 @@ class TestListAuditLogs:
         for item in body["items"]:
             assert item["resource_type"] == "instance"
 
-    # Spec: FS-ADMIN-003 AC-5
+    @spec_ref("FS-ADMIN-003", "AC-5")
     async def test_audit_log_filters_by_date_range(
         self, client: AsyncClient, async_session: AsyncSession, admin_user: User
     ) -> None:

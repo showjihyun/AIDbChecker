@@ -9,11 +9,13 @@ from jose import jwt
 
 from app.api.v1.auth import pwd_context, _create_token, _create_access_token, _create_refresh_token
 from app.config import settings
+from tests.conftest import spec_ref
 
 
 class TestPasswordHashing:
     """Tests for bcrypt password hashing via passlib CryptContext."""
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_hash_and_verify_correct_password(self) -> None:
         """Hashed password should verify against the original plain text."""
         plain = "NeuralDB@2026!"
@@ -22,6 +24,7 @@ class TestPasswordHashing:
         assert hashed != plain, "Hash must differ from plain text"
         assert pwd_context.verify(plain, hashed) is True
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_verify_wrong_password_fails(self) -> None:
         """Verification should fail for an incorrect password."""
         hashed = pwd_context.hash("correct-password")
@@ -42,6 +45,7 @@ class TestPasswordHashing:
 class TestJWTTokenCreation:
     """Tests for JWT access and refresh token creation."""
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_create_access_token_has_valid_claims(self) -> None:
         """Access token should contain sub, exp, and iat claims."""
         user_id = str(uuid4())
@@ -55,6 +59,7 @@ class TestJWTTokenCreation:
         assert "exp" in payload
         assert "iat" in payload
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_create_refresh_token_expires_later_than_access(self) -> None:
         """Refresh token should have a later expiration than the access token."""
         user_id = str(uuid4())
@@ -70,6 +75,7 @@ class TestJWTTokenCreation:
 
         assert refresh_payload["exp"] > access_payload["exp"]
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_expired_token_raises_on_decode(self) -> None:
         """Decoding an expired token should raise an error."""
         user_id = str(uuid4())
@@ -85,6 +91,7 @@ class TestJWTTokenCreation:
                 algorithms=[settings.JWT_ALGORITHM],
             )
 
+    @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_token_with_wrong_secret_fails(self) -> None:
         """Decoding a token with a different secret should fail."""
         user_id = str(uuid4())
