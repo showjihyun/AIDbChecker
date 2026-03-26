@@ -43,24 +43,23 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
       (a, b) => new Date(a.sampled_at).getTime() - new Date(b.sampled_at).getTime()
     );
 
-    // Spec: FS-KPI-001 §4.5 — Downsample to ~200 points max for readability
-    const maxPoints = 200;
-    const sorted = rawSorted.length > maxPoints
-      ? rawSorted.filter((_, i) => i % Math.ceil(rawSorted.length / maxPoints) === 0)
-      : rawSorted;
-
-    // Spec: FS-KPI-001 §4.5 — Adaptive X-axis format based on time range
-    const timeFormat = (() => {
+    // Spec: FS-KPI-001 §4.5 — Adaptive chart config per time range
+    const chartConfig = (() => {
       switch (activePreset) {
-        case '15m': return 'HH:mm:ss';      // 초 단위
-        case '1h':  return 'HH:mm';          // 분 단위
-        case '6h':  return 'HH:mm';          // 분 단위
-        case '24h': return 'HH:mm';          // 시:분
-        case '7d':  return 'MM/dd HH:mm';    // 날짜+시간
-        default:    return 'HH:mm:ss';
+        case '15m': return { maxPoints: 150, format: 'HH:mm:ss', labelInterval: 14,  rotate: 0  };
+        case '1h':  return { maxPoints: 120, format: 'HH:mm',    labelInterval: 11,  rotate: 0  };
+        case '6h':  return { maxPoints: 90,  format: 'HH:mm',    labelInterval: 8,   rotate: 0  };
+        case '24h': return { maxPoints: 72,  format: 'HH:mm',    labelInterval: 5,   rotate: 35 };
+        case '7d':  return { maxPoints: 56,  format: 'MM/dd HH',  labelInterval: 3,   rotate: 35 };
+        default:    return { maxPoints: 120, format: 'HH:mm:ss', labelInterval: 11,  rotate: 0  };
       }
     })();
-    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), timeFormat));
+
+    const sorted = rawSorted.length > chartConfig.maxPoints
+      ? rawSorted.filter((_, i) => i % Math.ceil(rawSorted.length / chartConfig.maxPoints) === 0)
+      : rawSorted;
+
+    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), chartConfig.format));
 
     // Connections: numbackends is a gauge (current value), not a counter
     const connData = sorted.map((d) => d.metrics.numbackends ?? d.metrics.active_connections ?? null);
@@ -113,7 +112,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         left: 48,
         right: 16,
         top: 36,
-        bottom: 24,
+        bottom: chartConfig.rotate > 0 ? 48 : 24,
       },
       xAxis: {
         type: 'category' as const,
@@ -124,6 +123,8 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           color: '#88929b',
           fontSize: 10,
           fontFamily: 'JetBrains Mono',
+          interval: chartConfig.labelInterval,
+          rotate: chartConfig.rotate,
         },
         splitLine: { show: false },
       },
