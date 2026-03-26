@@ -71,17 +71,18 @@ SELECT
      WHERE wait_event_type = 'Lock'
     ) AS lock_waits,
 
-    -- KPI-03: Avg response time from pg_stat_statements (if available)
-    (SELECT round(avg(mean_exec_time)::numeric, 3)
-     FROM pg_stat_statements
-     WHERE calls > 0
-    ) AS avg_response_time_ms,
-
     -- KPI-10: Cumulative deadlocks (for live fallback)
     (SELECT deadlocks
      FROM pg_stat_database
      WHERE datname = current_database()
     ) AS deadlocks;
+"""
+
+# Separate query for pg_stat_statements (optional extension — may not be installed)
+_SQL_AVG_RESPONSE_TIME = """
+SELECT round(avg(mean_exec_time)::numeric, 3) AS avg_response_time_ms
+FROM pg_stat_statements
+WHERE calls > 0;
 """
 
 # SQL: Warm metrics from pg_stat_user_tables (10-second interval)
@@ -408,17 +409,24 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
             if row is None:
                 return None
 
+            # pg_stat_statements is optional — query separately to avoid
+            # breaking the main KPI query if the extension isn't installed
+            avg_rt: float | None = None
+            try:
+                async with self._pool.acquire() as conn:
+                    rt_row = await conn.fetchrow(_SQL_AVG_RESPONSE_TIME)
+                    if rt_row and rt_row["avg_response_time_ms"] is not None:
+                        avg_rt = float(rt_row["avg_response_time_ms"])
+            except (asyncpg.PostgresError, asyncio.TimeoutError):
+                pass  # Extension not installed — avg_response_time stays None
+
             return {
                 "slow_query_count": row["slow_query_count"],
                 "active_sessions": row["active_sessions"],
                 "numbackends": row["numbackends"],
                 "max_connections": row["max_connections"],
                 "lock_waits": row["lock_waits"],
-                "avg_response_time_ms": (
-                    float(row["avg_response_time_ms"])
-                    if row["avg_response_time_ms"] is not None
-                    else None
-                ),
+                "avg_response_time_ms": avg_rt,
                 "deadlocks": row["deadlocks"],
             }
 
