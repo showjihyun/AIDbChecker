@@ -49,11 +49,11 @@ class Settings(BaseSettings):
     VALKEY_CELERY_DB: int = 1
     VALKEY_DEFAULT_TTL: int = Field(default=300, ge=60)  # seconds
 
-    # ── Kafka ────────────────────────────────────
-    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
-    KAFKA_SECURITY_PROTOCOL: str = Field(default="PLAINTEXT", pattern="^(PLAINTEXT|SSL|SASL_PLAINTEXT|SASL_SSL)$")
-    KAFKA_CONSUMER_GROUP: str = "neuraldb"
-    KAFKA_AUTO_OFFSET_RESET: str = "latest"
+    # ── Kafka (Phase 3+ — not used in MVP) ───────
+    # KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    # KAFKA_SECURITY_PROTOCOL: str = "PLAINTEXT"
+    # KAFKA_CONSUMER_GROUP: str = "neuraldb"
+    # KAFKA_AUTO_OFFSET_RESET: str = "latest"
 
     # ── JWT Auth ─────────────────────────────────
     JWT_SECRET_KEY: str  # REQUIRED, no default
@@ -123,7 +123,6 @@ settings = Settings()
 | `DATABASE_URL` | 기본값 OK | 필수 | 필수 |
 | `OPENAI_API_KEY` | 선택 (offline 가능) | 필수 | 필수 |
 | `SLACK_WEBHOOK_URL` | 선택 | 필수 | 필수 |
-| `KAFKA_BOOTSTRAP_SERVERS` | 기본값 OK | 필수 | 필수 |
 | `SENTRY_DSN` | 선택 | 필수 | 필수 |
 
 ---
@@ -143,8 +142,8 @@ DATABASE_URL=postgresql+asyncpg://neuraldb:neuraldb@localhost:5432/neuraldb
 # Valkey
 VALKEY_URL=redis://localhost:6379/0
 
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+# Kafka (Phase 3+ — not needed for MVP)
+# KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
 # LLM
 LLM_MODE=online

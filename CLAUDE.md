@@ -29,7 +29,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect (7-Phase Loop)
 - **Backend**: Python 3.11+ / FastAPI / SQLAlchemy 2.0 / Celery
 - **Database**: PostgreSQL 16 (Meta + Metrics + Vector)
 - **Cache**: Valkey (BSD 3-Clause, Redis API 호환)
-- **Messaging**: Apache Kafka
+- **Async Tasks**: Celery + Valkey (Kafka planned for Phase 3+)
 - **AI/ML**: LangChain / scikit-learn / statsmodels / OpenAI / Ollama
 - **Package Manager**: uv (pip 금지)
 

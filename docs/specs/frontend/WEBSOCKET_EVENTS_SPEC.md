@@ -324,8 +324,6 @@ interface SystemHealthEvent {
     postgres: 'up' | 'down';
     /** Valkey 캐시 */
     valkey: 'up' | 'down';
-    /** Kafka 메시지 브로커 */
-    kafka: 'up' | 'down';
     /** Celery 활성 워커 수 */
     celery_workers: number;
     /** Celery Beat 스케줄러 */
@@ -350,7 +348,6 @@ async def broadcast_system_health():
             components={
                 'postgres': 'up' if health.postgres_ok else 'down',
                 'valkey': 'up' if health.valkey_ok else 'down',
-                'kafka': 'up' if health.kafka_ok else 'down',
                 'celery_workers': health.active_worker_count,
                 'celery_beat': 'up' if health.beat_ok else 'down',
             },
