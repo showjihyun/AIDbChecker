@@ -34,8 +34,8 @@ _WRITE_KEYWORDS = re.compile(
 
 # Dangerous functions that can exfiltrate data or read files even in read-only mode
 _DANGEROUS_FUNCTIONS = re.compile(
-    r"\b(pg_read_file|pg_read_binary_file|pg_stat_file|lo_get|lo_export|"
-    r"dblink|pg_execute_server_program|query_to_xml|xpath)\b",
+    r"\b(pg_read_file|pg_read_binary_file|pg_stat_file|lo_get|lo_export|lo_import|"
+    r"dblink|pg_execute_server_program|query_to_xml|xpath|pg_sleep)\b",
     re.IGNORECASE,
 )
 
