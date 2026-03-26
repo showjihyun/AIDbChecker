@@ -90,31 +90,13 @@ users(id UUID, email VARCHAR, name VARCHAR, role VARCHAR, is_active BOOLEAN)
 
 
 def _get_llm():
-    """Create LangChain LLM based on AI_MODE config.
+    """Create LangChain LLM via unified LLMProviderManager.
 
-    Returns a LangChain chat model instance. Online mode uses OpenAI,
-    offline mode uses Ollama via langchain-community.
+    Spec: FS-AI-LLM-001 — AC-6: all services use LLMProviderManager.
     """
-    # Spec: MVP-AI-005 — AI_MODE check
-    if settings.AI_MODE == "online":
-        from langchain_openai import ChatOpenAI
+    from app.services.llm_provider import get_llm_manager
 
-        return ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
-            temperature=0,
-            max_tokens=500,
-            request_timeout=15,
-        )
-    else:
-        from langchain_community.llms import Ollama
-
-        return Ollama(
-            base_url=settings.OLLAMA_BASE_URL,
-            model=settings.OLLAMA_MODEL,
-            temperature=0,
-            num_predict=500,
-        )
+    return get_llm_manager().get_llm(temperature=0, max_tokens=500, request_timeout=15)
 
 
 def _validate_sql_readonly(sql: str) -> None:
@@ -211,7 +193,7 @@ async def generate_sql(question: str, instance_id: UUID) -> str:
         "nl2sql.generated",
         question=question[:100],
         sql=sql[:200],
-        model=settings.OPENAI_MODEL if settings.AI_MODE == "online" else settings.OLLAMA_MODEL,
+        model=get_model_name(),
     )
     return sql
 
@@ -285,7 +267,8 @@ async def execute_readonly_sql(
 
 
 def get_model_name() -> str:
-    """Return the current LLM model name based on AI_MODE."""
-    if settings.AI_MODE == "online":
-        return settings.OPENAI_MODEL
-    return settings.OLLAMA_MODEL
+    """Return the current LLM model name.
+
+    Spec: FS-AI-LLM-001 — uses unified AI_PROVIDER / AI_MODEL settings.
+    """
+    return settings.AI_MODEL

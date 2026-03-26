@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0.0] - 2026-03-26 — Phase 2: Multi-LLM Provider
+
+### Added
+- **LLM Provider Manager**: 4 providers (Ollama/OpenAI/Anthropic/Google) unified abstraction
+- **Settings API**: GET/PUT /settings/llm, provider list, Ollama model list, test endpoint
+- **LLM Settings Page**: provider/model selector, API key management, test button
+- **FS-AI-LLM-001 Spec**: 8 ACs for multi-provider system
+- Existing NL2SQL + MTL Lite updated to use LLMProviderManager
+- Dependencies: langchain-anthropic, langchain-google-genai
+
 ## [0.4.3.0] - 2026-03-26
 
 ### Added

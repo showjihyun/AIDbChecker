@@ -157,19 +157,41 @@ export function SettingsPage() {
           ]}
         />
 
+        {/* AI Configuration — Spec: FS-AI-LLM-001 */}
+        <SettingsSection
+          title="AI Configuration"
+          icon="smart_toy"
+          description="LLM provider, model selection, and API key management."
+          items={[
+            {
+              label: 'LLM Provider',
+              detail: 'Ollama / OpenAI / Anthropic / Google provider switching',
+              to: '/settings/llm',
+            },
+            {
+              label: 'Model Selection',
+              detail: 'Choose models per provider, test connectivity',
+              to: '/settings/llm',
+            },
+            {
+              label: 'API Keys',
+              detail: 'Manage encrypted API keys for cloud providers',
+              to: '/settings/llm',
+            },
+          ]}
+          actionLabel="Configure AI"
+          actionTo="/settings/llm"
+        />
+
         {/* System Configuration */}
         <SettingsSection
           title="System Configuration"
           icon="tune"
-          description="Collection intervals, AI model settings, and system behavior."
+          description="Collection intervals, baseline training, and system behavior."
           items={[
             {
               label: 'Collection Intervals',
               detail: 'Hot: 1s, Warm: 10s, Cold: 60s, Schema: 60s',
-            },
-            {
-              label: 'AI Mode',
-              detail: 'Online (Cloud LLM) / Offline (Ollama) switching',
             },
             {
               label: 'Baseline Training',
