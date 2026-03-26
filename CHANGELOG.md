@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0.0] - 2026-03-26 — NL2GraphRAG Phase 2
+
+### Added
+- **Knowledge Graph**: graph_nodes + graph_edges tables (pgvector embedding)
+- **SchemaGraphBuilder**: information_schema → Graph auto-generation
+- **GraphRAGRetriever**: question → Subgraph extraction (cosine similarity)
+- **NL2SQL upgrade**: GraphRAG path with hardcoded schema fallback
+- **Graph API**: build, nodes list, business metric/concept registration
+- Alembic migration 002_graph_tables
+
 ## [0.6.0.0] - 2026-03-26 — Phase 2 Complete
 
 ### Added
