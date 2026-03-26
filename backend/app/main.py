@@ -12,7 +12,7 @@ from fastapi import Depends
 
 from app.config import settings
 from app.api.v1 import auth, audit, baselines, instances, metrics, ash, alerts, incidents, system, users
-from app.api.v1 import nl2sql, rag, mtl, schema_changes, kpi, llm_settings
+from app.api.v1 import nl2sql, rag, mtl, schema_changes, kpi, llm_settings, tuning
 from app.api.deps import get_current_user
 from app.middleware.audit import AuditLogMiddleware
 from app.websocket.events import sio
@@ -31,6 +31,16 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     for pool_engine in list(_target_pools.values()):
         await pool_engine.dispose()
     _target_pools.clear()
+
+    # Close tuning agent connection pools
+    from app.api.v1.tuning import _tuning_pool_cache
+
+    for pool, _dsn in list(_tuning_pool_cache.values()):
+        try:
+            await pool.close()
+        except Exception:
+            pass
+    _tuning_pool_cache.clear()
 
 
 app = FastAPI(
@@ -74,6 +84,7 @@ app.include_router(mtl.router, prefix="/api/v1", tags=["mtl"], dependencies=_aut
 app.include_router(schema_changes.router, prefix="/api/v1", tags=["schema-changes"], dependencies=_auth_dep)
 app.include_router(kpi.router, prefix="/api/v1", tags=["kpi"], dependencies=_auth_dep)
 app.include_router(llm_settings.router, prefix="/api/v1", tags=["llm-settings"], dependencies=_auth_dep)
+app.include_router(tuning.router, prefix="/api/v1", tags=["tuning"], dependencies=_auth_dep)
 
 # System router — intentionally public (health check, metrics)
 app.include_router(system.router, prefix="/api/v1", tags=["system"])
