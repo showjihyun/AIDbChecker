@@ -51,6 +51,8 @@ services:
       CORS_ORIGINS: '["http://localhost:3000"]'
       # Ollama runs on host machine — use host.docker.internal to reach it from container
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      # AI defaults — set AI_MODEL to a model installed in Ollama (e.g., llama3.1:8b)
+      AI_MODEL: "llama3.1:8b"
       # Entrypoint: PostgreSQL connection for pg_isready + Alembic sync driver
       DB_HOST: postgres
       DB_PORT: "5432"
