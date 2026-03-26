@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0.0] - 2026-03-26 — Phase 2 Complete
+
+### Added
+- DB Copilot: Tree-of-Thought diagnosis with 8 branch types (FS-AI-012)
+- LLM Observability: token tracking, drift detection, budget/accuracy checks (FS-AI-013)
+- LLM Provider Manager: 4 providers (Ollama/OpenAI/Anthropic/Google) unified (FS-AI-LLM-001)
+- DB Tuning Agent: 7 PostgreSQL tools + ReAct agent (FS-AI-TUNE-001)
+- LLM Settings page: provider/model/API key management UI
+- Tuning Agent page: natural language DB analysis UI
+- AC coverage: 62%→88% (96/109 ACs passing, 258 tests)
+- X-axis adaptive spacing for 6h/24h/7d chart ranges
+
 ## [0.5.1.0] - 2026-03-26
 
 ### Added
