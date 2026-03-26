@@ -47,10 +47,12 @@ async def nl2sql_query(
     - Results capped at 1000 rows
     """
     # Step 1: Generate SQL from natural language
+    # Spec: FS-AI-NL2SQL-001 — use GraphRAG path if graph exists, fallback to hardcoded
     try:
-        sql = await nl2sql_service.generate_sql(
+        sql = await nl2sql_service.generate_sql_with_graph(
             question=body.question,
             instance_id=body.instance_id,
+            session=session,
         )
     except ValueError as exc:
         # Write operation detected in generated SQL

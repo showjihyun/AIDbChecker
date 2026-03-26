@@ -1,9 +1,14 @@
-# Spec: FR-AI-003, MVP-AI-004, MVP-AI-005
+# Spec: FR-AI-003, MVP-AI-004, MVP-AI-005, FS-AI-NL2SQL-001
 """NL2SQL service — convert natural language to SQL and execute read-only.
 
 Uses LangChain for LLM abstraction. Online mode uses OpenAI GPT-4o,
 offline mode uses Ollama (mistral:7b). All queries are strictly read-only
 with a 5-second statement_timeout safety net.
+
+Phase 2 (FS-AI-NL2SQL-001): GraphRAG path — if a Schema Knowledge Graph
+exists for the target instance, uses GraphRAGRetriever to extract a
+relevant subgraph and build a focused schema prompt. Falls back to the
+hardcoded system schema prompt if no graph is available.
 """
 
 import hashlib
@@ -272,3 +277,126 @@ def get_model_name() -> str:
     Spec: FS-AI-LLM-001 — uses unified AI_PROVIDER / AI_MODEL settings.
     """
     return settings.AI_MODEL
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: GraphRAG-enhanced SQL generation
+# Spec: FS-AI-NL2SQL-001 Sections 2-4
+# ---------------------------------------------------------------------------
+
+# Spec: FS-AI-NL2SQL-001 — GraphRAG system prompt template (subgraph injected)
+_GRAPHRAG_SYSTEM_PROMPT_TEMPLATE = """You are a PostgreSQL SQL expert for NeuralDB monitoring system.
+Convert the user's natural language question into a single read-only SQL query.
+
+RULES:
+- Generate ONLY SELECT statements. NEVER generate INSERT, UPDATE, DELETE, DROP, ALTER, or any DDL/DML.
+- Use PostgreSQL 16 syntax.
+- Always include reasonable LIMIT (default 100) to prevent excessive results.
+- Use explicit column names instead of SELECT *.
+- Return ONLY the SQL query, no explanations or markdown.
+- Use the join paths provided to construct correct JOINs.
+
+{schema_context}
+"""
+
+
+async def generate_sql_with_graph(
+    question: str,
+    instance_id: UUID,
+    session: AsyncSession,
+) -> str:
+    """Convert a natural language question to SQL using GraphRAG retrieval.
+
+    Spec: FS-AI-NL2SQL-001 Section 2 — NL2GraphRAG architecture.
+
+    If a Knowledge Graph exists for the instance, uses GraphRAGRetriever
+    to extract a relevant subgraph for a focused schema prompt.
+    If no graph exists, falls back to the hardcoded schema prompt
+    via generate_sql().
+
+    All 5 safety layers are preserved regardless of path.
+
+    Args:
+        question: User's natural language question.
+        instance_id: Target DB instance UUID.
+        session: System DB async session (for graph queries).
+
+    Returns:
+        A valid read-only SQL string.
+
+    Raises:
+        ValueError: If the generated SQL contains write operations.
+        RuntimeError: If the LLM call fails.
+    """
+    from app.services.graph_rag import GraphRAGRetriever, has_graph_for_instance
+
+    # Spec: FS-AI-NL2SQL-001 — fallback: if no graph, use hardcoded schema
+    graph_exists = await has_graph_for_instance(session, instance_id)
+    if not graph_exists:
+        logger.info(
+            "nl2sql.graph_not_found_fallback",
+            instance_id=str(instance_id),
+        )
+        return await generate_sql(question, instance_id)
+
+    # GraphRAG path: retrieve relevant subgraph
+    retriever = GraphRAGRetriever()
+    subgraph = await retriever.retrieve(
+        session=session,
+        question=question,
+        instance_id=instance_id,
+        top_k=10,
+    )
+
+    # If subgraph is empty (no relevant nodes found), fall back
+    if not subgraph.tables:
+        logger.info(
+            "nl2sql.graph_empty_subgraph_fallback",
+            instance_id=str(instance_id),
+        )
+        return await generate_sql(question, instance_id)
+
+    # Build focused schema prompt from subgraph
+    schema_context = subgraph.to_prompt_context()
+    system_prompt = _GRAPHRAG_SYSTEM_PROMPT_TEMPLATE.format(
+        schema_context=schema_context,
+    )
+
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    llm = _get_llm()
+    user_prompt = (
+        f"Target instance ID: {instance_id}\n"
+        f"Question: {question}\n\n"
+        "Generate a single PostgreSQL SELECT query:"
+    )
+
+    try:
+        response = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ])
+        raw_sql = response.content if hasattr(response, "content") else str(response)
+    except Exception as exc:
+        logger.error(
+            "nl2sql.graphrag_llm_call_failed",
+            error=str(exc),
+            question=question,
+        )
+        raise RuntimeError(
+            f"LLM call failed: {exc}. Check AI_MODE setting and API keys."
+        ) from exc
+
+    sql = _clean_sql(raw_sql)
+
+    # Spec: FS-AI-NL2SQL-001 Section 5 — all 5 safety layers applied
+    _validate_sql_readonly(sql)
+
+    logger.info(
+        "nl2sql.graphrag_generated",
+        question=question[:100],
+        sql=sql[:200],
+        model=get_model_name(),
+        subgraph_tables=len(subgraph.tables),
+    )
+    return sql

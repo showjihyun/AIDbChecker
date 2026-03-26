@@ -15,3 +15,5 @@ from app.models.rag_document import RAGDocument  # noqa: F401
 from app.models.alert_channel import AlertChannel  # noqa: F401
 from app.models.alert_policy import AlertPolicy  # noqa: F401
 from app.models.alert_history import AlertHistory  # noqa: F401
+from app.models.graph_node import GraphNode  # noqa: F401
+from app.models.graph_edge import GraphEdge  # noqa: F401
