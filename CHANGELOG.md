@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1.0] - 2026-03-26 — NL2SQL Tests + GraphRAG Fixes
+
+### Added
+- **NL2SQL AC-1~20 tests**: 15 pass, 5 skip (2 live-infra, 3 Phase 3)
+- **Notification dedup**: 5-min time window prevents re-adding after read/clear (AC-12)
+- **pgvector + asyncpg guide**: NL2SQL_SPEC §3.3.1 compatibility documentation
+
+### Fixed
+- **GraphRAG pgvector insert**: raw SQL + CAST(AS vector) for asyncpg compatibility
+- **GraphRAG DSN**: Fernet-decrypted credentials via `build_target_dsn()`
+- **Migration 002**: Direct ALTER to vector(384)/jsonb (SAVEPOINT graceful degradation removed)
+- **Spec parser**: AC_PATTERN matches `[x]` checked items; `###` sub-headings allowed
+- **Dangerous functions**: added `pg_sleep` + `lo_import` to NL2SQL blocklist
+
+### Metrics
+- Backend: 232 tests, 111/130 ACs passing (85%)
+- Frontend: 41 tests, 41 pass
+- Specs: 18 specs tracked (NL2SQL now included)
+
 ## [0.7.0.0] - 2026-03-26 — NL2GraphRAG Phase 2
 
 ### Added
