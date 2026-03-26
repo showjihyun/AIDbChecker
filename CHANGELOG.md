@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1.0] - 2026-03-26
+
+### Added
+- Tuning Agent UI: natural language DB analysis page with results table
+- SideNav: Tuning menu item
+
 ## [0.5.0.0] - 2026-03-26 — Phase 2: Multi-LLM Provider
 
 ### Added
