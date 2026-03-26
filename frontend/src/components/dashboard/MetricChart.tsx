@@ -39,11 +39,28 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
     if (!data || data.length === 0) return null;
 
     // Sort by time ascending for delta calculation
-    const sorted = [...data].sort(
+    const rawSorted = [...data].sort(
       (a, b) => new Date(a.sampled_at).getTime() - new Date(b.sampled_at).getTime()
     );
 
-    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), 'HH:mm:ss'));
+    // Spec: FS-KPI-001 §4.5 — Downsample to ~200 points max for readability
+    const maxPoints = 200;
+    const sorted = rawSorted.length > maxPoints
+      ? rawSorted.filter((_, i) => i % Math.ceil(rawSorted.length / maxPoints) === 0)
+      : rawSorted;
+
+    // Spec: FS-KPI-001 §4.5 — Adaptive X-axis format based on time range
+    const timeFormat = (() => {
+      switch (activePreset) {
+        case '15m': return 'HH:mm:ss';      // 초 단위
+        case '1h':  return 'HH:mm';          // 분 단위
+        case '6h':  return 'HH:mm';          // 분 단위
+        case '24h': return 'HH:mm';          // 시:분
+        case '7d':  return 'MM/dd HH:mm';    // 날짜+시간
+        default:    return 'HH:mm:ss';
+      }
+    })();
+    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), timeFormat));
 
     // Connections: numbackends is a gauge (current value), not a counter
     const connData = sorted.map((d) => d.metrics.numbackends ?? d.metrics.active_connections ?? null);
