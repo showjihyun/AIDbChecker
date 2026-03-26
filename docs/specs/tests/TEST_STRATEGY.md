@@ -241,6 +241,22 @@ export default class SpecReporter implements Reporter {
 | AC-12 | `test_mtl_e2e.py::test_mtl_lite_4_tasks_simultaneous` | Integration |
 | AC-13 | `test_rag_e2e.py::test_pgvector_search_in_rca_context` | Integration |
 
+### 3.2.1 KPI Spec → 테스트
+
+| Spec | AC | Backend Test | Frontend Test | Layer |
+|------|-----|-------------|---------------|-------|
+| **FS-KPI-001 (DB KPI)** | | | | |
+| | AC-1 | `test_kpi_api.py::test_kpi_returns_12_kpis` | - | API |
+| | AC-2 | `test_kpi_calculator.py::test_delta_rate_tps` | - | Unit |
+| | AC-3 | `test_kpi_calculator.py::test_hit_ratio_delta` | - | Unit |
+| | AC-4 | - | `InstanceCard.test.tsx::renders_5_kpis` | Component |
+| | AC-5 | - | `KPIOverviewPanel.test.tsx::renders_12_kpis` | Component |
+| | AC-6 | `test_kpi_calculator.py::test_threshold_warning` | - | Unit |
+| | AC-8 | `test_kpi_api.py::test_advisory_pg_stat_statements` | - | API |
+| | AC-9 | - | `Toast.test.tsx::auto_dismiss` | Component |
+| | AC-10 | - | `NotificationPanel.test.tsx::copy_action` | Component |
+| | AC-11 | - | `MainLayout.test.tsx::unread_badge` | Component |
+
 ### 3.3 Phase 2 Specs → 테스트 (사전 정의)
 
 | Spec | 테스트 파일 | 상태 |

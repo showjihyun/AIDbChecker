@@ -209,7 +209,84 @@ class KPICalculator:
 
 ---
 
-## 6. 인수 기준
+## 6. Advisory 시스템 (확장 미설치 감지 + 알림)
+
+### 6.1 KPI Advisory
+
+KPI API 응답에 `advisories` 배열을 포함하여, 대상 DB의 구성 문제를 사전에 감지하고 사용자에게 안내한다.
+
+```python
+class KPIAdvisory(BaseModel):
+    level: Literal["info", "warning", "error"]
+    title: str          # 문제 요약 (e.g., "pg_stat_statements 미설치")
+    message: str        # 상세 설명
+    action: str | None  # 해결 SQL (e.g., "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;")
+```
+
+### 6.2 감지 대상
+
+| 조건 | Level | Title | Action |
+|------|-------|-------|--------|
+| `pg_stat_statements` 미설치 (avg_response_time = null) | warning | pg_stat_statements 미설치 | `CREATE EXTENSION IF NOT EXISTS pg_stat_statements;` |
+| Replication 미구성 (replication_lag = null) | info | Replication 미구성 | None |
+
+### 6.3 Toast 알림 컴포넌트
+
+```
+┌─ Toast (화면 우상단) ─────────────────────┐
+│ ⚠️ pg_stat_statements 미설치              │  ← warning: 12초 후 자동 닫힘
+│ 쿼리 성능 분석에 필요한 확장이 설치되어    │     info: 8초 후 자동 닫힘
+│ 있지 않습니다.                        [✕] │
+└──────────────────────────────────────────┘
+```
+
+- 같은 title+instanceName의 Toast는 중복 표시하지 않음
+- 여러 Toast는 수직 스택으로 쌓임
+- Level별 색상: info=primary, warning=warning-container, error=error-container
+
+### 6.4 Notification Panel (알림 벨 드롭다운)
+
+TopNav 알림 아이콘(🔔) 클릭 시 드롭다운 패널 표시:
+
+```
+┌─ Notifications ──────────────────────────┐
+│ ⚠️ pg_stat_statements 미설치 (inst-name) │
+│   쿼리 성능 분석에 필요한 확장이...       │
+│   ┌──────────────────────────────────┐   │
+│   │ CREATE EXTENSION IF NOT EXISTS   │ 📋│  ← 클립보드 복사 버튼
+│   │ pg_stat_statements;              │   │
+│   └──────────────────────────────────┘   │
+│                                          │
+│ ℹ️ Replication 미구성 (inst-name)         │
+│   단일 인스턴스 모드입니다.              │
+│                                          │
+│ [Mark all read]  [Clear all]             │
+└──────────────────────────────────────────┘
+```
+
+- 미읽음 알림 수: 🔔 아이콘에 빨간 배지로 표시
+- 최대 50개 알림 (FIFO)
+- 동일 title+instanceName 중복 방지
+- action 필드가 있으면 monospace 코드 블록 + 복사 버튼 표시
+
+### 6.5 Notification Store (Zustand)
+
+```typescript
+interface Notification {
+  id: string;
+  level: 'info' | 'warning' | 'error';
+  title: string;
+  message: string;
+  action?: string;
+  timestamp: Date;
+  read: boolean;
+  instanceName?: string;
+}
+```
+
+---
+
+## 7. 인수 기준
 
 - [ ] AC-1: GET /api/v1/instances/{id}/kpi에서 12개 KPI가 모두 반환됨
 - [ ] AC-2: TPS, QPS, Deadlocks는 delta/초 기반으로 계산됨
@@ -218,3 +295,7 @@ class KPICalculator:
 - [ ] AC-5: KPI Overview Panel이 인스턴스 선택 시 12개 전체 KPI 표시
 - [ ] AC-6: 임계값에 따라 normal/warning/critical 색상 코딩
 - [ ] AC-7: max_connections 대비 연결 사용률(%) 표시
+- [ ] AC-8: pg_stat_statements 미설치 시 advisory warning + CREATE EXTENSION SQL 안내
+- [ ] AC-9: Toast 알림이 화면 우상단에 표시되고 자동 닫힘 (info 8초, warning 12초)
+- [ ] AC-10: Notification Panel에서 advisory 목록 확인 + SQL action 복사 가능
+- [ ] AC-11: 알림 벨에 미읽음 수 빨간 배지 표시

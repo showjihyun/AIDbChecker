@@ -85,7 +85,7 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | **API** | `@docs/specs/api/` | API_SPEC.md, ERROR_CODES_SPEC.md, GRAPHQL_SCHEMA.md |
 | **Config** | `@docs/specs/config/` | SETTINGS_SPEC.md |
 | **Data Model** | `@docs/specs/data-model/` | ERD.md, MIGRATION_SPEC.md |
-| **Frontend** | `@docs/specs/frontend/` | COMPONENT_SPEC.md, REACT_HOOKS_SPEC.md, WEBSOCKET_EVENTS_SPEC.md |
+| **Frontend** | `@docs/specs/frontend/` | COMPONENT_SPEC.md, REACT_HOOKS_SPEC.md, WEBSOCKET_EVENTS_SPEC.md, DB_KPI_SPEC.md, INCIDENT_LIST_SPEC.md |
 | **Playbooks** | `@docs/specs/playbooks/` | PLAYBOOK_SPEC.md |
 | **Protocols** | `@docs/specs/protocols/` | A2A_PROTOCOL.md, KAFKA_SPEC.md, MCP_INTEGRATION.md |
 | **Services** | `@docs/specs/services/` | SERVICE_LAYER_SPEC.md |
