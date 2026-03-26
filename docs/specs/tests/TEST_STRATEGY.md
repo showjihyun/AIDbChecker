@@ -262,16 +262,24 @@ export default class SpecReporter implements Reporter {
 | Spec | AC | Backend Test | Frontend Test | Layer |
 |------|-----|-------------|---------------|-------|
 | **FS-AI-NL2SQL-001** | | | | |
-| | AC-1 | `test_nl2sql_spec.py::test_query_returns_sql_and_results` | - | API |
-| | AC-2 | `test_nl2sql_spec.py::test_write_keyword_rejected` | - | Unit |
-| | AC-3 | `test_nl2sql_spec.py::test_dangerous_function_rejected` | - | Unit |
-| | AC-4 | `test_nl2sql_spec.py::test_blocked_table_rejected` | - | Unit |
-| | AC-5 | `test_nl2sql_spec.py::test_statement_timeout` | - | Unit |
-| | AC-6 | `test_nl2sql_spec.py::test_result_row_limit` | - | Unit |
-| | AC-7 | `test_nl2sql_spec.py::test_history_saved` | - | API |
-| | AC-8 | `test_nl2sql_spec.py::test_uses_llm_provider_manager` | - | Unit |
-| | AC-9 | - | `NL2SQLChat.test.ts::instance_id_required` | Component |
-| | AC-10 | - | `NL2SQLChat.test.ts::model_and_time_displayed` | Component |
+| | AC-1 | `test_ai_nl2sql_001_spec.py::ac1_query_returns_sql_and_results` | - | Unit |
+| | AC-2 | `test_ai_nl2sql_001_spec.py::ac2_write_keyword_rejected` | - | Unit |
+| | AC-3 | `test_ai_nl2sql_001_spec.py::ac3_dangerous_function_rejected` | - | Unit |
+| | AC-4 | `test_ai_nl2sql_001_spec.py::ac4_blocked_tables_rejected` | - | Unit |
+| | AC-5 | `test_ai_nl2sql_001_spec.py::ac5_statement_timeout` | - | Unit |
+| | AC-6 | `test_ai_nl2sql_001_spec.py::ac6_result_row_limit` | - | Unit |
+| | AC-7 | `test_ai_nl2sql_001_spec.py::ac7_history_saved` | - | Unit |
+| | AC-8 | `test_ai_nl2sql_001_spec.py::ac8_uses_llm_provider_manager` | - | Unit |
+| | AC-9 | `test_ai_nl2sql_001_spec.py::ac9_instance_id_required` | - | Unit |
+| | AC-10 | `test_ai_nl2sql_001_spec.py::ac10_model_and_time_in_response` | - | Unit |
+| | AC-11 | `test_ai_nl2sql_001_spec.py::ac11_schema_graph_creation` | - | Unit |
+| | AC-12 | `test_ai_nl2sql_001_spec.py::ac12_graphrag_retrieval` | - | Unit |
+| | AC-13 | `test_ai_nl2sql_001_spec.py::ac13_subgraph_based_sql_generation` | - | Unit |
+| | AC-14 | `test_ai_nl2sql_001_spec.py::ac14_join_path_from_graph_edges` | - | Unit |
+| | AC-15 | `test_ai_nl2sql_001_spec.py::ac15_business_metric_concept_registration` | - | Unit |
+| | AC-16 | `test_ai_nl2sql_001_spec.py::ac16_sql_accuracy` | - | Integration (skip) |
+| | AC-17 | `test_ai_nl2sql_001_spec.py::ac17_target_db_direct_query` | - | Integration (skip) |
+| | AC-18~20 | `test_ai_nl2sql_001_spec.py::ac18~20` | - | Phase 3 (skip) |
 
 ### 3.3 Phase 2 Specs → 테스트
 

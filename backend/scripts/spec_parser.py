@@ -30,9 +30,9 @@ SPEC_ID_PATTERN = re.compile(
     r"\*\*Spec ID\*\*\s*[:：]\s*([A-Z][A-Z0-9_-]+(?:-[A-Z0-9]+)*)"
 )
 
-# Match both:  - [ ] AC-N: description  AND  - [ ] **AC-N**: description
+# Match both checked/unchecked:  - [ ] AC-N:  / - [x] AC-N:  / - [x] **AC-N**:
 AC_PATTERN = re.compile(
-    r"- \[ \]\s+\*?\*?(?P<ac>AC-\d+)\*?\*?\s*[:：]\s*(?P<desc>.+)"
+    r"- \[[ xX]\]\s+\*?\*?(?P<ac>AC-\d+)\*?\*?\s*[:：]\s*(?P<desc>.+)"
 )
 
 # Section headers that contain acceptance criteria
@@ -127,8 +127,9 @@ def parse_acceptance_criteria(content: str) -> list[AcceptanceCriterion]:
                 in_ac_section = True
                 break
 
-        # Check if we left the AC section (next heading)
-        if in_ac_section and line.startswith("#") and not any(
+        # Check if we left the AC section (next same-level or higher heading)
+        # Sub-headings (###) within the AC section are allowed (e.g., Phase groupings)
+        if in_ac_section and re.match(r"^#{1,2}\s", line) and not any(
             p.match(line.strip()) for p in AC_SECTION_PATTERNS
         ):
             in_ac_section = False
