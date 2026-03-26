@@ -5,7 +5,7 @@ GET /api/v1/instances/{id}/kpi
 
 Delta-based KPIs are derived from the last 2 hot metric_samples.
 Live KPIs (active sessions, lock waits, slow queries, connection usage)
-are queried directly from the target DB via the adapter.
+are queried directly from the target DB via a shared adapter cache.
 Storage KPIs come from the latest cold metric_samples.
 """
 
@@ -27,6 +27,37 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
+# Shared adapter cache for KPI endpoint — avoids creating a new connection pool
+# per request. Keyed by (instance_id, dsn) so DSN changes invalidate the cache.
+_kpi_adapter_cache: dict[UUID, tuple[PostgreSQLRemoteAdapter, str]] = {}
+
+
+async def _get_kpi_adapter(instance: DBInstance) -> PostgreSQLRemoteAdapter | None:
+    """Get or create a cached adapter for KPI live queries.
+
+    Reuses existing connections instead of creating a new pool per request.
+    Invalidates cache when DSN changes (e.g., password rotation).
+    """
+    dsn = build_target_dsn(instance)
+
+    if instance.id in _kpi_adapter_cache:
+        cached_adapter, cached_dsn = _kpi_adapter_cache[instance.id]
+        if cached_dsn == dsn:
+            return cached_adapter
+        # DSN changed — disconnect old adapter
+        await cached_adapter.disconnect()
+        del _kpi_adapter_cache[instance.id]
+
+    adapter = PostgreSQLRemoteAdapter(instance_id=instance.id, dsn=dsn)
+    connected = await adapter.connect()
+    if not connected:
+        # Always disconnect on failure to avoid partial pool leak
+        await adapter.disconnect()
+        return None
+
+    _kpi_adapter_cache[instance.id] = (adapter, dsn)
+    return adapter
+
 
 @router.get(
     "/instances/{instance_id}/kpi",
@@ -35,7 +66,7 @@ router = APIRouter()
     description=(
         "Returns 5-category, 12-indicator KPI snapshot. "
         "Delta KPIs use last 2 hot samples. "
-        "Live KPIs are queried from the target DB in real-time."
+        "Live KPIs are queried from the target DB via cached adapter."
     ),
 )
 async def get_instance_kpi(
@@ -45,14 +76,7 @@ async def get_instance_kpi(
     """Compute and return all 12 KPIs for a monitored instance.
 
     Spec: FS-KPI-001 Section 5.3
-
-    The endpoint:
-    1. Fetches last 2 hot metric_samples for delta calculations
-    2. Fetches latest cold sample for storage KPIs
-    3. Opens a temporary adapter connection to the target DB for live KPIs
-    4. Returns all 12 indicators with threshold-based status evaluation
     """
-    # Verify instance exists and is not soft-deleted
     stmt = select(DBInstance).where(
         DBInstance.id == instance_id,
         DBInstance.deleted_at.is_(None),
@@ -66,28 +90,12 @@ async def get_instance_kpi(
             detail=f"Instance {instance_id} not found. Verify the ID is correct.",
         )
 
-    # Create a temporary adapter for live KPI queries
     adapter: PostgreSQLRemoteAdapter | None = None
-    try:
-        if instance.is_active and instance.db_type == "postgresql":
-            dsn = build_target_dsn(instance)
-            adapter = PostgreSQLRemoteAdapter(instance_id=instance.id, dsn=dsn)
-            connected = await adapter.connect()
-            if not connected:
-                logger.warning(
-                    "kpi.adapter_connect_failed",
-                    instance_id=str(instance_id),
-                )
-                adapter = None
+    if instance.is_active and instance.db_type == "postgresql":
+        adapter = await _get_kpi_adapter(instance)
 
-        kpi_response = await KPICalculator.compute_all_kpi(
-            instance_id=instance_id,
-            session=session,
-            adapter=adapter,
-        )
-        return kpi_response
-
-    finally:
-        # Always clean up the temporary adapter connection
-        if adapter is not None:
-            await adapter.disconnect()
+    return await KPICalculator.compute_all_kpi(
+        instance_id=instance_id,
+        session=session,
+        adapter=adapter,
+    )
