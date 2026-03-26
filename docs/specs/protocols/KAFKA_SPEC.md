@@ -1,8 +1,10 @@
 # Kafka Event Spec: NeuralDB 메시징 설계
 
+> **Phase**: Phase 3+ (MVP/Phase 2에서는 Celery + Valkey가 모든 비동기 태스크를 처리합니다)
+>
 > **Spec ID**: PROTO-KAFKA-001
 > **PRD 참조**: FR-DASH-001, FR-DB-001, FR-ALERT-001~003, FR-AUTO-001
-> **상태**: Approved
+> **상태**: Approved (Phase 3+ 구현 예정)
 > **Broker**: Apache Kafka 3.7+ (KRaft mode, no Zookeeper)
 
 ---

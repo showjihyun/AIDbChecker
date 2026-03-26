@@ -51,7 +51,6 @@ interface HealthApiResponse {
   db: string;
   valkey: string;
   celery: string;
-  kafka?: string;
   status: string;
 }
 
@@ -68,7 +67,7 @@ export function SystemHealthPanel() {
       <div className="bg-surface-container rounded-xl p-5">
         <h3 className="text-sm font-semibold text-on-surface mb-3">System Health</h3>
         <div className="space-y-2 animate-pulse">
-          {['DB', 'Valkey', 'Celery', 'Kafka'].map((name) => (
+          {['DB', 'Valkey', 'Celery'].map((name) => (
             <div key={name} className="flex justify-between py-2">
               <div className="h-4 w-16 bg-surface-container-high rounded-sm" />
               <div className="h-5 w-12 bg-surface-container-high rounded-md" />
@@ -91,13 +90,11 @@ export function SystemHealthPanel() {
         { name: 'Database', component: toComponent(data.db) },
         { name: 'Valkey', component: toComponent(data.valkey) },
         { name: 'Celery', component: toComponent(data.celery) },
-        { name: 'Kafka', component: toComponent(data.kafka) },
       ]
     : [
         { name: 'Database', component: toComponent() },
         { name: 'Valkey', component: toComponent() },
         { name: 'Celery', component: toComponent() },
-        { name: 'Kafka', component: toComponent() },
       ];
 
   return (

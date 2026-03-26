@@ -374,7 +374,6 @@ interface SystemHealth {
   components: {
     database: ComponentHealth;
     valkey: ComponentHealth;
-    kafka: ComponentHealth;
     celery: CeleryHealth;
   };
 }
@@ -946,7 +945,7 @@ interface SchemaChangeTimelineProps {
 
 ```typescript
 interface SystemHealthCardProps {
-  /** 컴포넌트명 (e.g., "PostgreSQL", "Valkey", "Kafka", "Celery") */
+  /** 컴포넌트명 (e.g., "PostgreSQL", "Valkey", "Celery") */
   component: string;
   /** 상태 */
   status: 'up' | 'down' | 'degraded';

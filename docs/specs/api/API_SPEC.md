@@ -285,7 +285,7 @@
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/system/health` | 시스템 전체 헬스 체크 (UP/DEGRADED/DOWN) |
-| GET | `/api/v1/system/health/details` | 컴포넌트별 헬스 상세 (DB, Valkey, Kafka, Celery) |
+| GET | `/api/v1/system/health/details` | 컴포넌트별 헬스 상세 (DB, Valkey, Celery) |
 | GET | `/api/v1/system/metrics` | Prometheus 메트릭 프록시 (대시보드용) |
 | GET | `/api/v1/system/agents/status` | 에이전트별 실행 상태/성공률 |
 | GET | `/api/v1/system/workers` | Celery Worker 상태/큐 깊이 |
@@ -300,7 +300,6 @@
   "components": {
     "database": { "status": "healthy", "latency_ms": 2.1 },
     "valkey": { "status": "healthy", "latency_ms": 0.3 },
-    "kafka": { "status": "healthy", "consumer_lag": 12 },
     "celery": { "status": "healthy", "active_workers": 4, "queued_tasks": 3 }
   }
 }

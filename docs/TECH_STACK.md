@@ -38,7 +38,7 @@
                            │
 ┌──────────────────────────┴──────────────────────────────────────┐
 │                  Infrastructure Layer                             │
-│  PostgreSQL 16 (Meta+Metrics+Vector) + Valkey + Kafka            │
+│  PostgreSQL 16 (Meta+Metrics+Vector) + Valkey                      │
 │  Docker + Kubernetes + Prometheus + OpenTelemetry                │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -123,7 +123,7 @@
 | 기술 | 버전 | 라이선스 | 용도 |
 |------|------|---------|------|
 | **Celery** | 5.4+ | BSD 3-Clause | 비동기 태스크 큐 (메트릭 수집, 에이전트 실행) |
-| **aiokafka** | 0.10+ | Apache 2.0 | Kafka 비동기 프로듀서/컨슈머 |
+| **aiokafka** | 0.10+ | Apache 2.0 | Kafka 비동기 프로듀서/컨슈머 (Phase 3+) |
 | **aio-pika** | 9+ | Apache 2.0 | RabbitMQ (Celery 브로커 대안) |
 
 ### 3.5 프로토콜 / Agent 통신
@@ -140,6 +140,9 @@
 | **opentelemetry-instrumentation-grpc** | 0.45+ | Apache 2.0 | gRPC 호출 자동 트레이싱 |
 
 #### Agent 통신 하이브리드 전략 (Phase 3)
+
+> **Phase 1/2**: Celery + Valkey가 모든 비동기 태스크를 처리합니다. Kafka는 Phase 3+에서 도입.
+
 ```
 동기 (gRPC, 저지연 RPC):
   ├── Agent 간 직접 요청/응답 (RCA 요청 → 즉시 결과)
@@ -147,11 +150,16 @@
   ├── Health Check / Agent Discovery heartbeat
   └── DB Copilot ToT 분기별 동기 분석
 
-비동기 (Kafka, 이벤트 스트리밍):
-  ├── 메트릭 수집 스트리밍 (1초 고빈도)
-  ├── 인시던트 생성/갱신 이벤트
+비동기 — Phase 1/2 (Celery + Valkey):
+  ├── 메트릭 수집 태스크 (Celery Beat 스케줄링)
+  ├── 인시던트 생성/갱신 태스크
   ├── 알림 디스패치 (Slack/Email/Webhook)
   └── 감사 로그 / AI Decision Log
+
+비동기 — Phase 3+ (Kafka, 이벤트 스트리밍):
+  ├── A2A 에이전트 간 이벤트 스트리밍
+  ├── 고빈도 메트릭 수집 파이프라인 (50+ 인스턴스)
+  └── 이벤트 소싱 / 감사 로그 영구 저장
 ```
 
 ### 3.6 RAG / Vector
@@ -187,8 +195,8 @@
 
 | 기술 | 버전 | 라이선스 | 용도 |
 |------|------|---------|------|
-| **Valkey** | 7+ | BSD 3-Clause | 캐시 (베이스라인, 세션, Agent 상태) |
-| **Apache Kafka** | 3.7+ | Apache 2.0 | 이벤트 스트리밍 (메트릭, A2A, 알림) |
+| **Valkey** | 7+ | BSD 3-Clause | 캐시 (베이스라인, 세션, Agent 상태) + Celery 브로커 |
+| **Apache Kafka** | 3.7+ | Apache 2.0 | 이벤트 스트리밍 — **Phase 3+** (A2A 에이전트 통신). Phase 1/2는 Celery + Valkey |
 | **Docker** | 26+ | Apache 2.0 | 컨테이너화 |
 | **Kubernetes** | 1.30+ | Apache 2.0 | 오케스트레이션 |
 | **Prometheus** | 2.52+ | Apache 2.0 | **NeuralDB 자체** 시스템 메트릭 수집 (대상 DB 메트릭 아님) |
@@ -208,7 +216,7 @@
 | **celery-exporter** | MIT | Celery Worker 메트릭 → Prometheus |
 | **postgres_exporter** | Apache 2.0 | 시스템 DB(PostgreSQL 16) 메트릭 → Prometheus |
 | **redis_exporter** | MIT | Valkey 메트릭 → Prometheus (호환) |
-| **kafka-exporter** | Apache 2.0 | Kafka consumer lag 등 → Prometheus |
+| **kafka-exporter** | Apache 2.0 | Kafka consumer lag 등 → Prometheus (Phase 3+) |
 | **openlit** | Apache 2.0 | LLM 파이프라인 메트릭 (토큰 사용량, 응답 지연, 비용) → Prometheus |
 
 ```
@@ -224,8 +232,7 @@
 │                      │                                       │
 │  postgres_exporter ──┤                                       │
 │  redis_exporter ─────┼──► Prometheus ──► System Health 탭    │
-│  celery-exporter ────┤                   (React + ECharts)   │
-│  kafka-exporter ─────┘                                       │
+│  celery-exporter ────┘                   (React + ECharts)   │
 │                                                              │
 │  ※ Grafana 사용 안함 (AGPL) → 자체 React 대시보드            │
 └──────────────────────────────────────────────────────────────┘
@@ -437,6 +444,5 @@ AIDbChecker/
 | Node.js | 20 LTS | 22 LTS |
 | PostgreSQL | 16.0 | 16.4 |
 | Valkey | 7.0 | 8.0 |
-| Kafka | 3.7 | 3.8 |
 | Docker | 26.0 | 27.0 |
 | Kubernetes | 1.30 | 1.31 |

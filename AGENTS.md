@@ -45,7 +45,7 @@ npm run format       # Prettier
 
 ```bash
 cd infra/docker
-docker compose up -d postgres valkey kafka   # 인프라만 기동
+docker compose up -d postgres valkey          # 인프라만 기동
 docker compose up -d                         # 전체 기동
 docker compose down                          # 전체 중지
 ```

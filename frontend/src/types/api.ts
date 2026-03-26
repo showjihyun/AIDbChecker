@@ -77,7 +77,6 @@ export interface SystemHealth {
     database: ComponentHealth;
     valkey: ComponentHealth;
     celery: ComponentHealth;
-    kafka: ComponentHealth;
   };
   uptime_seconds: number;
 }
