@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { to: '/instances', icon: 'dns', label: 'Instances' },
   { to: '/ash', icon: 'analytics', label: 'ASH Explorer' },
   { to: '/incidents', icon: 'report_problem', label: 'Incidents' },
+  { to: '/tuning', icon: 'tune', label: 'Tuning' },
   { to: '/settings', icon: 'settings', label: 'Settings' },
 ];
 
