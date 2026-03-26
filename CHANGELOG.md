@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1.0] - 2026-03-26
+
+### Added
+- README.md — Quick Start, features, architecture, dev setup, testing
+- 36 real AC test implementations (10% → 39% coverage)
+  - FS-DASH-004: incident filter, status transition
+  - FS-ADMIN-003: audit middleware, JWT extraction, URL parsing, resilience
+  - FS-SCHEMA-001: snapshot compare, Valkey caching
+  - FS-KPI-001: delta rate, hit ratio, thresholds, advisory
+  - FS-AI-010: MTL predict, confidence, reasoning chain, fallback
+  - FS-AI-RAG-001: cosine similarity, format_for_prompt, status schema
+
 ## [0.4.0.0] - 2026-03-25 — DB KPI Dashboard
 
 ### Added
