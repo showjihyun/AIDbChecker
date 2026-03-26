@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2.0] - 2026-03-26
+
+### Added
+- Frontend Vitest setup + 41 unit tests (notification store, KPI formatters, toast, nav items)
+- Integration test infrastructure (tests/integration/) with live DB auto-skip
+- INTEGRATION_TEST_SPEC.md — test DB connection, markers, targets
+- 21 new backend unit tests (migration, config, error codes, service layer)
+- AC coverage: 39% → **52%** (45/87 ACs passing)
+
 ## [0.4.1.0] - 2026-03-26
 
 ### Added
