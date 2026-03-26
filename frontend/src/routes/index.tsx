@@ -10,6 +10,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { DashboardPage } from '@/routes/pages/DashboardPage';
 import { ASHExplorerPage } from '@/routes/pages/ASHExplorerPage';
 import { SettingsPage } from '@/routes/pages/SettingsPage';
+import { LLMSettingsPage } from '@/routes/pages/LLMSettingsPage';
 import { IncidentsPage } from '@/routes/pages/IncidentsPage';
 import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
@@ -80,9 +81,15 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+const llmSettingsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/settings/llm',
+  component: LLMSettingsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, settingsRoute]),
+  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, settingsRoute, llmSettingsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
