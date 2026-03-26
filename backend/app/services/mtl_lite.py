@@ -106,34 +106,14 @@ _MTL_FALLBACK = {
 
 
 def _get_llm():
-    """Create LangChain LLM based on AI_MODE config.
+    """Create LangChain LLM via unified LLMProviderManager.
 
+    Spec: FS-AI-LLM-001 — AC-6: all services use LLMProviderManager.
     Spec: FS-AI-010 Section 3.5 — LLM model selection.
     """
-    if settings.AI_MODE == "online":
-        from langchain_openai import ChatOpenAI
+    from app.services.llm_provider import get_llm_manager
 
-        if not settings.OPENAI_API_KEY:
-            raise RuntimeError(
-                "AI_MODE is 'online' but OPENAI_API_KEY is not set. "
-                "Set the key or switch AI_MODE to 'offline'."
-            )
-        return ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
-            temperature=0.1,
-            max_tokens=1500,
-            request_timeout=30,
-        )
-    else:
-        from langchain_community.llms import Ollama
-
-        return Ollama(
-            base_url=settings.OLLAMA_BASE_URL,
-            model=settings.OLLAMA_MODEL,
-            temperature=0.1,
-            num_predict=1500,
-        )
+    return get_llm_manager().get_llm(temperature=0.1, max_tokens=1500, request_timeout=30)
 
 
 def _parse_llm_response(raw: str) -> dict:
@@ -349,11 +329,8 @@ async def predict(
         except Exception:
             root_cause_detail = None
 
-    model_name = (
-        settings.OPENAI_MODEL
-        if settings.AI_MODE == "online"
-        else settings.OLLAMA_MODEL
-    )
+    # Spec: FS-AI-LLM-001 — unified model name from settings
+    model_name = settings.AI_MODEL
 
     result = MTLPredictResponse(
         prediction_id=prediction_id,
