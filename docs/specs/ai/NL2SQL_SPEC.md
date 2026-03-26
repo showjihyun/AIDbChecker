@@ -145,6 +145,56 @@ CREATE INDEX idx_graph_edges_target ON graph_edges(target_id);
 > NeuralDB는 이미 PostgreSQL 16 단일 DB 전략 (ADR-002).
 > pgvector로 유사도 검색 + 일반 SQL로 Graph 탐색 가능.
 
+### 3.3.1 pgvector + asyncpg + SQLAlchemy 호환성 가이드
+
+pgvector-python은 SQLAlchemy를 공식 지원하지만, **asyncpg 드라이버와 함께 사용 시** 타입 등록 문제가 발생합니다.
+
+| 드라이버 | pgvector ORM INSERT | pgvector ORM SELECT | 비고 |
+|----------|--------------------|--------------------|------|
+| `psycopg2` (sync) | ✅ 동작 | ✅ 동작 | 별도 설정 불필요 |
+| `asyncpg` (async) | ❌ 타입 오류 | ❌ 타입 오류 | `register_vector` 필요 |
+
+**NeuralDB 해결 전략 (asyncpg 환경):**
+
+1. **ORM 모델 정의**: `pgvector.sqlalchemy.Vector(384)` 사용 (읽기/스키마 정의용)
+2. **INSERT/UPDATE**: `text()` raw SQL + `CAST(:embedding AS vector)` 사용
+3. **SELECT (유사도 검색)**: `text()` raw SQL + `CAST(:query_vec AS vector)` 사용
+4. **임베딩 포맷**: Python list → pgvector 문자열 `"[0.1,0.2,...]"` 변환
+
+```python
+# ✅ GOOD — asyncpg에서 안전한 pgvector 사용법
+from sqlalchemy import text
+
+# INSERT
+await session.execute(
+    text("""
+        INSERT INTO graph_nodes (id, name, embedding)
+        VALUES (:id, :name, CAST(:embedding AS vector))
+    """),
+    {"id": node_id, "name": "users", "embedding": "[0.1,0.2,0.3]"},
+)
+
+# SELECT (cosine similarity)
+await session.execute(
+    text("""
+        SELECT id, name, 1 - (embedding <=> CAST(:q AS vector)) AS similarity
+        FROM graph_nodes
+        ORDER BY embedding <=> CAST(:q AS vector)
+        LIMIT 5
+    """),
+    {"q": "[0.1,0.2,0.3]"},
+)
+
+# ❌ BAD — asyncpg에서 ORM 직접 INSERT 시 타입 오류
+node = GraphNode(embedding=embedding_list)  # asyncpg DataError
+session.add(node)
+```
+
+> **근거**: asyncpg는 PostgreSQL custom type을 자동 감지하지 않으므로,
+> `pgvector.asyncpg.register_vector(conn)` 호출이 필요하나,
+> SQLAlchemy의 connection pool 이벤트에서 async 등록이 복잡.
+> Raw SQL + CAST 방식이 가장 안정적이며, 쿼리 가독성도 명확.
+
 ### 3.4 Schema → Graph 자동 생성
 
 ```python
