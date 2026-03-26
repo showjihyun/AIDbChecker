@@ -21,30 +21,11 @@ from app.api.deps import get_session
 from app.models.db_instance import DBInstance
 from app.schemas.kpi import KPIResponse
 from app.services.kpi_calculator import KPICalculator
-from app.utils.encryption import decrypt_value
+from app.utils.dsn import build_target_dsn
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter()
-
-
-def _build_dsn(instance: DBInstance) -> str:
-    """Build asyncpg DSN from instance fields + decrypted credentials.
-
-    Duplicated from tasks/collect.py for adapter construction.
-    Uses urllib.parse for safe URL encoding of credentials.
-    """
-    import urllib.parse
-
-    config = instance.connection_config or {}
-    username = decrypt_value(config["username"]) if "username" in config else "neuraldb"
-    password = decrypt_value(config["password"]) if "password" in config else ""
-    ssl_mode = config.get("sslmode", "prefer")
-    return (
-        f"postgresql://{urllib.parse.quote_plus(username)}:{urllib.parse.quote_plus(password)}"
-        f"@{instance.host}:{instance.port}/{instance.database_name}"
-        f"?sslmode={ssl_mode}"
-    )
 
 
 @router.get(
@@ -89,7 +70,7 @@ async def get_instance_kpi(
     adapter: PostgreSQLRemoteAdapter | None = None
     try:
         if instance.is_active and instance.db_type == "postgresql":
-            dsn = _build_dsn(instance)
+            dsn = build_target_dsn(instance)
             adapter = PostgreSQLRemoteAdapter(instance_id=instance.id, dsn=dsn)
             connected = await adapter.connect()
             if not connected:

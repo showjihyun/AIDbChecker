@@ -23,7 +23,7 @@ from app.db.session import create_worker_session
 from app.models.active_session import ActiveSession as ActiveSessionModel
 from app.models.db_instance import DBInstance
 from app.models.metric import MetricSample as MetricSampleModel
-from app.utils.encryption import decrypt_value
+from app.utils.dsn import build_target_dsn
 
 logger = structlog.get_logger(__name__)
 
@@ -32,28 +32,13 @@ logger = structlog.get_logger(__name__)
 _adapter_cache: dict[UUID, tuple[PostgreSQLRemoteAdapter, str]] = {}
 
 
-def _build_dsn(instance: DBInstance) -> str:
-    """Build asyncpg DSN from instance fields + decrypted credentials."""
-    import urllib.parse
-
-    config = instance.connection_config or {}
-    username = decrypt_value(config["username"]) if "username" in config else "neuraldb"
-    password = decrypt_value(config["password"]) if "password" in config else ""
-    ssl_mode = config.get("sslmode", "prefer")
-    return (
-        f"postgresql://{urllib.parse.quote_plus(username)}:{urllib.parse.quote_plus(password)}"
-        f"@{instance.host}:{instance.port}/{instance.database_name}"
-        f"?sslmode={ssl_mode}"
-    )
-
-
 async def _get_adapter(instance: DBInstance) -> PostgreSQLRemoteAdapter | None:
     """Get or create adapter for an instance. Returns None if connect fails.
 
     Invalidates cached adapter when the instance DSN has changed (e.g. password
     rotation or host migration).
     """
-    dsn = _build_dsn(instance)
+    dsn = build_target_dsn(instance)
 
     if instance.id in _adapter_cache:
         cached_adapter, cached_dsn = _adapter_cache[instance.id]
