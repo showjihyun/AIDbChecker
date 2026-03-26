@@ -43,14 +43,17 @@ function formatKPIValue(kpi: KPIValue, displayUnit: string): string {
   return displayUnit ? `${formatted} ${displayUnit}` : formatted;
 }
 
+// Spec: FS-KPI-001 §4.3 — 3-stage traffic light color coding
 function statusColor(status: KPIStatus): string {
   switch (status) {
+    case 'normal':
+      return 'text-tertiary';   // 🟢 Healthy — green
     case 'warning':
-      return 'text-warning';
+      return 'text-warning';    // 🟡 Warning — amber/yellow
     case 'critical':
-      return 'text-error';
+      return 'text-error';      // 🔴 Critical — red
     case 'unknown':
-      return 'text-outline';
+      return 'text-outline';    // ⚪ Unknown — gray
     default:
       return 'text-on-surface';
   }

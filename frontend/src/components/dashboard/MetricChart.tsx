@@ -49,15 +49,18 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
     const connData = sorted.map((d) => d.metrics.numbackends ?? d.metrics.active_connections ?? null);
 
     // TPS: xact_commit is a cumulative counter — compute delta per second
+    // Negative delta = counter reset (pg_stat_reset or DB restart) → show null
     const tpsData = sorted.map((d, i) => {
-      if (i === 0) return null; // no previous sample to diff
+      if (i === 0) return null;
       const prev = sorted[i - 1];
       const currCommit = d.metrics.xact_commit ?? d.metrics.tps ?? 0;
       const prevCommit = prev.metrics.xact_commit ?? prev.metrics.tps ?? 0;
+      const delta = currCommit - prevCommit;
+      if (delta < 0) return null; // counter reset — skip this interval
       const timeDiffSec =
         (new Date(d.sampled_at).getTime() - new Date(prev.sampled_at).getTime()) / 1000;
       if (timeDiffSec <= 0) return null;
-      return Math.round((currCommit - prevCommit) / timeDiffSec);
+      return Math.round(delta / timeDiffSec);
     });
 
     // Buffer Hit Ratio: delta-based (same as TPS) to show recent-interval ratio,

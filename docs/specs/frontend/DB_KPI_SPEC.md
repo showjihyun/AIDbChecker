@@ -103,13 +103,48 @@
 └───────────────────────────────────────────────────┘
 ```
 
-### 4.3 색상 코딩
+### 4.3 색상 코딩 (3단계 신호등)
 
-| 상태 | 조건 | 색상 |
-|------|------|------|
-| Normal | 값 < warn 임계값 | `text-on-surface` (기본) |
-| Warning | warn ≤ 값 < crit | `text-warning` (노란) |
-| Critical | 값 ≥ crit 임계값 | `text-error` (빨간) |
+| 상태 | 조건 | 색상 | Tailwind | 의미 |
+|------|------|------|----------|------|
+| **Healthy** | 값이 정상 범위 | 🟢 초록 | `text-tertiary` (#4edea3) | 쾌적 |
+| **Warning** | warn 임계값 도달 | 🟡 노란/주황 | `text-warning` (#f59e0b) | 주의 필요 |
+| **Critical** | crit 임계값 초과 | 🔴 빨간 | `text-error` (#ef4444) | 즉시 조치 |
+| **Unknown** | 데이터 없음 | ⚪ 회색 | `text-outline` (#88929b) | 수집 불가 |
+
+### 4.4 임계값 기본값 + 인스턴스별 설정
+
+각 KPI의 임계값은 DB 인스턴스의 성능 스펙에 따라 **Settings에서 조정 가능**합니다.
+
+| KPI | 기본 Warning | 기본 Critical | 방향 | 비고 |
+|-----|-------------|--------------|------|------|
+| TPS | 5,000 tx/s | 10,000 tx/s | ↑ 높을수록 위험 | OLTP 기준 |
+| QPS | 50,000 q/s | 100,000 q/s | ↑ | |
+| Avg RT | 100 ms | 500 ms | ↑ | |
+| Slow Queries | 5건 | 20건 | ↑ | |
+| Hit Ratio | 95% | 90% | ↓ **낮을수록 위험** | |
+| Disk IOPS | 1,000 ops/s | 5,000 ops/s | ↑ | |
+| Active Sessions | 50 | 100 | ↑ | max_connections 대비 |
+| Conn Usage | 80% | 95% | ↑ | |
+| Lock Waits | 5건 | 20건 | ↑ | |
+| Deadlocks | 0.1/s | 1.0/s | ↑ | |
+| DB Size | 80% 용량 | 95% 용량 | ↑ | |
+| Repl Lag | 10 sec | 60 sec | ↑ | |
+
+### 4.5 카운터 리셋 처리
+
+`xact_commit`, `blks_hit`, `blks_read`, `deadlocks` 등 누적 카운터는 PostgreSQL 재시작 또는 `pg_stat_reset()` 호출 시 0으로 리셋됩니다.
+
+```
+delta = current - previous
+if delta < 0:
+    # 카운터 리셋 — 이 구간의 delta/s는 계산 불가
+    return null (차트에 빈 구간으로 표시)
+```
+
+- 차트에서 음수 값을 **절대 표시하지 않음**
+- 리셋 구간은 차트에서 gap(빈 구간)으로 나타남
+- KPI 패널에서 delta 계산 불가 시 `unknown` 상태 표시
 
 ---
 
