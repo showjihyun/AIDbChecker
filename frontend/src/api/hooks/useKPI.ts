@@ -59,3 +59,33 @@ export function useInstanceKPI(
 
   return query;
 }
+
+/**
+ * Fetch KPIs for ALL given instance IDs in parallel.
+ * Returns a map of instanceId → KPIResponse.
+ * Polls every 10 seconds (lighter than single-instance 5s).
+ * Used by DashboardPage to show accurate KPI values on ALL instance cards,
+ * not just the selected one.
+ */
+export function useAllInstancesKPI(instanceIds: string[]) {
+  return useQuery({
+    queryKey: ['kpi', 'all', ...instanceIds],
+    queryFn: async () => {
+      const results: Record<string, KPIResponse> = {};
+      await Promise.all(
+        instanceIds.map(async (id) => {
+          try {
+            const res = await apiClient.get<KPIResponse>(`/instances/${id}/kpi`);
+            results[id] = res;
+          } catch {
+            // Skip failed instances
+          }
+        })
+      );
+      return results;
+    },
+    enabled: instanceIds.length > 0,
+    refetchInterval: 10_000,
+    staleTime: 8_000,
+  });
+}
