@@ -1,13 +1,13 @@
-# Feature Spec: NL2SQL — 자연어 DB 질의 시스템
+# Feature Spec: NL2GraphRAG — GraphRAG 기반 자연어 DB 질의 시스템
 
 ## 메타데이터
 - **Spec ID**: FS-AI-NL2SQL-001
 - **PRD 참조**: FR-AI-003, MVP-AI-004, MVP-AI-005
-- **우선순위**: P0 (MVP)
-- **상태**: Implemented (v0.6.0)
+- **우선순위**: P0 (MVP→Phase 2 확장)
+- **상태**: Partial (MVP: 기본 NL2SQL 구현, Phase 2: GraphRAG 전환)
 - **선행 Spec**: FS-AI-LLM-001 (LLM Provider), DM-001 (ERD)
 - **구현 파일**:
-  - Backend: `backend/app/services/nl2sql.py`, `backend/app/api/v1/nl2sql.py`
+  - Backend: `backend/app/services/nl2sql.py`, `backend/app/services/graph_rag.py`, `backend/app/api/v1/nl2sql.py`
   - Frontend: `frontend/src/components/nl2sql/NL2SQLChat.tsx`
   - Test: `backend/tests/unit/test_nl2sql_spec.py`
   - Skill: `.claude/skills/gen-nl2sql/SKILL.md`
@@ -16,276 +16,360 @@
 
 ## 1. 개요
 
-사용자가 자연어로 질문하면 LLM이 PostgreSQL SELECT 쿼리로 변환하고, 읽기 전용으로 실행하여 결과를 반환하는 시스템. 5계층 안전 장치로 write/injection을 완전 차단합니다.
+### 1.1 왜 NL2SQL → NL2GraphRAG인가
+
+기존 NL2SQL의 한계:
+
+| 문제 | 기존 NL2SQL | NL2GraphRAG 해결 |
+|------|-----------|-----------------|
+| **스키마 규모** | 프롬프트에 전체 스키마 불가 (300+ 테이블) | Graph에서 관련 5개만 추출 |
+| **Join 경로** | LLM이 FK 관계를 모름 → 잘못된 JOIN | Graph Edge로 자동 발견 |
+| **비즈니스 시맨틱** | `active_customer` 같은 메트릭 이해 불가 | Business Concept 노드로 매핑 |
+| **정확도** | ~60% | **~80-90%** |
+
+### 1.2 진화 경로
+
+```
+Phase 1 (MVP, 현재): 기본 NL2SQL
+  → LLM + 하드코딩 스키마 프롬프트
+  → 시스템 DB 쿼리만
+
+Phase 2 (GraphRAG 전환): NL2GraphRAG
+  → Schema → Knowledge Graph 자동 생성
+  → Graph Retrieval → Subgraph → Query Plan → SQL
+  → 대상 DB 직접 쿼리 지원
+
+Phase 3 (Agent 기반): Multi-Agent NL2GraphRAG
+  → Planner Agent + Schema Agent + SQL Agent + Validator Agent
+  → 멀티 DB (PostgreSQL + MySQL + MSSQL)
+```
 
 ---
 
-## 2. 아키텍처
+## 2. NL2GraphRAG 아키텍처
 
 ```
-사용자 질의: "오늘 가장 느린 쿼리 5개 보여줘"
+사용자 질의: "지난달 가장 느린 쿼리를 실행한 인스턴스는?"
     ↓
-┌─ Layer 1: LLM SQL 생성 ─────────────────────────┐
-│  System Prompt (§3.1)                             │
-│  + Schema Context (시스템 테이블 구조)              │
-│  + Question                                       │
-│  → LLM (Ollama/OpenAI/Claude/Gemini)             │
-│  → Raw SQL output                                 │
+┌─ Step 1: NL Understanding ───────────────────────┐
+│  질의 의도 파악 + 핵심 엔티티 추출                  │
+│  → entities: [쿼리, 인스턴스, 지난달]              │
+│  → intent: aggregation + time_filter + ranking    │
 └───────────────────────────────────────────────────┘
     ↓
-┌─ Layer 2: SQL 정제 ──────────────────────────────┐
-│  _clean_sql(): markdown 펜스 제거, 세미콜론 제거   │
+┌─ Step 2: GraphRAG Retrieval ─────────────────────┐
+│  2a. Query Embedding                              │
+│      embedding("지난달 가장 느린 쿼리 인스턴스")    │
+│  2b. Graph Node Retrieval (pgvector 유사도)        │
+│      → active_sessions, db_instances, metric_...  │
+│  2c. Subgraph Generation                          │
+│      db_instances ← active_sessions (FK)          │
+│      → 관련 컬럼 + Join 경로 추출                  │
 └───────────────────────────────────────────────────┘
     ↓
-┌─ Layer 3: 5계층 안전 검증 (§4) ──────────────────┐
-│  ① Write 키워드 차단 (INSERT/UPDATE/DELETE/DROP...) │
-│  ② 위험 함수 차단 (pg_read_file, dblink...)       │
-│  ③ 민감 테이블 차단 (users, audit_logs...)        │
-│  ④ Multi-statement 차단 (세미콜론)                │
-│  ⑤ SELECT/WITH 강제 (첫 키워드 검증)              │
+┌─ Step 3: Query Planner ──────────────────────────┐
+│  Graph 기반 실행 계획 생성                         │
+│  1. active_sessions에서 duration_ms 집계           │
+│  2. db_instances JOIN (인스턴스명)                  │
+│  3. 지난달 필터 (sampled_at >= ...)               │
+│  4. GROUP BY instance → AVG(duration_ms)          │
+│  5. ORDER BY DESC → LIMIT 10                      │
 └───────────────────────────────────────────────────┘
     ↓
-┌─ Layer 4: 읽기 전용 실행 ────────────────────────┐
-│  SET LOCAL default_transaction_read_only = on     │
-│  SET LOCAL statement_timeout = '5000'             │
-│  LIMIT 1000 rows                                  │
+┌─ Step 4: SQL Generator ──────────────────────────┐
+│  Planner 결과 → PostgreSQL SQL 생성               │
+│  + 5계층 안전 검증 (§5)                           │
 └───────────────────────────────────────────────────┘
     ↓
-┌─ Layer 5: 결과 반환 + 이력 저장 ─────────────────┐
-│  NL2SQLQueryResponse (sql, columns, rows, time)   │
-│  nl2sql_histories 테이블에 저장                    │
+┌─ Step 5: SQL Validator + Execution ──────────────┐
+│  schema validation + execution test               │
+│  + query cost check                               │
+│  → 읽기 전용 실행 → 결과 반환                     │
 └───────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. LLM 프롬프트 설계
+## 3. Schema Knowledge Graph
 
-### 3.1 System Prompt
+### 3.1 Graph 노드 유형
 
-```
-You are a PostgreSQL SQL expert for NeuralDB monitoring system.
-Convert the user's natural language question into a single read-only SQL query.
+| Node Type | 소스 | 설명 | 예시 |
+|-----------|------|------|------|
+| **Table** | `pg_tables`, `information_schema` | DB 테이블 | `active_sessions` |
+| **Column** | `pg_attribute`, `information_schema.columns` | 테이블 컬럼 | `active_sessions.duration_ms` |
+| **Metric** | 수동 정의 / 자동 추출 | 비즈니스 메트릭 | `avg_query_time`, `tps` |
+| **BusinessConcept** | 수동 정의 | 비즈니스 용어 | `slow_query`, `active_customer` |
 
-RULES:
-- Generate ONLY SELECT statements. NEVER generate INSERT, UPDATE, DELETE, DROP, ALTER.
-- Use PostgreSQL 16 syntax.
-- Always include reasonable LIMIT (default 100).
-- Use explicit column names instead of SELECT *.
-- Return ONLY the SQL query, no explanations or markdown.
-```
+### 3.2 Graph 엣지 유형
 
-### 3.2 Schema Context
+| Edge Type | 소스 | 설명 | 예시 |
+|-----------|------|------|------|
+| `HAS_COLUMN` | `table → column` | 테이블-컬럼 관계 | `active_sessions → duration_ms` |
+| `FOREIGN_KEY` | `pg_constraint` | FK 관계 | `active_sessions.instance_id → db_instances.id` |
+| `METRIC_SOURCE` | 수동 | 메트릭 ← 컬럼 | `avg_query_time ← active_sessions.duration_ms` |
+| `CONCEPT_MAP` | 수동 | 비즈니스 용어 → 메트릭 | `slow_query → avg_query_time` |
 
-시스템 DB의 주요 테이블 구조를 프롬프트에 포함:
-
-| 테이블 | 주요 컬럼 | NL2SQL 쿼리 대상 |
-|--------|----------|-----------------|
-| `db_instances` | name, host, port, environment | ✅ |
-| `metric_samples` | instance_id, sampled_at, category, metrics(JSONB) | ✅ |
-| `active_sessions` | instance_id, pid, query, wait_event, duration_ms | ✅ |
-| `incidents` | severity, status, title, detected_at | ✅ |
-| `baselines` | metric_type, normal_min, normal_max, mean | ✅ |
-| `schema_changes` | change_type, object_name, detected_at | ✅ |
-| `users` | — | ❌ 차단 |
-| `audit_logs` | — | ❌ 차단 |
-
-### 3.3 쿼리 대상 DB
-
-| Phase | 쿼리 대상 | 설명 |
-|-------|----------|------|
-| **MVP (현재)** | 시스템 DB | NeuralDB 자체 메타/메트릭 테이블 |
-| **Phase 3** | 대상 DB | 모니터링 대상 PostgreSQL에 직접 쿼리 |
-
-> MVP에서는 `instance_id`로 특정 인스턴스의 데이터를 필터링합니다.
-> Phase 3에서는 adapter를 통해 대상 DB에 직접 SELECT를 실행합니다.
-
----
-
-## 4. 5계층 안전 장치
-
-### 4.1 Layer 1 — Write 키워드 차단
-
-```python
-_WRITE_KEYWORDS = re.compile(
-    r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|"
-    r"COPY|VACUUM|REINDEX|CLUSTER|COMMENT|LOCK|DISCARD|REASSIGN|"
-    r"DO|EXECUTE|CALL|PERFORM)\b",
-    re.IGNORECASE,
-)
-```
-
-### 4.2 Layer 2 — 위험 함수 차단
-
-```python
-_DANGEROUS_FUNCTIONS = re.compile(
-    r"\b(pg_read_file|pg_read_binary_file|pg_stat_file|lo_get|lo_export|"
-    r"dblink|pg_execute_server_program|query_to_xml|xpath)\b",
-    re.IGNORECASE,
-)
-```
-
-### 4.3 Layer 3 — 민감 테이블 차단
-
-```python
-_BLOCKED_TABLES = re.compile(
-    r"\b(users|audit_logs|alert_channels|alert_policies|rag_documents)\b",
-    re.IGNORECASE,
-)
-```
-
-### 4.4 Layer 4 — Multi-statement 차단
-
-세미콜론이 포함된 SQL은 거부 (연쇄 SQL injection 방지).
-
-### 4.5 Layer 5 — SELECT/WITH 강제
-
-첫 키워드가 `SELECT` 또는 `WITH` (CTE)가 아니면 거부.
-
-### 4.6 실행 시 안전장치
-
-| 설정 | 값 | 목적 |
-|------|-----|------|
-| `default_transaction_read_only` | `on` | DB 레벨 write 차단 |
-| `statement_timeout` | `5000` (5초) | 무한 실행 방지 |
-| max_rows | 1000 | 결과 크기 제한 |
-
----
-
-## 5. API 엔드포인트
-
-### 5.1 구현 완료
-
-| Method | Path | Auth | 상태 |
-|--------|------|------|------|
-| POST | `/api/v1/nl2sql/query` | operator+ | ✅ 구현 |
-
-### 5.2 미구현 (Phase 2+)
-
-| Method | Path | Auth | 설명 | Phase |
-|--------|------|------|------|-------|
-| POST | `/api/v1/nl2sql/explain` | operator+ | EXPLAIN ANALYZE 자연어 해석 | Phase 2 |
-| POST | `/api/v1/nl2sql/optimize` | operator+ | SQL 최적화 제안 | Phase 2 |
-| GET | `/api/v1/nl2sql/history` | operator+ | 질의 이력 조회 | Phase 2 |
-| POST | `/api/v1/nl2sql/feedback` | operator+ | 결과 정확도 피드백 (👍/👎) | Phase 2 |
-
-### 5.3 Request / Response
-
-```python
-# POST /api/v1/nl2sql/query
-class NL2SQLQueryRequest(BaseModel):
-    question: str           # 자연어 질문 (3~1000자)
-    instance_id: UUID       # 대상 인스턴스 (메트릭 필터링용)
-
-class NL2SQLQueryResponse(BaseModel):
-    sql: str                # 생성된 SQL
-    result_rows: list[list] # 실행 결과 행
-    result_columns: list[str] # 컬럼명
-    execution_time_ms: int  # 실행 시간
-    ai_model: str           # 사용 LLM 모델
-    warning: str | None     # 경고 (결과 잘림 등)
-```
-
----
-
-## 6. 프론트엔드 — NL2SQL Chat Widget
-
-### 6.1 위치
-
-대시보드 우하단 플로팅 💬 버튼 → 400px 채팅 패널
-
-### 6.2 기능
-
-| 기능 | 상태 |
-|------|------|
-| 자연어 입력 → SQL 생성 → 결과 테이블 | ✅ |
-| 세션 히스토리 (최근 5건) | ✅ |
-| 인스턴스 자동 선택 (Dashboard 선택 연동) | ✅ |
-| AI 모델명 + 실행시간 표시 | ✅ |
-| 인스턴스 미선택 시 안내 메시지 | ✅ |
-| 결과 행 수 제한 (20행 표시, 전체 수 표기) | ✅ |
-| EXPLAIN 해석 버튼 | ❌ Phase 2 |
-| SQL 최적화 제안 버튼 | ❌ Phase 2 |
-| 👍/👎 피드백 버튼 | ❌ Phase 2 |
-
-### 6.3 에러 처리
-
-| 에러 | 표시 메시지 |
-|------|-----------|
-| 인스턴스 미선택 | "인스턴스를 먼저 선택하세요" |
-| Write SQL 감지 | "Only SELECT queries are allowed." |
-| 위험 함수 감지 | "Generated SQL contains restricted functions." |
-| 민감 테이블 접근 | "Generated SQL references restricted tables." |
-| LLM 호출 실패 | "SQL execution failed. Try rephrasing your question." |
-| 타임아웃 (5초) | "SQL execution failed." |
-
----
-
-## 7. 데이터 모델
-
-### 7.1 nl2sql_histories 테이블
+### 3.3 Graph 저장 (PostgreSQL + pgvector)
 
 ```sql
-CREATE TABLE nl2sql_histories (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id),
+-- Graph 노드 테이블
+CREATE TABLE graph_nodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    node_type VARCHAR(20) NOT NULL,    -- table / column / metric / concept
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    metadata JSONB DEFAULT '{}',
+    embedding VECTOR(384) NOT NULL,    -- sentence-transformers
     instance_id UUID REFERENCES db_instances(id),
-    natural_query TEXT NOT NULL,
-    generated_sql TEXT NOT NULL,
-    execution_result JSONB,      -- {rows: N, columns: [...]}
-    is_correct BOOLEAN,          -- 사용자 피드백
-    ai_model VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Graph 엣지 테이블
+CREATE TABLE graph_edges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_id UUID NOT NULL REFERENCES graph_nodes(id),
+    target_id UUID NOT NULL REFERENCES graph_nodes(id),
+    edge_type VARCHAR(30) NOT NULL,    -- has_column / foreign_key / metric_source / concept_map
+    metadata JSONB DEFAULT '{}',
+    UNIQUE(source_id, target_id, edge_type)
+);
+
+CREATE INDEX idx_graph_nodes_embedding ON graph_nodes USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX idx_graph_nodes_type ON graph_nodes(node_type);
+CREATE INDEX idx_graph_edges_source ON graph_edges(source_id);
+CREATE INDEX idx_graph_edges_target ON graph_edges(target_id);
+```
+
+> **설계 결정**: 별도 Graph DB (Neo4j) 대신 PostgreSQL + pgvector 사용.
+> NeuralDB는 이미 PostgreSQL 16 단일 DB 전략 (ADR-002).
+> pgvector로 유사도 검색 + 일반 SQL로 Graph 탐색 가능.
+
+### 3.4 Schema → Graph 자동 생성
+
+```python
+# backend/app/services/graph_rag.py
+
+class SchemaGraphBuilder:
+    """PostgreSQL 카탈로그에서 Knowledge Graph 자동 생성."""
+
+    async def build_graph(self, instance_id: UUID) -> int:
+        """대상 DB의 information_schema를 읽어 Graph 노드/엣지 생성.
+
+        1. information_schema.tables → Table 노드
+        2. information_schema.columns → Column 노드 + HAS_COLUMN 엣지
+        3. pg_constraint → FOREIGN_KEY 엣지
+        4. 각 노드에 sentence-transformers 임베딩 생성
+        """
+        ...
+
+    async def add_business_metric(self, name: str, description: str,
+                                   source_columns: list[str]) -> UUID:
+        """비즈니스 메트릭 노드 + METRIC_SOURCE 엣지 수동 추가."""
+        ...
+
+    async def add_business_concept(self, name: str, description: str,
+                                    related_metrics: list[str]) -> UUID:
+        """비즈니스 개념 노드 + CONCEPT_MAP 엣지 수동 추가."""
+        ...
 ```
 
 ---
 
-## 8. 예시 질의 + 기대 SQL
+## 4. GraphRAG Retrieval 프로세스
 
-| 자연어 질의 | 기대 SQL |
-|-----------|---------|
-| "현재 등록된 인스턴스 보여줘" | `SELECT name, host, port, environment FROM db_instances WHERE deleted_at IS NULL LIMIT 100` |
-| "오늘 발생한 critical 인시던트" | `SELECT title, severity, detected_at FROM incidents WHERE severity = 'critical' AND detected_at >= CURRENT_DATE LIMIT 100` |
-| "가장 오래 실행 중인 쿼리" | `SELECT pid, query, duration_ms FROM active_sessions WHERE state = 'active' ORDER BY duration_ms DESC LIMIT 10` |
-| "neuraldb-system의 최근 메트릭" | `SELECT sampled_at, metrics FROM metric_samples WHERE instance_id = '...' ORDER BY sampled_at DESC LIMIT 10` |
+### 4.1 Query Embedding + Graph Node 검색
+
+```python
+class GraphRAGRetriever:
+    """사용자 질의에서 관련 Schema Subgraph 추출."""
+
+    async def retrieve(self, question: str, instance_id: UUID,
+                       top_k: int = 10) -> SubgraphContext:
+        """
+        1. question → embedding (sentence-transformers)
+        2. pgvector cosine similarity → top_k 관련 노드
+        3. 관련 노드의 이웃 탐색 (1-hop) → Subgraph 구성
+        4. Join 경로 자동 발견 (FOREIGN_KEY 엣지 추적)
+        """
+        ...
+```
+
+### 4.2 Subgraph → LLM Context 변환
+
+```python
+class SubgraphContext:
+    tables: list[str]           # 관련 테이블 목록
+    columns: dict[str, list]    # 테이블별 컬럼 목록
+    join_paths: list[JoinPath]  # FK 기반 Join 경로
+    metrics: list[str]          # 관련 비즈니스 메트릭
+    concepts: list[str]         # 관련 비즈니스 개념
+
+    def to_prompt_context(self) -> str:
+        """LLM 프롬프트에 삽입할 스키마 컨텍스트 생성.
+
+        전체 스키마가 아닌 관련 Subgraph만 포함 → 토큰 절약.
+        """
+```
+
+### 4.3 기존 NL2SQL과의 비교
+
+```
+기존 (Phase 1):
+  하드코딩 스키마 (10 테이블) → LLM → SQL
+
+NL2GraphRAG (Phase 2):
+  질의 → Embedding → Graph 검색 → 관련 5 테이블만 추출
+  → Subgraph Context → Query Planner → SQL Generator → SQL
+```
 
 ---
 
-## 9. LLM 프로바이더별 최적화
+## 5. 5계층 안전 장치 (기존 유지)
 
-| Provider | 특이사항 | 권장 설정 |
-|----------|---------|----------|
-| **Ollama** | 로컬, 느림 (2-10초), 정확도 중간 | temperature=0, max_tokens=500 |
-| **OpenAI** | 빠름 (<2초), 정확도 높음 | gpt-4o, temperature=0 |
-| **Anthropic** | 빠름, SQL 생성 정확도 매우 높음 | claude-sonnet-4-20250514, temperature=0 |
-| **Google** | 빠름, 가끔 markdown 펜스 포함 | gemini-2.0-flash, temperature=0 |
+GraphRAG 전환 후에도 동일하게 적용:
 
-모든 프로바이더에서 `_clean_sql()`이 markdown 펜스를 자동 제거합니다.
+| Layer | 검증 | 내용 |
+|-------|------|------|
+| ① | Write 키워드 | INSERT/UPDATE/DELETE/DROP/ALTER... |
+| ② | 위험 함수 | pg_read_file, dblink, lo_get... |
+| ③ | 민감 테이블 | users, audit_logs, alert_channels... |
+| ④ | Multi-statement | 세미콜론 차단 |
+| ⑤ | SELECT/WITH 강제 | 첫 키워드 검증 |
+
+실행 시 안전장치:
+- `SET LOCAL default_transaction_read_only = on`
+- `SET LOCAL statement_timeout = '5000'`
+- 결과 1000행 제한
+
+---
+
+## 6. Agent 기반 구조 (Phase 3)
+
+```
+┌─ Planner Agent ──────────────────────────────────┐
+│  질의 의도 파악 → 실행 계획 수립                    │
+│  "어떤 테이블을 어떤 순서로 조회할지"               │
+└───────────────────────────────────────────────────┘
+    ↓
+┌─ Schema Agent ───────────────────────────────────┐
+│  GraphRAG Retrieval → Subgraph 구성               │
+│  "관련 테이블/컬럼/Join 경로 선택"                 │
+└───────────────────────────────────────────────────┘
+    ↓
+┌─ SQL Agent ──────────────────────────────────────┐
+│  Subgraph + Plan → SQL 생성                       │
+│  "PostgreSQL 문법에 맞는 최적 SQL"                 │
+└───────────────────────────────────────────────────┘
+    ↓
+┌─ Validator Agent ────────────────────────────────┐
+│  5계층 안전 검증 + EXPLAIN ANALYZE 비용 체크       │
+│  "안전하고 효율적인 SQL인지 확인"                   │
+└───────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. API 엔드포인트
+
+### 7.1 현재 구현 (Phase 1)
+
+| Method | Path | 상태 |
+|--------|------|------|
+| POST | `/api/v1/nl2sql/query` | ✅ 기본 NL2SQL |
+
+### 7.2 Phase 2 추가
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/api/v1/nl2sql/query` | GraphRAG 기반 NL2SQL (기존 API 유지, 내부 교체) |
+| POST | `/api/v1/nl2sql/explain` | EXPLAIN ANALYZE 자연어 해석 |
+| POST | `/api/v1/nl2sql/optimize` | SQL 최적화 제안 |
+| GET | `/api/v1/nl2sql/history` | 질의 이력 조회 |
+| POST | `/api/v1/nl2sql/feedback` | 결과 정확도 피드백 (👍/👎) |
+| POST | `/api/v1/graph/build` | Schema → Graph 자동 생성 |
+| GET | `/api/v1/graph/nodes` | Graph 노드 조회 |
+| POST | `/api/v1/graph/metric` | 비즈니스 메트릭 등록 |
+| POST | `/api/v1/graph/concept` | 비즈니스 개념 등록 |
+
+---
+
+## 8. 구현 마일스톤
+
+### Phase 1 (현재 — 기본 NL2SQL)
+
+- [x] LLM + 하드코딩 스키마 → SQL 생성
+- [x] 5계층 안전 장치
+- [x] 읽기 전용 실행 + 결과 반환
+- [x] 프론트엔드 채팅 위젯
+- [x] LLMProviderManager 통합
+
+### Phase 2 (다음 — GraphRAG 전환)
+
+- [ ] `graph_nodes` / `graph_edges` 테이블 마이그레이션
+- [ ] `SchemaGraphBuilder` — information_schema → Graph 자동 생성
+- [ ] `GraphRAGRetriever` — 질의 → Subgraph 추출
+- [ ] `QueryPlanner` — Graph 기반 실행 계획
+- [ ] `SQLGenerator` — Subgraph + Plan → SQL (기존 LLM 호출 교체)
+- [ ] `SQLValidator` — EXPLAIN ANALYZE 비용 체크
+- [ ] 대상 DB 직접 쿼리 (adapter 통해)
+- [ ] 비즈니스 메트릭/개념 등록 API
+
+### Phase 3 (Agent 기반)
+
+- [ ] Planner Agent + Schema Agent + SQL Agent + Validator Agent
+- [ ] 멀티 DB 지원 (MySQL, MSSQL 어댑터)
+- [ ] 피드백 학습 (Few-shot 자동 추가)
+
+---
+
+## 9. GraphRAG 효과 예측
+
+| 지표 | Phase 1 (NL2SQL) | Phase 2 (GraphRAG) |
+|------|------------------|-------------------|
+| SQL 생성 정확도 | ~60% | **~80-90%** |
+| 지원 스키마 규모 | ~20 테이블 | **수백~수천 테이블** |
+| Join 경로 정확도 | LLM 추측 | **Graph 기반 100%** |
+| 비즈니스 용어 이해 | ❌ | **✅ Concept 노드** |
+| 토큰 사용량 | 전체 스키마 (많음) | **Subgraph만 (적음)** |
 
 ---
 
 ## 10. 인수 기준
 
-- [ ] AC-1: POST /api/v1/nl2sql/query에서 자연어 → SQL → 결과 반환
-- [ ] AC-2: Write 키워드 (INSERT/DELETE/DROP) 포함 SQL 생성 시 400 에러
-- [ ] AC-3: 위험 함수 (pg_read_file, dblink) 포함 시 400 에러
-- [ ] AC-4: 민감 테이블 (users, audit_logs) 접근 시 400 에러
-- [ ] AC-5: statement_timeout 5초 적용 확인
-- [ ] AC-6: 결과 1000행 제한 + 초과 시 warning 메시지
-- [ ] AC-7: nl2sql_histories 테이블에 질의 이력 저장
-- [ ] AC-8: LLMProviderManager를 통해 현재 설정된 LLM 사용
-- [ ] AC-9: 프론트엔드에서 instance_id 전달 + 미선택 시 안내
-- [ ] AC-10: AI 모델명 + 실행시간이 결과에 표시
+### Phase 1 (현재, MVP)
+
+- [x] AC-1: POST /api/v1/nl2sql/query에서 자연어 → SQL → 결과 반환
+- [x] AC-2: Write 키워드 차단 (INSERT/DELETE/DROP)
+- [x] AC-3: 위험 함수 차단 (pg_read_file, dblink)
+- [x] AC-4: 민감 테이블 차단 (users, audit_logs)
+- [x] AC-5: statement_timeout 5초 적용
+- [x] AC-6: 결과 1000행 제한 + warning
+- [x] AC-7: nl2sql_histories 이력 저장
+- [x] AC-8: LLMProviderManager 사용
+- [x] AC-9: 프론트엔드 instance_id 전달
+- [x] AC-10: AI 모델명 + 실행시간 표시
+
+### Phase 2 (GraphRAG)
+
+- [ ] AC-11: Schema → Graph 자동 생성 (graph_nodes, graph_edges)
+- [ ] AC-12: GraphRAG Retrieval로 관련 Subgraph 추출
+- [ ] AC-13: Subgraph 기반 SQL 생성 (하드코딩 스키마 대체)
+- [ ] AC-14: Join 경로가 Graph Edge에서 자동 발견
+- [ ] AC-15: 비즈니스 메트릭/개념 등록 + SQL 반영
+- [ ] AC-16: SQL 정확도 80%+ (테스트 세트 기준)
+- [ ] AC-17: 대상 DB 직접 쿼리 지원
+
+### Phase 3 (Agent)
+
+- [ ] AC-18: 4-Agent 파이프라인 (Planner→Schema→SQL→Validator)
+- [ ] AC-19: 멀티 DB SQL 방언 지원
+- [ ] AC-20: 피드백 기반 Few-shot 학습
 
 ---
 
-## 11. Phase 2 확장 계획
+## 11. 의존성
 
-| 기능 | 설명 | 의존성 |
-|------|------|--------|
-| EXPLAIN 해석 | SQL 실행 계획을 자연어로 설명 | Tuning Agent tools |
-| SQL 최적화 | 느린 쿼리의 개선안 제안 | index_recommendations tool |
-| 대상 DB 직접 쿼리 | adapter를 통해 모니터링 대상에 SELECT | Adapter pool 연동 |
-| 피드백 학습 | 👍/👎 → Few-shot 예시 자동 추가 | RAG pipeline |
-| 질의 이력 API | GET /nl2sql/history + 검색/필터 | nl2sql_histories 테이블 |
+- **선행**: FS-AI-LLM-001 (LLM Provider), DM-001 (ERD), FS-AI-RAG-001 (pgvector)
+- **사용**: FS-AI-TUNE-001 (Tuning Agent의 explain_query tool 재사용)
+- **후행**: Phase 3 MCP Server에서 NL2GraphRAG를 외부 AI에 노출
