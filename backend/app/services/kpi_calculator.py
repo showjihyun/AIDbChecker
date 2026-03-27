@@ -257,8 +257,12 @@ class KPICalculator:
 
         if cold_sample is not None:
             cm = cold_sample.metrics
-            # KPI-11: DB Size
-            db_size_val = cm.get("database_size_bytes")
+            # KPI-11: DB Size — cold에서 가져오되, 없으면 hot의 db_size fallback
+            db_size_val = cm.get("database_size_bytes") or cm.get("db_size")
+
+        # Fallback: hot metrics에서 db_size 확인 (cold 수집 전이라 없을 수 있음)
+        if db_size_val is None and latest is not None:
+            db_size_val = latest.metrics.get("database_size_bytes") or latest.metrics.get("db_size")
 
             # KPI-12: Replication Lag (max across all replicas)
             replication = cm.get("replication", [])

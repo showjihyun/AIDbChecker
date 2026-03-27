@@ -141,34 +141,29 @@ export function KPIOverviewPanel({ instanceId }: KPIOverviewPanelProps) {
     );
   }
 
+  // DBA 관점: 중요도 순서 — Throughput → Connection/Lock → Resource/Storage
+  // 2행 그리드로 수직 스크롤 최소화
   return (
-    <div className="bg-surface-container rounded-xl p-5 space-y-4">
-      <CategorySection title="Throughput & Latency" icon="speed">
+    <div className="bg-surface-container rounded-xl p-5">
+      {/* Row 1: 핵심 KPI 6개 (한 줄에 모두 표시) */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
         <KPIItem label="TPS" kpi={kpi.throughput.tps} displayUnit="tx/s" />
-        <KPIItem label="QPS" kpi={kpi.throughput.qps} displayUnit="q/s" />
-        <KPIItem label="Avg Response" kpi={kpi.throughput.avg_response_time_ms} />
-        <KPIItem label="Slow Queries" kpi={kpi.throughput.slow_queries} />
-      </CategorySection>
-
-      <CategorySection title="Resource" icon="memory">
-        <KPIItem label="Hit Ratio" kpi={kpi.resource.buffer_hit_ratio} />
-        <KPIItem label="Disk IOPS" kpi={kpi.resource.disk_iops} displayUnit="ops/s" />
-      </CategorySection>
-
-      <CategorySection title="Connection" icon="lan">
-        <KPIItem label="Active Sessions" kpi={kpi.connection.active_sessions} />
-        <KPIItem label="Conn Usage" kpi={kpi.connection.connection_usage_pct} />
-      </CategorySection>
-
-      <CategorySection title="Lock" icon="lock">
+        <KPIItem label="Active Sess" kpi={kpi.connection.active_sessions} />
         <KPIItem label="Lock Waits" kpi={kpi.lock.lock_waits} />
+        <KPIItem label="Hit Ratio" kpi={kpi.resource.buffer_hit_ratio} />
+        <KPIItem label="Avg Resp" kpi={kpi.throughput.avg_response_time_ms} />
         <KPIItem label="Deadlocks" kpi={kpi.lock.deadlocks_per_sec} displayUnit="/s" />
-      </CategorySection>
+      </div>
 
-      <CategorySection title="Storage" icon="storage">
+      {/* Row 2: 보조 KPI 6개 */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 pt-3 border-t border-white/5">
+        <KPIItem label="QPS" kpi={kpi.throughput.qps} displayUnit="q/s" />
+        <KPIItem label="Conn Usage" kpi={kpi.connection.connection_usage_pct} />
+        <KPIItem label="Slow Query" kpi={kpi.throughput.slow_queries} />
+        <KPIItem label="Disk IOPS" kpi={kpi.resource.disk_iops} displayUnit="ops/s" />
         <KPIItem label="DB Size" kpi={kpi.storage.db_size_bytes} />
         <KPIItem label="Repl Lag" kpi={kpi.storage.replication_lag_sec} />
-      </CategorySection>
+      </div>
     </div>
   );
 }
