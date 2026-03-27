@@ -84,6 +84,11 @@ app.add_middleware(
 # Spec: FS-ADMIN-003 -- Audit log middleware (after CORS, before route handling)
 app.add_middleware(AuditLogMiddleware)
 
+# Spec: API-ERR-001 -- Standardized error responses
+from app.middleware.error_handler import register_error_handlers
+
+register_error_handlers(app)
+
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
