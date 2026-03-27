@@ -25,9 +25,7 @@ class BranchScore(BaseModel):
     def final_score(self) -> float:
         """Spec: FS-AI-012 Section 2.3 — weighted score minus risk penalty."""
         base = (
-            self.relevance_score * 0.4
-            + self.evidence_strength * 0.3
-            + self.action_confidence * 0.3
+            self.relevance_score * 0.4 + self.evidence_strength * 0.3 + self.action_confidence * 0.3
         )
         return round(max(base - self.risk_penalty, 0.0), 3)
 
@@ -35,9 +33,7 @@ class BranchScore(BaseModel):
 class BranchScoreOut(BranchScore):
     """Serializable BranchScore that includes computed final_score."""
 
-    final_score_value: float = Field(
-        ..., alias="final_score", description="Computed final score"
-    )
+    final_score_value: float = Field(..., alias="final_score", description="Computed final score")
 
     model_config = {"populate_by_name": True}
 
@@ -78,7 +74,12 @@ class CopilotDiagnoseResponse(BaseModel):
     total_inference_time_ms: int
     total_tokens_used: int
     autonomy_level_applied: int
-    execution_status: str  # recommended | awaiting_approval | executed | blocked
+    execution_status: str  # recommended | awaiting_approval | executed | blocked | copilot_recommended
+
+    # Spec: FS-AI-012 AC-7 — Playbook 하이브리드 연동 (ADR-008)
+    recommended_playbook: str | None = Field(
+        None, description="Matched Built-in Playbook name, or None if no match"
+    )
 
 
 class CopilotSessionItem(BaseModel):
