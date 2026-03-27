@@ -498,24 +498,18 @@ def upgrade() -> None:
         ["created_at"],
     )
 
-    # On PostgreSQL with pgvector: convert embedding to vector(384) and add HNSW index.
-    # Uses SAVEPOINT so a failure does not abort the outer transaction.
+    # Convert rag_documents.embedding to vector(384) and add HNSW index.
+    # pgvector extension must be created in init.sql or prior step.
     conn = op.get_bind()
-    conn.execute(sa.text("SAVEPOINT pgvector_check"))
-    try:
-        conn.execute(sa.text(
-            "ALTER TABLE rag_documents "
-            "ALTER COLUMN embedding TYPE vector(384) USING embedding::vector(384)"
-        ))
-        conn.execute(sa.text(
-            "CREATE INDEX idx_rag_documents_embedding "
-            "ON rag_documents USING hnsw (embedding vector_cosine_ops) "
-            "WITH (m = 16, ef_construction = 64)"
-        ))
-        conn.execute(sa.text("RELEASE SAVEPOINT pgvector_check"))
-    except Exception:
-        conn.execute(sa.text("ROLLBACK TO SAVEPOINT pgvector_check"))
-        # pgvector not available; embedding stays as LargeBinary
+    conn.execute(sa.text(
+        "ALTER TABLE rag_documents "
+        "ALTER COLUMN embedding TYPE vector(384) USING NULL"
+    ))
+    conn.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_rag_documents_embedding "
+        "ON rag_documents USING hnsw (embedding vector_cosine_ops) "
+        "WITH (m = 16, ef_construction = 64)"
+    ))
 
     # ==================================================================
     # 11. alert_channels (FK: users SET NULL)

@@ -59,7 +59,7 @@ class PlaybookMetadata(BaseModel):
     description: str
     author: str = "builtin"
     tags: list[str] = []
-    min_autonomy_level: int = Field(..., ge=0, le=2)
+    min_autonomy_level: int = Field(..., ge=0, le=4)  # Phase 3: L3/L4 개방
     target_db_types: list[str] = ["postgresql"]
     risk_level: RiskLevel
 

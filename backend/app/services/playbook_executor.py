@@ -38,6 +38,9 @@ _BUILTIN_DIR = Path(__file__).resolve().parent.parent.parent / "playbooks" / "bu
 # Cache: name → parsed YAML dict
 _playbook_cache: dict[str, dict] = {}
 
+# Phase 3: Custom playbooks (in-memory store)
+_custom_playbooks: dict[str, dict] = {}
+
 
 def _load_all_playbooks() -> dict[str, dict]:
     """Load and cache all built-in YAML playbooks."""
@@ -63,11 +66,11 @@ def _load_all_playbooks() -> dict[str, dict]:
 
 
 def list_playbooks() -> list[PlaybookSummary]:
-    """List all built-in playbooks as summaries.
+    """List all playbooks (built-in + custom) as summaries.
 
     Spec: FS-AUTO-003 AC-1, AC-2
     """
-    playbooks = _load_all_playbooks()
+    playbooks = {**_load_all_playbooks(), **_custom_playbooks}
     result = []
     for data in playbooks.values():
         meta = data.get("metadata", {})
@@ -87,11 +90,11 @@ def list_playbooks() -> list[PlaybookSummary]:
 
 
 def get_playbook(name: str) -> PlaybookDetail | None:
-    """Get a single playbook detail by name.
+    """Get a single playbook detail by name (built-in or custom).
 
     Spec: FS-AUTO-003 AC-2
     """
-    playbooks = _load_all_playbooks()
+    playbooks = {**_load_all_playbooks(), **_custom_playbooks}
     data = playbooks.get(name)
     if not data:
         return None
@@ -196,7 +199,12 @@ async def execute_playbook(
             total_duration_ms=elapsed,
         )
 
-    if autonomy_level < min_level:
+    if autonomy_level >= 3:
+        # Spec: FS-AUTO-002 AC-9, AC-10 — L3/L4 자동 실행 (Phase 3)
+        # Skip approval, proceed directly to execution
+        pass  # fall through to execution below
+
+    elif autonomy_level < min_level:
         # L1 but playbook requires L2: pending approval
         elapsed = int((time.monotonic() - start_time) * 1000)
         return PlaybookExecuteResponse(
@@ -291,3 +299,81 @@ async def execute_playbook(
         completed_at=datetime.now(UTC),
         total_duration_ms=elapsed,
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Custom Playbook CRUD
+# Spec: FS-AUTO-003 Phase 3
+# ---------------------------------------------------------------------------
+
+
+def create_custom_playbook(yaml_content: str) -> tuple[str | None, str | None]:
+    """Parse and store a custom playbook YAML.
+
+    Returns (playbook_name, error).
+    """
+    try:
+        data = yaml.safe_load(yaml_content)
+    except Exception as exc:
+        return None, f"Invalid YAML: {exc}"
+
+    if not isinstance(data, dict):
+        return None, "YAML root must be a mapping"
+
+    meta = data.get("metadata", {})
+    name = meta.get("name")
+    if not name:
+        return None, "metadata.name is required"
+
+    # Reject overwriting built-in
+    builtins = _load_all_playbooks()
+    if name in builtins:
+        return None, f"Cannot overwrite built-in playbook '{name}'"
+
+    # Validate required fields
+    if not meta.get("risk_level"):
+        return None, "metadata.risk_level is required"
+    if "min_autonomy_level" not in meta:
+        return None, "metadata.min_autonomy_level is required"
+    if not data.get("steps"):
+        return None, "At least one step is required"
+
+    # Mark as custom
+    meta["author"] = "custom"
+    data["_yaml_content"] = yaml_content
+
+    _custom_playbooks[name] = data
+    logger.info("playbook.custom_created", name=name)
+    return name, None
+
+
+def update_custom_playbook(name: str, yaml_content: str) -> tuple[bool, str | None]:
+    """Update an existing custom playbook. Returns (success, error)."""
+    if name not in _custom_playbooks:
+        return False, f"Custom playbook '{name}' not found"
+
+    builtins = _load_all_playbooks()
+    if name in builtins:
+        return False, f"Cannot modify built-in playbook '{name}'"
+
+    try:
+        data = yaml.safe_load(yaml_content)
+    except Exception as exc:
+        return False, f"Invalid YAML: {exc}"
+
+    meta = data.get("metadata", {})
+    meta["author"] = "custom"
+    data["_yaml_content"] = yaml_content
+    _custom_playbooks[name] = data
+    logger.info("playbook.custom_updated", name=name)
+    return True, None
+
+
+def delete_custom_playbook(name: str) -> tuple[bool, str | None]:
+    """Delete a custom playbook. Returns (success, error)."""
+    if name not in _custom_playbooks:
+        return False, f"Custom playbook '{name}' not found"
+
+    del _custom_playbooks[name]
+    logger.info("playbook.custom_deleted", name=name)
+    return True, None

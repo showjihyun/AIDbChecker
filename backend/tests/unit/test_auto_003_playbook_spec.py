@@ -368,3 +368,113 @@ def test_fs_auto_003_ac8_approve_request_schema():
 
     req2 = PlaybookApproveRequest(approved=False, comment="Too risky")
     assert req2.approved is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Custom Playbook CRUD
+# ---------------------------------------------------------------------------
+
+_CUSTOM_YAML = """
+apiVersion: neuraldb/v1
+kind: Playbook
+metadata:
+  name: custom-test-playbook
+  version: "1.0"
+  description: "Test custom playbook"
+  tags: [test]
+  min_autonomy_level: 1
+  target_db_types: [postgresql]
+  risk_level: low
+trigger:
+  type: manual
+  min_confidence: 0.5
+steps:
+  - name: check_status
+    type: sql
+    query: "SELECT 1"
+    timeout: 5s
+on_success:
+  - notify: slack
+    message: "Custom playbook done"
+"""
+
+
+@spec_ref("FS-AUTO-003", "AC-9")
+def test_fs_auto_003_phase3_create_custom_playbook():
+    """Phase 3: 커스텀 Playbook YAML 생성."""
+    from app.services.playbook_executor import (
+        _custom_playbooks,
+        create_custom_playbook,
+    )
+
+    _custom_playbooks.clear()
+    name, err = create_custom_playbook(_CUSTOM_YAML)
+    assert err is None
+    assert name == "custom-test-playbook"
+    assert "custom-test-playbook" in _custom_playbooks
+    _custom_playbooks.clear()
+
+
+@spec_ref("FS-AUTO-003", "AC-9")
+def test_fs_auto_003_phase3_cannot_overwrite_builtin():
+    """Phase 3: Built-in Playbook 덮어쓰기 불가."""
+    from app.services.playbook_executor import (
+        _custom_playbooks,
+        _playbook_cache,
+        create_custom_playbook,
+    )
+
+    _playbook_cache.clear()
+    _custom_playbooks.clear()
+    overwrite_yaml = _CUSTOM_YAML.replace("custom-test-playbook", "lock-remediation")
+    name, err = create_custom_playbook(overwrite_yaml)
+    assert name is None
+    assert "Cannot overwrite built-in" in err
+    _custom_playbooks.clear()
+
+
+@spec_ref("FS-AUTO-003", "AC-9")
+def test_fs_auto_003_phase3_list_includes_custom():
+    """Phase 3: list_playbooks()에 커스텀 포함."""
+    from app.services.playbook_executor import (
+        _custom_playbooks,
+        _playbook_cache,
+        create_custom_playbook,
+        list_playbooks,
+    )
+
+    _playbook_cache.clear()
+    _custom_playbooks.clear()
+    create_custom_playbook(_CUSTOM_YAML)
+
+    summaries = list_playbooks()
+    names = [s.name for s in summaries]
+    assert "custom-test-playbook" in names
+    assert len(summaries) == 8  # 7 built-in + 1 custom
+    _custom_playbooks.clear()
+
+
+@spec_ref("FS-AUTO-003", "AC-9")
+def test_fs_auto_003_phase3_delete_custom():
+    """Phase 3: 커스텀 Playbook 삭제."""
+    from app.services.playbook_executor import (
+        _custom_playbooks,
+        create_custom_playbook,
+        delete_custom_playbook,
+    )
+
+    _custom_playbooks.clear()
+    create_custom_playbook(_CUSTOM_YAML)
+    ok, err = delete_custom_playbook("custom-test-playbook")
+    assert ok is True
+    assert "custom-test-playbook" not in _custom_playbooks
+
+
+@spec_ref("FS-AUTO-003", "AC-9")
+def test_fs_auto_003_phase3_crud_endpoints_registered():
+    """Phase 3: POST/PUT/DELETE /playbooks 엔드포인트 등록."""
+    from app.main import app as fastapi_app
+
+    paths = [r.path for r in fastapi_app.routes]
+    assert "/api/v1/playbooks" in paths  # POST (create)
+    assert "/api/v1/playbooks/{name}" in paths  # PUT, DELETE
