@@ -28,6 +28,7 @@ from app.api.v1 import (
     playbooks,
     rag,
     reports,
+    tasks,
     schema_changes,
     system,
     tuning,
@@ -116,6 +117,7 @@ app.include_router(
 app.include_router(graph.router, prefix="/api/v1", tags=["graph"], dependencies=_auth_dep)
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"], dependencies=_auth_dep)
 app.include_router(playbooks.router, prefix="/api/v1", tags=["playbooks"], dependencies=_auth_dep)
+app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"], dependencies=_auth_dep)
 
 # System router — intentionally public (health check, metrics)
 app.include_router(system.router, prefix="/api/v1", tags=["system"])
