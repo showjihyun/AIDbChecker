@@ -221,20 +221,29 @@ async def predict(
     """
     from langchain_core.messages import HumanMessage, SystemMessage
 
+    from app.utils.react_trace import ReActTrace
+
     prediction_id = uuid4()
     now = datetime.now(UTC)
     detected = detected_at or now
     start = time.monotonic()
     tokens_used = None
 
+    # Spec: FS-AI-TRACE-001 — ReAct trace collector
+    trace = ReActTrace("mtl_rca")
+    trace.thought("Incident detected — gathering context for 4-Head analysis")
+
     # Build the prompt
+    trace.action("Building prompt from metrics + ASH + RAG results")
     user_prompt = _MTL_USER_PROMPT.format(
         metrics_snapshot=metrics_snapshot or "No metrics available.",
         ash_summary=ash_summary or "No active sessions data.",
         rag_results=rag_results or "No similar past incidents found.",
     )
+    trace.observation(f"Prompt built: {len(user_prompt)} chars, RAG context included")
 
     llm = _get_llm()
+    trace.action(f"LLM invoke — {getattr(llm, 'model_name', 'unknown')} 4-Head inference")
     parsed = None
 
     # Spec: FS-AI-010 Section 4.2 — max 2 retries on invalid JSON
@@ -276,9 +285,11 @@ async def predict(
             break  # Non-JSON errors — don't retry
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
+    trace.observation(f"LLM responded in {elapsed_ms}ms")
 
     # Spec: FS-AI-010 Section 3.6 — fallback on failure
     if parsed is None:
+        trace.error(f"LLM failed after retries: {last_error}")
         logger.error(
             "mtl.prediction_failed_fallback",
             incident_id=str(incident_id),
@@ -346,6 +357,13 @@ async def predict(
         model_version="mtl-lite-v1",
         inference_time_ms=elapsed_ms,
         tokens_used=tokens_used,
+        # ReAct trace (FS-AI-TRACE-001)
+        trace=trace.to_dict(),
+    )
+    trace.result(
+        f"anomaly={result.anomaly_type.value}, "
+        f"confidence={result.confidence}, "
+        f"actions={len(result.suggested_actions)}"
     )
 
     logger.info(
