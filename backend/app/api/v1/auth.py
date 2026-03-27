@@ -2,6 +2,7 @@
 """Auth endpoints: login, token refresh, current user info."""
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -37,7 +38,7 @@ class TokenRefreshRequest(BaseModel):
 
 
 class UserMeResponse(BaseModel):
-    id: str
+    id: str | UUID
     email: str
     name: str
     role: str
