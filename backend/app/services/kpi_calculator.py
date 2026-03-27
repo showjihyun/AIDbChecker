@@ -39,7 +39,7 @@ logger = structlog.get_logger(__name__)
 # Spec: FS-KPI-001 Section 2 — threshold definitions
 # Format: (warning_threshold, critical_threshold)
 # For "higher is worse" metrics (default direction)
-_THRESHOLDS_UPPER = {
+_THRESHOLDS_UPPER: dict[str, tuple[float, float]] = {
     "tps": (5000, 10000),
     "qps": (50000, 100000),
     "avg_response_time_ms": (100, 500),
@@ -77,10 +77,10 @@ def _evaluate_status(metric_name: str, value: float | int | None) -> str:
 
     # Upper-is-worse metrics (standard thresholds)
     if metric_name in _THRESHOLDS_UPPER:
-        warn, crit = _THRESHOLDS_UPPER[metric_name]
-        if value >= crit:
+        warn_upper, crit_upper = _THRESHOLDS_UPPER[metric_name]
+        if value >= crit_upper:
             return "critical"
-        if value >= warn:
+        if value >= warn_upper:
             return "warning"
         return "normal"
 

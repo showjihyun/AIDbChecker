@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """Baseline model — AI-generated automatic baselines for anomaly detection."""
 

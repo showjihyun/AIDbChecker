@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """User model — system users with RBAC roles."""
 

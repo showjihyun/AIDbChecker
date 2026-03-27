@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """NL2SQLHistory model — natural language to SQL query history."""
 
