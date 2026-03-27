@@ -277,15 +277,16 @@ def test_fs_ai_nl2sql_001_ac19_moved_to_adapter():
 # ---------------------------------------------------------------------------
 
 @spec_ref("FS-AI-NL2SQL-001", "AC-20")
-def test_fs_ai_nl2sql_001_ac20_feedback_few_shot():
-    """FS-AI-NL2SQL-001 AC-20: Feedback Few-shot — nl2sql_histories 기반.
+def test_fs_ai_nl2sql_001_ac20_feedback_deferred():
+    """FS-AI-NL2SQL-001 AC-20: Few-shot — Deferred (현재 불필요).
 
-    Uses is_correct=true rows from nl2sql_histories as Few-shot examples.
-    No Agent pipeline needed — simple service logic.
+    Decision (2026-03-27): 정확도 100% + 피드백 0건 → Few-shot 연기.
+    대신 피드백 수집 인프라(is_correct 필드)는 준비 완료.
+    도입 조건: 정확도 <80% 또는 피드백 50건 이상 축적 시.
     """
     from app.models.nl2sql_history import NL2SQLHistory
 
-    # History model has feedback field for few-shot learning
+    # Feedback infrastructure ready (field exists)
     assert hasattr(NL2SQLHistory, "is_correct")
     assert hasattr(NL2SQLHistory, "natural_query")
     assert hasattr(NL2SQLHistory, "generated_sql")
