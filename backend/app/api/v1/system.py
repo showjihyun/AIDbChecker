@@ -1,8 +1,11 @@
-# Spec: MVP-DASH-005, FR-SELF-001
+# Spec: MVP-DASH-005, FR-SELF-001, FS-SELF-001
 """System health API — check DB, Valkey, Celery component status."""
 
+import time
+from datetime import datetime, timezone
+
 import structlog
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -13,6 +16,9 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
+# Track process start time for uptime calculation
+_PROCESS_START = time.monotonic()
+
 
 class HealthStatus(BaseModel):
     """Component health status response."""
@@ -21,6 +27,24 @@ class HealthStatus(BaseModel):
     valkey: str  # "up" / "down"
     celery: str  # "up" / "down"
     status: str  # "healthy" / "degraded" / "unhealthy"
+
+
+class ComponentHealthDetail(BaseModel):
+    """Spec: FS-SELF-001 §3.2 — per-component health detail."""
+
+    status: str  # "up" / "down"
+    latency_ms: int | None = None
+    details: dict | None = None
+    last_checked_at: datetime
+
+
+class HealthDetail(BaseModel):
+    """Spec: FS-SELF-001 §3.2 — detailed health response."""
+
+    status: str  # "healthy" / "degraded" / "unhealthy"
+    uptime_seconds: int
+    version: str
+    components: dict[str, ComponentHealthDetail]
 
 
 @router.get("/system/health", response_model=HealthStatus)
@@ -53,39 +77,104 @@ async def health_check() -> HealthStatus:
     )
 
 
+@router.get("/system/health/detail", response_model=HealthDetail)
+async def health_detail() -> HealthDetail:
+    """Spec: FS-SELF-001 AC-6 — detailed health with uptime, version, latencies."""
+    from app.api.deps import get_current_user  # noqa: F811
+
+    now = datetime.now(timezone.utc)
+    db_status, db_ms = await _check_db_detail()
+    valkey_status, valkey_ms = await _check_valkey_detail()
+    celery_status, celery_ms, celery_details = await _check_celery_detail()
+
+    components_map = {"db": db_status, "valkey": valkey_status, "celery": celery_status}
+    if all(v == "up" for v in components_map.values()):
+        overall = "healthy"
+    elif db_status == "down":
+        overall = "unhealthy"
+    else:
+        overall = "degraded"
+
+    return HealthDetail(
+        status=overall,
+        uptime_seconds=int(time.monotonic() - _PROCESS_START),
+        version=_read_version(),
+        components={
+            "db": ComponentHealthDetail(
+                status=db_status, latency_ms=db_ms, last_checked_at=now,
+            ),
+            "valkey": ComponentHealthDetail(
+                status=valkey_status, latency_ms=valkey_ms, last_checked_at=now,
+            ),
+            "celery": ComponentHealthDetail(
+                status=celery_status, latency_ms=celery_ms,
+                details=celery_details, last_checked_at=now,
+            ),
+        },
+    )
+
+
+def _read_version() -> str:
+    """Read VERSION file from project root."""
+    try:
+        from pathlib import Path
+        vf = Path(__file__).resolve().parents[3] / "VERSION"
+        return vf.read_text().strip() if vf.exists() else "unknown"
+    except Exception:
+        return "unknown"
+
+
 async def _check_db() -> str:
     """Check system PostgreSQL via SELECT 1."""
+    status, _ = await _check_db_detail()
+    return status
+
+
+async def _check_db_detail() -> tuple[str, int | None]:
+    """Check system PostgreSQL with latency measurement."""
     try:
+        start = time.monotonic()
         async with system_engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        return "up"
+        ms = int((time.monotonic() - start) * 1000)
+        return "up", ms
     except Exception:
         logger.warning("health.db_down")
-        return "down"
+        return "down", None
 
 
 async def _check_valkey() -> str:
     """Check Valkey connectivity via PING."""
+    status, _ = await _check_valkey_detail()
+    return status
+
+
+async def _check_valkey_detail() -> tuple[str, int | None]:
+    """Check Valkey with latency measurement."""
     try:
         import redis.asyncio as aioredis
 
+        start = time.monotonic()
         client = aioredis.from_url(settings.VALKEY_URL, socket_timeout=3)
         try:
             pong = await client.ping()
-            return "up" if pong else "down"
+            ms = int((time.monotonic() - start) * 1000)
+            return ("up" if pong else "down"), ms
         finally:
             await client.aclose()
     except Exception:
         logger.warning("health.valkey_down")
-        return "down"
+        return "down", None
 
 
 async def _check_celery() -> str:
-    """Check Celery by inspecting active workers via Valkey-backed control.
+    """Check Celery worker availability."""
+    status, _, _ = await _check_celery_detail()
+    return status
 
-    Celery's inspect.ping() is a synchronous blocking call; run it in a
-    thread executor to avoid blocking the async event loop.
-    """
+
+async def _check_celery_detail() -> tuple[str, int | None, dict | None]:
+    """Check Celery with latency and worker count."""
     try:
         import asyncio
         from app.tasks import celery_app
@@ -94,11 +183,14 @@ async def _check_celery() -> str:
             inspector = celery_app.control.inspect(timeout=2)
             return inspector.ping()
 
+        start = time.monotonic()
         loop = asyncio.get_running_loop()
         ping_result = await loop.run_in_executor(None, _sync_ping)
+        ms = int((time.monotonic() - start) * 1000)
+
         if ping_result:
-            return "up"
-        return "down"
+            return "up", ms, {"worker_count": len(ping_result)}
+        return "down", ms, None
     except Exception:
         logger.warning("health.celery_down")
-        return "down"
+        return "down", None, None
