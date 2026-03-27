@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0.0] - 2026-03-27 — v1.0 Release: AI-Powered DBA Agent
+
+### Milestone
+- **NeuralDB v1.0** — AI 기반 DB 모니터링 + DBA Agent 자율 운영 시스템
+- AC Coverage: 216/219 (99%), 25+ Specs, 470+ tests
+- 4일간 개발 (Day 1~4, gstack Sprint 7-Phase Loop)
+
+### Added (v0.9 → v1.0)
+- **DBA Agent Security Audit**: 9 findings fixed (2 CRITICAL, 3 HIGH, 3 MEDIUM, 1 LOW)
+  - SQL injection prevention (validate_identifier + parameter allowlist)
+  - SafetyGuard: always check SQL patterns + reject semicolons/comments
+  - Role-based risk ceiling (operator→WARNING, db_admin→DANGEROUS)
+  - Explicit transaction context for SET LOCAL
+  - User identity propagation to audit trail
+- **DBA Agent Tier 2**: QuerySimulator, ActionMemory, LLM Retry
+- **DBA Agent Chat UI**: `/dba` page with intent-routed chat interface
+- **Pre-commit Hook**: dev/staging TypeScript warn-only (not blocking)
+
+### Full Feature Set (v1.0)
+- Real-time DB monitoring (1s Hot / 10s Warm / 1min Cold metrics)
+- ASH (Active Session History) 히트맵
+- AI Auto-Baseline (STL + Isolation Forest)
+- NL2GraphRAG (Knowledge Graph + pgvector)
+- DBA Agent (Execution + Orchestrator + Safety Guard)
+- Copilot (Tree-of-Thought 8-branch diagnosis)
+- Tuning Agent (ReAct 7 tools)
+- Playbook Lite (Built-in 7 + executor)
+- AIGC Report generation
+- 4-Pillar Pre-Commit Quality Gate (Harness v3)
+- MCP PostgreSQL integration
+
 ## [0.9.0.0] - 2026-03-27 — DBA Agent (Execution + Orchestrator)
 
 ### Added
