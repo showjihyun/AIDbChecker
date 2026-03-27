@@ -1,0 +1,54 @@
+# Spec: FS-AUTO-003 (Lite) — Built-in Playbook #4
+apiVersion: neuraldb/v1
+kind: Playbook
+
+metadata:
+  name: "connection-pool"
+  version: "1.0"
+  description: "Connection saturation 감지 — idle 세션 정리"
+  author: "builtin"
+  tags: [connection, resource, postgresql]
+  min_autonomy_level: 1
+  target_db_types: [postgresql]
+  risk_level: medium
+
+trigger:
+  type: metric_threshold
+  metric: connection_usage_pct
+  condition: ">"
+  threshold: 80
+  duration: 60s
+  cooldown: 10m
+  min_confidence: 0.5
+
+steps:
+  - name: "find_idle_connections"
+    type: sql
+    query: |
+      SELECT pid, usename, application_name, state,
+             age(clock_timestamp(), state_change) AS idle_duration
+      FROM pg_stat_activity
+      WHERE state = 'idle'
+        AND age(clock_timestamp(), state_change) > interval '10 minutes'
+      ORDER BY state_change
+      LIMIT 20
+    timeout: 10s
+    save_as: idle_sessions
+
+  - name: "kill_oldest_idle"
+    type: sql
+    query: "SELECT pg_terminate_backend({{ idle_sessions[0].pid }})"
+    timeout: 5s
+    requires_approval: true
+    rollback:
+      query: "-- no rollback for session kill"
+
+on_success:
+  - notify: slack
+    message: "Connection pool 정리: idle 세션 {{ idle_sessions | length }}개 중 최장 idle 종료"
+
+on_failure:
+  - rollback: all
+  - notify: slack
+    severity: warning
+    message: "Connection pool 정리 실패: {{ error }}"
