@@ -160,6 +160,84 @@ async def refresh_token(
     )
 
 
+# ---------------------------------------------------------------------------
+# Spec: FS-ADMIN-002 — SSO/LDAP endpoints
+# ---------------------------------------------------------------------------
+
+
+class OIDCCallbackRequest(BaseModel):
+    id_token: str
+
+
+class LDAPLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/oidc/callback", response_model=TokenResponse)
+async def oidc_callback(
+    body: OIDCCallbackRequest,
+    session: AsyncSession = Depends(get_session),
+) -> TokenResponse:
+    """Exchange OIDC id_token for JWT tokens.
+
+    Spec: FS-ADMIN-002 AC-2, AC-5, AC-6.
+    """
+    if not settings.SSO_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="SSO is not enabled.",
+        )
+
+    from app.services.sso import authenticate_oidc
+
+    try:
+        user = await authenticate_oidc(session, body.id_token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        )
+
+    user_id = str(user.id)
+    return TokenResponse(
+        access_token=_create_access_token(user_id),
+        refresh_token=_create_refresh_token(user_id),
+    )
+
+
+@router.post("/ldap", response_model=TokenResponse)
+async def ldap_login(
+    body: LDAPLoginRequest,
+    session: AsyncSession = Depends(get_session),
+) -> TokenResponse:
+    """Authenticate via LDAP and issue JWT tokens.
+
+    Spec: FS-ADMIN-002 AC-3, AC-5, AC-6.
+    """
+    if not settings.SSO_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="SSO is not enabled.",
+        )
+
+    from app.services.sso import authenticate_ldap
+
+    try:
+        user = await authenticate_ldap(session, body.username, body.password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        )
+
+    user_id = str(user.id)
+    return TokenResponse(
+        access_token=_create_access_token(user_id),
+        refresh_token=_create_refresh_token(user_id),
+    )
+
+
 @router.get("/me", response_model=UserMeResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),

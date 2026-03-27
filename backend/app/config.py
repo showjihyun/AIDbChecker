@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     SLACK_WEBHOOK_URL: str = ""
     SLACK_ALERT_COOLDOWN_MINUTES: int = 30
 
+    # SSO / External Auth (Spec: FS-ADMIN-002)
+    SSO_ENABLED: bool = False
+    OIDC_ISSUER_URL: str = ""
+    OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    LDAP_SERVER_URL: str = ""
+    LDAP_BIND_DN: str = ""
+    LDAP_BIND_PASSWORD: str = ""
+    LDAP_USER_SEARCH_BASE: str = ""
+    LDAP_USER_SEARCH_FILTER: str = "(uid={username})"
+    API_KEY_HEADER: str = "X-API-Key"
+
     # Credential Encryption (ADR-007)
     CREDENTIAL_ENCRYPTION_KEY: str = Field(
         default="change-me-32-byte-key-for-fernet",

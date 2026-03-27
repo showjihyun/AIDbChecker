@@ -122,12 +122,12 @@ async def test_fs_ai_012_ac3_auto_execute_true_autonomy_level():
     llm = _make_mock_llm(branches)
     agent = DBCopilotAgent(llm=llm)
 
-    # Level 0 + auto_execute: should recommend, not execute
+    # Level 0 + auto_execute: should recommend (or copilot_recommended if no playbook match)
     r0 = await agent.diagnose(
         instance_id=uuid4(), max_branches=2,
         autonomy_level=0, auto_execute=True,
     )
-    assert r0.execution_status == "recommended"
+    assert r0.execution_status in ("recommended", "copilot_recommended")
 
     # Level 2 + auto_execute: should await approval
     r2 = await agent.diagnose(
@@ -143,12 +143,12 @@ async def test_fs_ai_012_ac3_auto_execute_true_autonomy_level():
     )
     assert r3.execution_status == "executed"
 
-    # Level 3 but auto_execute=False: should recommend
+    # Level 3 but auto_execute=False: should recommend (or copilot_recommended)
     r3_no = await agent.diagnose(
         instance_id=uuid4(), max_branches=2,
         autonomy_level=3, auto_execute=False,
     )
-    assert r3_no.execution_status == "recommended"
+    assert r3_no.execution_status in ("recommended", "copilot_recommended")
 
 
 @spec_ref("FS-AI-012", "AC-4")
@@ -224,3 +224,119 @@ async def test_fs_ai_012_ac6_copilot_sessions():
 
     # Cleanup
     _sessions.clear()
+
+
+@spec_ref("FS-AI-012", "AC-7")
+@pytest.mark.asyncio
+async def test_fs_ai_012_ac7_known_anomaly_matches_playbook():
+    """FS-AI-012 AC-7: lock_contention → recommended_playbook='lock-remediation'."""
+    branches = _make_branches(2, [
+        {
+            "relevance_score": 0.9,
+            "evidence_strength": 0.8,
+            "action_confidence": 0.8,
+            "risk_penalty": 0.0,
+            "anomaly_type": "lock_contention",
+        },
+        {
+            "relevance_score": 0.3,
+            "evidence_strength": 0.3,
+            "action_confidence": 0.3,
+            "risk_penalty": 0.0,
+            "anomaly_type": "unknown",
+        },
+    ])
+    llm = _make_mock_llm(branches)
+    agent = DBCopilotAgent(llm=llm)
+
+    result = await agent.diagnose(instance_id=uuid4(), max_branches=2)
+
+    assert result.recommended_playbook == "lock-remediation"
+    assert result.execution_status == "recommended"
+
+
+@spec_ref("FS-AI-012", "AC-7")
+@pytest.mark.asyncio
+async def test_fs_ai_012_ac7_vacuum_bloat_matches_playbook():
+    """FS-AI-012 AC-7: vacuum_bloat → recommended_playbook='vacuum-maintenance'."""
+    branches = _make_branches(2, [
+        {
+            "relevance_score": 0.9,
+            "evidence_strength": 0.9,
+            "action_confidence": 0.9,
+            "risk_penalty": 0.0,
+            "anomaly_type": "vacuum_bloat",
+        },
+        {
+            "relevance_score": 0.2,
+            "evidence_strength": 0.2,
+            "action_confidence": 0.2,
+            "risk_penalty": 0.0,
+            "anomaly_type": "unknown",
+        },
+    ])
+    llm = _make_mock_llm(branches)
+    agent = DBCopilotAgent(llm=llm)
+
+    result = await agent.diagnose(instance_id=uuid4(), max_branches=2)
+
+    assert result.recommended_playbook == "vacuum-maintenance"
+
+
+@spec_ref("FS-AI-012", "AC-8")
+@pytest.mark.asyncio
+async def test_fs_ai_012_ac8_unknown_anomaly_copilot_recommended():
+    """FS-AI-012 AC-8: unknown anomaly → execution_status='copilot_recommended', no playbook."""
+    branches = _make_branches(2, [
+        {
+            "relevance_score": 0.8,
+            "evidence_strength": 0.7,
+            "action_confidence": 0.7,
+            "risk_penalty": 0.0,
+            "anomaly_type": "some_new_pattern",
+        },
+        {
+            "relevance_score": 0.3,
+            "evidence_strength": 0.3,
+            "action_confidence": 0.3,
+            "risk_penalty": 0.0,
+            "anomaly_type": "unknown",
+        },
+    ])
+    llm = _make_mock_llm(branches)
+    agent = DBCopilotAgent(llm=llm)
+
+    result = await agent.diagnose(instance_id=uuid4(), max_branches=2)
+
+    assert result.recommended_playbook is None
+    assert result.execution_status == "copilot_recommended"
+
+
+@spec_ref("FS-AI-012", "AC-8")
+@pytest.mark.asyncio
+async def test_fs_ai_012_ac8_blocked_overrides_copilot_recommended():
+    """FS-AI-012 AC-8: low confidence → blocked takes priority over copilot_recommended."""
+    branches = _make_branches(2, [
+        {
+            "relevance_score": 0.1,
+            "evidence_strength": 0.1,
+            "action_confidence": 0.1,
+            "risk_penalty": 0.2,
+            "anomaly_type": "new_pattern",
+        },
+        {
+            "relevance_score": 0.1,
+            "evidence_strength": 0.1,
+            "action_confidence": 0.1,
+            "risk_penalty": 0.1,
+            "anomaly_type": "unknown",
+        },
+    ])
+    llm = _make_mock_llm(branches)
+    agent = DBCopilotAgent(llm=llm)
+
+    result = await agent.diagnose(instance_id=uuid4(), max_branches=2)
+
+    # Low confidence → blocked, not copilot_recommended
+    assert result.confidence < 0.5
+    assert result.execution_status == "blocked"

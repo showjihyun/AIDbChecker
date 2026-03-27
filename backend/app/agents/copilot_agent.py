@@ -102,14 +102,16 @@ class DBCopilotAgent:
                 risk_penalty=br.get("risk_penalty", 0.0),
             )
             scored_branches.append(score)
-            branch_details.append({
-                "branch_name": score.branch_name,
-                "relevance_score": score.relevance_score,
-                "evidence_strength": score.evidence_strength,
-                "action_confidence": score.action_confidence,
-                "risk_penalty": score.risk_penalty,
-                "final_score": score.final_score,
-            })
+            branch_details.append(
+                {
+                    "branch_name": score.branch_name,
+                    "relevance_score": score.relevance_score,
+                    "evidence_strength": score.evidence_strength,
+                    "action_confidence": score.action_confidence,
+                    "risk_penalty": score.risk_penalty,
+                    "final_score": score.final_score,
+                }
+            )
 
         # Select best branch (highest final_score)
         if scored_branches:
@@ -139,6 +141,19 @@ class DBCopilotAgent:
             auto_execute=auto_execute,
         )
 
+        # Spec: FS-AI-012 AC-7, AC-8 — Playbook 하이브리드 연동 (ADR-008)
+        recommended_playbook = None
+        try:
+            from app.services.playbook_executor import match_playbook
+
+            recommended_playbook = match_playbook(anomaly_type)
+        except Exception:
+            pass
+
+        # AC-8: Playbook 없는 신규 패턴
+        if recommended_playbook is None and execution_status == "recommended":
+            execution_status = "copilot_recommended"
+
         duration_ms = int((time.monotonic() - start) * 1000)
 
         return CopilotDiagnoseResponse(
@@ -157,6 +172,7 @@ class DBCopilotAgent:
             total_tokens_used=0,
             autonomy_level_applied=autonomy_level,
             execution_status=execution_status,
+            recommended_playbook=recommended_playbook,
         )
 
     def _build_context(
