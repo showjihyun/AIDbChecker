@@ -1,0 +1,53 @@
+# Spec: FS-AUTO-003 (Lite) — Built-in Playbook #2
+apiVersion: neuraldb/v1
+kind: Playbook
+
+metadata:
+  name: "index-optimization"
+  version: "1.0"
+  description: "Missing index 감지 후 CREATE INDEX CONCURRENTLY"
+  author: "builtin"
+  tags: [performance, index, postgresql]
+  min_autonomy_level: 2
+  target_db_types: [postgresql]
+  risk_level: medium
+
+trigger:
+  type: anomaly_detection
+  metric: seq_scan_ratio
+  condition: ">"
+  threshold: 80
+  duration: 5m
+  cooldown: 30m
+  min_confidence: 0.7
+
+steps:
+  - name: "find_missing_indexes"
+    type: sql
+    query: |
+      SELECT schemaname, relname, seq_scan, idx_scan,
+             seq_scan::float / NULLIF(seq_scan + idx_scan, 0) * 100 AS seq_pct
+      FROM pg_stat_user_tables
+      WHERE seq_scan > 1000 AND seq_scan > idx_scan
+      ORDER BY seq_scan DESC
+      LIMIT 5
+    timeout: 10s
+    save_as: missing_index_tables
+
+  - name: "create_index"
+    type: sql
+    query: "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_{{ missing_index_tables[0].relname }}_auto ON {{ missing_index_tables[0].relname }} USING btree (id)"
+    timeout: 300s
+    requires_approval: true
+    rollback:
+      query: "DROP INDEX CONCURRENTLY IF EXISTS idx_{{ missing_index_tables[0].relname }}_auto"
+
+on_success:
+  - notify: slack
+    message: "Index optimization 완료: {{ missing_index_tables[0].relname }}"
+
+on_failure:
+  - rollback: all
+  - notify: slack
+    severity: critical
+    message: "Index optimization 실패: {{ error }}"

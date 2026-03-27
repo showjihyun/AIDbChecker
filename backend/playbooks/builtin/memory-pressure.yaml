@@ -1,0 +1,60 @@
+# Spec: FS-AUTO-003 (Lite) — Built-in Playbook #7
+apiVersion: neuraldb/v1
+kind: Playbook
+
+metadata:
+  name: "memory-pressure"
+  version: "1.0"
+  description: "Buffer cache hit ratio 저하 감지 — shared_buffers 조정 추천"
+  author: "builtin"
+  tags: [memory, cache, postgresql]
+  min_autonomy_level: 2
+  target_db_types: [postgresql]
+  risk_level: high
+
+trigger:
+  type: metric_threshold
+  metric: buffer_hit_ratio
+  condition: "<"
+  threshold: 95
+  duration: 5m
+  cooldown: 30m
+  min_confidence: 0.6
+
+steps:
+  - name: "check_buffer_stats"
+    type: sql
+    query: |
+      SELECT
+        pg_size_pretty(setting::bigint * 8192) AS shared_buffers,
+        (SELECT ROUND(
+          blks_hit::numeric / NULLIF(blks_hit + blks_read, 0) * 100, 2
+        ) FROM pg_stat_database WHERE datname = current_database()) AS hit_ratio
+      FROM pg_settings
+      WHERE name = 'shared_buffers'
+    timeout: 10s
+    save_as: buffer_info
+
+  - name: "check_top_cache_consumers"
+    type: sql
+    query: |
+      SELECT c.relname,
+             pg_size_pretty(pg_relation_size(c.oid)) AS size,
+             s.heap_blks_hit, s.heap_blks_read,
+             ROUND(s.heap_blks_hit::numeric / NULLIF(s.heap_blks_hit + s.heap_blks_read, 0) * 100, 2) AS hit_pct
+      FROM pg_statio_user_tables s
+      JOIN pg_class c ON c.oid = s.relid
+      WHERE s.heap_blks_hit + s.heap_blks_read > 1000
+      ORDER BY s.heap_blks_read DESC
+      LIMIT 10
+    timeout: 10s
+    save_as: cache_consumers
+
+on_success:
+  - notify: slack
+    message: "Memory pressure 분석: hit_ratio={{ buffer_info[0].hit_ratio }}%, shared_buffers={{ buffer_info[0].shared_buffers }}"
+
+on_failure:
+  - notify: slack
+    severity: warning
+    message: "Memory pressure 분석 실패: {{ error }}"

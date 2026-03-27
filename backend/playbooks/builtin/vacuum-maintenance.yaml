@@ -1,0 +1,53 @@
+# Spec: FS-AUTO-003 (Lite) — Built-in Playbook #5
+apiVersion: neuraldb/v1
+kind: Playbook
+
+metadata:
+  name: "vacuum-maintenance"
+  version: "1.0"
+  description: "Dead tuples 증가 감지 — VACUUM ANALYZE 실행"
+  author: "builtin"
+  tags: [vacuum, maintenance, postgresql]
+  min_autonomy_level: 1
+  target_db_types: [postgresql]
+  risk_level: low
+
+trigger:
+  type: metric_threshold
+  metric: dead_tuples
+  condition: ">"
+  threshold: 10000
+  duration: 5m
+  cooldown: 30m
+  min_confidence: 0.5
+
+steps:
+  - name: "find_bloated_tables"
+    type: sql
+    query: |
+      SELECT schemaname, relname, n_dead_tup, n_live_tup,
+             ROUND(n_dead_tup::numeric / NULLIF(n_live_tup + n_dead_tup, 0) * 100, 2) AS dead_pct,
+             last_vacuum, last_autovacuum
+      FROM pg_stat_user_tables
+      WHERE n_dead_tup > 10000
+      ORDER BY n_dead_tup DESC
+      LIMIT 5
+    timeout: 10s
+    save_as: bloated_tables
+
+  - name: "vacuum_analyze"
+    type: sql
+    query: "VACUUM ANALYZE {{ bloated_tables[0].schemaname }}.{{ bloated_tables[0].relname }}"
+    timeout: 120s
+    requires_approval: false
+    rollback:
+      query: "-- VACUUM is safe, no rollback needed"
+
+on_success:
+  - notify: slack
+    message: "VACUUM ANALYZE 완료: {{ bloated_tables[0].relname }} (dead_tuples={{ bloated_tables[0].n_dead_tup }})"
+
+on_failure:
+  - notify: slack
+    severity: warning
+    message: "VACUUM 실패: {{ error }}"
