@@ -382,3 +382,55 @@ def test_fs_admin_004_ac6_empty_prompt_summary_omitted():
         decision="rca_completed",
     )
     assert "prompt_summary" not in details
+
+
+# ---------------------------------------------------------------------------
+# Decorator tests (FS-ADMIN-004 §4.1)
+# ---------------------------------------------------------------------------
+
+
+@spec_ref("FS-ADMIN-004", "AC-1")
+@pytest.mark.asyncio
+async def test_fs_admin_004_ac1_decorator_exists():
+    """FS-ADMIN-004 AC-1: log_ai_decision 데코레이터가 존재하고 호출 가능."""
+    from app.utils.ai_logger import log_ai_decision
+
+    assert callable(log_ai_decision)
+
+    # Decorate a dummy function
+    @log_ai_decision("test_rca")
+    async def dummy(session=None):
+        return MagicMock(confidence=0.9, tokens_used=100, ai_model="gpt-4o")
+
+    mock_session = AsyncMock()
+    result = await dummy(session=mock_session)
+    assert result is not None
+
+
+@spec_ref("FS-ADMIN-004", "AC-4")
+@pytest.mark.asyncio
+async def test_fs_admin_004_ac4_decorator_handles_exception():
+    """FS-ADMIN-004 AC-4: 데코레이터가 원래 예외를 그대로 전파."""
+    from app.utils.ai_logger import log_ai_decision
+
+    @log_ai_decision("test_error")
+    async def failing(session=None):
+        raise RuntimeError("LLM down")
+
+    mock_session = AsyncMock()
+    with pytest.raises(RuntimeError, match="LLM down"):
+        await failing(session=mock_session)
+
+
+@spec_ref("FS-ADMIN-004", "AC-1")
+@pytest.mark.asyncio
+async def test_fs_admin_004_ac1_decorator_without_session():
+    """FS-ADMIN-004 AC-1: session 없이도 데코레이터가 crash하지 않음."""
+    from app.utils.ai_logger import log_ai_decision
+
+    @log_ai_decision("no_session")
+    async def no_session_fn():
+        return MagicMock(confidence=0.5, tokens_used=50, ai_model="mistral")
+
+    result = await no_session_fn()
+    assert result is not None

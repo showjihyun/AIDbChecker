@@ -460,6 +460,31 @@ async def generate_report(
         tokens=tokens_used,
     )
 
+    # Spec: FS-ADMIN-004 — AI Decision Log
+    try:
+        from app.utils.ai_logger import build_ai_details, create_ai_decision_log
+
+        details = build_ai_details(
+            ai_model=str(model_name),
+            inference_time_ms=elapsed_ms,
+            decision="report_generated",
+            confidence=confidence,
+            total_tokens=tokens_used,
+            output_summary={
+                "title": parsed.get("title", ""),
+                "sections_count": len(sections),
+                "recommendations_count": len(recommendations),
+            },
+        )
+        await create_ai_decision_log(
+            session,
+            resource_type="aigc_report",
+            resource_id=str(report_id),
+            details=details,
+        )
+    except Exception:
+        logger.debug("report.ai_decision_log_skipped")
+
     return ReportGenerateResponse(
         report_id=report_id,
         instance_id=instance_id,
