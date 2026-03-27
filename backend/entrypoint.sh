@@ -34,6 +34,11 @@ echo "[entrypoint] Running seed script..."
 PYTHONPATH=. uv run python -m app.db.seed
 echo "[entrypoint] Seed complete."
 
+# --- 3b. Run demo seed (idempotent — skips if demo data exists) ---
+echo "[entrypoint] Running demo seed..."
+PYTHONPATH=. uv run python -m app.db.seed_demo
+echo "[entrypoint] Demo seed complete."
+
 # --- 4. Start the application ---
 echo "[entrypoint] Starting uvicorn..."
 exec "$@"
