@@ -2,7 +2,7 @@
 """AlertChannel model — notification channel configuration (Slack, Email, Webhook, PagerDuty)."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import ARRAY, Boolean, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -21,15 +21,15 @@ class AlertChannel(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "alert_channels"
 
-    name: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment='e.g. "#db-alerts"'
-    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False, comment='e.g. "#db-alerts"')
     channel_type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="slack / email / webhook / pagerduty",
     )
     config: Mapped[dict] = mapped_column(
-        JSONB, nullable=False,
+        JSONB,
+        nullable=False,
         comment="Channel-specific settings (encrypted at rest)",
     )
     severity_filter: Mapped[list[str]] = mapped_column(
@@ -37,15 +37,9 @@ class AlertChannel(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
         nullable=False,
         server_default="{critical,warning}",
     )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
-    last_test_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_test_result: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_test_result: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_by: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

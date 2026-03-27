@@ -6,7 +6,6 @@ a PostgreSQL SELECT query, executes it read-only, and returns the results.
 Auth required: operator, db_admin, or super_admin.
 """
 
-from typing import Annotated
 from uuid import UUID
 
 import structlog
@@ -86,8 +85,13 @@ async def nl2sql_query(
         model_name = nl2sql_service.get_model_name()
         # Save failed attempt to history
         await _save_history(
-            session, current_user.id, body.instance_id,
-            body.question, sql, None, model_name,
+            session,
+            current_user.id,
+            body.instance_id,
+            body.question,
+            sql,
+            None,
+            model_name,
         )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -102,8 +106,13 @@ async def nl2sql_query(
     # Step 3: Save to history
     execution_result = {"rows": len(rows), "columns": columns}
     await _save_history(
-        session, current_user.id, body.instance_id,
-        body.question, sql, execution_result, model_name,
+        session,
+        current_user.id,
+        body.instance_id,
+        body.question,
+        sql,
+        execution_result,
+        model_name,
     )
 
     return NL2SQLQueryResponse(

@@ -14,11 +14,9 @@ Key design decisions:
 
 from __future__ import annotations
 
-import time
+import json
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
-
-import json
 
 import structlog
 from sqlalchemy import delete, func, select, text
@@ -71,6 +69,7 @@ def _compute_embedding(text_content: str) -> str:
 # SubgraphContext -- the result of GraphRAG retrieval
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SubgraphContext:
     """Extracted subgraph context for LLM prompt construction.
@@ -80,7 +79,9 @@ class SubgraphContext:
 
     tables: list[str] = field(default_factory=list)
     columns: dict[str, list[str]] = field(default_factory=dict)  # table -> [col1, col2]
-    join_paths: list[tuple[str, str, str]] = field(default_factory=list)  # (tbl1.col, tbl2.col, edge_type)
+    join_paths: list[tuple[str, str, str]] = field(
+        default_factory=list
+    )  # (tbl1.col, tbl2.col, edge_type)
     metrics: list[str] = field(default_factory=list)
     concepts: list[str] = field(default_factory=list)
 
@@ -118,6 +119,7 @@ class SubgraphContext:
 # SchemaGraphBuilder -- information_schema -> Knowledge Graph
 # ---------------------------------------------------------------------------
 
+
 class SchemaGraphBuilder:
     """Builds a Schema Knowledge Graph from a target DB's information_schema.
 
@@ -150,9 +152,7 @@ class SchemaGraphBuilder:
             Tuple of (nodes_created, edges_created).
         """
         # Spec: FS-AI-NL2SQL-001 -- clear existing graph for this instance before rebuild
-        await session.execute(
-            delete(GraphNode).where(GraphNode.instance_id == instance_id)
-        )
+        await session.execute(delete(GraphNode).where(GraphNode.instance_id == instance_id))
         await session.flush()
 
         node_count = 0
@@ -253,13 +253,15 @@ class SchemaGraphBuilder:
                     "node_type": "column",
                     "name": full_col,
                     "description": comment or None,
-                    "metadata": json.dumps({
-                        "schema": schema,
-                        "table": tname,
-                        "column": cname,
-                        "data_type": dtype,
-                        "is_nullable": row["is_nullable"],
-                    }),
+                    "metadata": json.dumps(
+                        {
+                            "schema": schema,
+                            "table": tname,
+                            "column": cname,
+                            "data_type": dtype,
+                            "is_nullable": row["is_nullable"],
+                        }
+                    ),
                     "embedding": embedding_str,
                     "instance_id": instance_id,
                 },
@@ -390,6 +392,7 @@ class SchemaGraphBuilder:
         # Create a lightweight ORM reference for edge creation
         class _NodeRef:
             id = node_id
+
         metric_node = _NodeRef()
 
         edges_created = 0
@@ -509,6 +512,7 @@ class SchemaGraphBuilder:
 # GraphRAGRetriever -- question -> subgraph extraction
 # ---------------------------------------------------------------------------
 
+
 class GraphRAGRetriever:
     """Retrieves a relevant subgraph for a natural language question.
 
@@ -563,11 +567,14 @@ class GraphRAGRetriever:
         """)
 
         try:
-            result = await session.execute(sql, {
-                "query_vec": embedding_str,
-                "instance_id": instance_id,
-                "top_k": top_k,
-            })
+            result = await session.execute(
+                sql,
+                {
+                    "query_vec": embedding_str,
+                    "instance_id": instance_id,
+                    "top_k": top_k,
+                },
+            )
             seed_rows = result.fetchall()
         except Exception as exc:
             logger.error("graph_rag.retrieve_search_failed", error=str(exc))
@@ -637,7 +644,7 @@ class GraphRAGRetriever:
         # Step 4: Build SubgraphContext
         ctx = SubgraphContext()
 
-        for nid, info in all_nodes.items():
+        for _nid, info in all_nodes.items():
             ntype = info["node_type"]
             name = info["name"]
             meta = info["metadata_extra"]
@@ -649,7 +656,9 @@ class GraphRAGRetriever:
             elif ntype == "column":
                 table_name = meta.get("table", "")
                 schema_name = meta.get("schema", "public")
-                full_table = f"{schema_name}.{table_name}" if schema_name != "public" else table_name
+                full_table = (
+                    f"{schema_name}.{table_name}" if schema_name != "public" else table_name
+                )
                 col_name = meta.get("column", name.split(".")[-1] if "." in name else name)
                 dtype = meta.get("data_type", "")
                 col_display = f"{col_name} {dtype}".strip()
@@ -664,9 +673,8 @@ class GraphRAGRetriever:
                 if name not in ctx.metrics:
                     ctx.metrics.append(name)
 
-            elif ntype == "concept":
-                if name not in ctx.concepts:
-                    ctx.concepts.append(name)
+            elif ntype == "concept" and name not in ctx.concepts:
+                ctx.concepts.append(name)
 
         # Extract join paths from FOREIGN_KEY edges
         for erow in edge_rows:
@@ -693,9 +701,13 @@ async def has_graph_for_instance(session: AsyncSession, instance_id: UUID) -> bo
 
     Spec: FS-AI-NL2SQL-001 -- fallback logic: if no graph, use hardcoded schema.
     """
-    stmt = select(func.count()).select_from(GraphNode).where(
-        GraphNode.instance_id == instance_id,
-        GraphNode.node_type == "table",
+    stmt = (
+        select(func.count())
+        .select_from(GraphNode)
+        .where(
+            GraphNode.instance_id == instance_id,
+            GraphNode.node_type == "table",
+        )
     )
     result = await session.execute(stmt)
     count = result.scalar_one()

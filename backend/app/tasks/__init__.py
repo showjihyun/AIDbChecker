@@ -19,18 +19,15 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-
     # Worker settings
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
-
     # Task routing
     task_routes={
         "app.tasks.collect.*": {"queue": "collect"},
         "app.tasks.alert.*": {"queue": "alert"},
         "app.tasks.analyze.*": {"queue": "analyze"},
     },
-
     # Beat schedule: hot (1s), warm (10s), cold (60s), ash (1s)
     beat_schedule={
         "collect-hot-metrics": {

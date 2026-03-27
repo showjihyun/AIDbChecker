@@ -14,13 +14,13 @@ Resilience: If no baseline exists, skip silently. If Valkey is unreachable,
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analyzers.baseline import BaselineAnalyzer, HOT_METRIC_KEYS, _extract_metric_value
+from app.analyzers.baseline import HOT_METRIC_KEYS, BaselineAnalyzer, _extract_metric_value
 from app.db.session import AsyncSessionLocal
 from app.models.incident import Incident
 
@@ -38,6 +38,7 @@ async def _get_valkey_client():
     """Lazy-init Valkey async client. Returns None if unavailable."""
     try:
         import redis.asyncio as aioredis
+
         from app.config import settings
 
         client = aioredis.from_url(settings.VALKEY_URL, socket_timeout=2)
@@ -71,9 +72,7 @@ async def _is_in_cooldown(instance_id: UUID, metric_type: str) -> bool:
 
     # Fallback: in-memory
     last_ts = _cooldown_fallback.get(f"{instance_id}:{metric_type}")
-    if last_ts is not None and (now - last_ts) < INCIDENT_COOLDOWN_SECONDS:
-        return True
-    return False
+    return bool(last_ts is not None and now - last_ts < INCIDENT_COOLDOWN_SECONDS)
 
 
 async def _set_cooldown(instance_id: UUID, metric_type: str) -> None:
@@ -120,7 +119,7 @@ class AnomalyDetector:
             List of newly created Incident records (may be empty).
         """
         if sampled_at is None:
-            sampled_at = datetime.now(timezone.utc)
+            sampled_at = datetime.now(UTC)
 
         created_incidents: list[Incident] = []
 
@@ -197,10 +196,7 @@ class AnomalyDetector:
         baseline_min = baseline.normal_min if baseline else 0.0
         baseline_max = baseline.normal_max if baseline else 0.0
 
-        title = (
-            f"AI Baseline Alert: {metric_type} anomaly detected "
-            f"({severity.upper()})"
-        )
+        title = f"AI Baseline Alert: {metric_type} anomaly detected ({severity.upper()})"
         description = (
             f"Metric '{metric_type}' value {value:.2f} is {z_score:.1f} sigma "
             f"from baseline mean {baseline_mean:.2f} "

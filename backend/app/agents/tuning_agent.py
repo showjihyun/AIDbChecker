@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import time
-from functools import partial
 from uuid import UUID
 
 import asyncpg
@@ -146,10 +145,7 @@ class DBTuningAgent:
             StructuredTool.from_function(
                 coroutine=_locks,
                 name="lock_analysis",
-                description=(
-                    "Show current lock waits and blocking sessions.  "
-                    "No input required."
-                ),
+                description=("Show current lock waits and blocking sessions.  No input required."),
             ),
             StructuredTool.from_function(
                 coroutine=_conns,
@@ -181,21 +177,21 @@ class DBTuningAgent:
 
         # Build tool name -> callable mapping
         tool_map = {t.name: t for t in self._tools}
-        tool_descriptions = "\n".join(
-            f"- {t.name}: {t.description}" for t in self._tools
-        )
+        tool_descriptions = "\n".join(f"- {t.name}: {t.description}" for t in self._tools)
 
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
-            HumanMessage(content=(
-                f"Available tools:\n{tool_descriptions}\n\n"
-                f"To use a tool, respond with EXACTLY this format:\n"
-                f"Action: <tool_name>\n"
-                f"Action Input: <input as JSON or plain string>\n\n"
-                f"When you have enough information, respond with:\n"
-                f"Final Answer: <your JSON response>\n\n"
-                f"Question: {question}"
-            )),
+            HumanMessage(
+                content=(
+                    f"Available tools:\n{tool_descriptions}\n\n"
+                    f"To use a tool, respond with EXACTLY this format:\n"
+                    f"Action: <tool_name>\n"
+                    f"Action Input: <input as JSON or plain string>\n\n"
+                    f"When you have enough information, respond with:\n"
+                    f"Final Answer: <your JSON response>\n\n"
+                    f"Question: {question}"
+                )
+            ),
         ]
 
         iteration = 0
@@ -235,19 +231,23 @@ class DBTuningAgent:
                 messages.append(HumanMessage(content=f"Observation: {result}"))
             elif action_name:
                 messages.append(
-                    HumanMessage(content=f"Observation: Unknown tool '{action_name}'. Available: {list(tool_map.keys())}")
+                    HumanMessage(
+                        content=f"Observation: Unknown tool '{action_name}'. Available: {list(tool_map.keys())}"
+                    )
                 )
             else:
                 # LLM did not follow format -- nudge it
                 messages.append(
-                    HumanMessage(content=(
-                        "Observation: Please use the format 'Action: <tool_name>' "
-                        "and 'Action Input: <input>' or 'Final Answer: <JSON>'."
-                    ))
+                    HumanMessage(
+                        content=(
+                            "Observation: Please use the format 'Action: <tool_name>' "
+                            "and 'Action Input: <input>' or 'Final Answer: <JSON>'."
+                        )
+                    )
                 )
         else:
             # max_iterations exceeded without Final Answer
-            final_text = content if 'content' in dir() else "Max iterations exceeded."
+            final_text = content if "content" in dir() else "Max iterations exceeded."
 
         duration_ms = int((time.monotonic() - start) * 1000)
 
@@ -323,13 +323,15 @@ class DBTuningAgent:
             raw_actions = data.get("actions", [])
             actions = []
             for a in raw_actions:
-                actions.append(TuningAction(
-                    action_type=a.get("action_type", "OTHER"),
-                    description=a.get("description", ""),
-                    sql=a.get("sql"),
-                    risk_level=a.get("risk_level", "medium"),
-                    estimated_impact=a.get("estimated_impact", ""),
-                ))
+                actions.append(
+                    TuningAction(
+                        action_type=a.get("action_type", "OTHER"),
+                        description=a.get("description", ""),
+                        sql=a.get("sql"),
+                        risk_level=a.get("risk_level", "medium"),
+                        estimated_impact=a.get("estimated_impact", ""),
+                    )
+                )
             return analysis, actions
         except (json.JSONDecodeError, TypeError, AttributeError):
             # Fallback: return raw text as analysis, no structured actions

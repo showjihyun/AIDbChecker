@@ -2,13 +2,13 @@
 """Pydantic v2 schemas for MTL Lite RCA API operations."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class AnomalyType(str, Enum):
+class AnomalyType(StrEnum):
     """Anomaly classification types from MTL Head 1."""
 
     QUERY_PERFORMANCE = "query_performance_degradation"
@@ -22,7 +22,7 @@ class AnomalyType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class SeverityLevel(str, Enum):
+class SeverityLevel(StrEnum):
     """Severity levels from MTL Head 3."""
 
     CRITICAL = "CRITICAL"
@@ -31,7 +31,7 @@ class SeverityLevel(str, Enum):
     INFO = "INFO"
 
 
-class ActionRisk(str, Enum):
+class ActionRisk(StrEnum):
     """Risk level for suggested actions."""
 
     LOW = "LOW"

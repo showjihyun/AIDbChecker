@@ -11,8 +11,8 @@ pattern as the KPI endpoint (_kpi_adapter_cache in kpi.py).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Annotated
+import contextlib
+from datetime import UTC, datetime
 from uuid import UUID
 
 import asyncpg
@@ -54,10 +54,8 @@ async def _get_tuning_pool(instance: DBInstance) -> asyncpg.Pool:
         if cached_dsn == dsn and not cached_pool._closed:
             return cached_pool
         # DSN changed or pool closed — clean up
-        try:
+        with contextlib.suppress(Exception):
             cached_pool.terminate()
-        except Exception:
-            pass
         del _tuning_pool_cache[instance.id]
 
     pool = await asyncpg.create_pool(
@@ -77,6 +75,7 @@ async def _get_tuning_pool(instance: DBInstance) -> asyncpg.Pool:
 # ---------------------------------------------------------------------------
 # POST /api/v1/tuning/analyze
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/tuning/analyze",
@@ -152,16 +151,18 @@ async def analyze_tuning(
     )
 
     # 5. Store in history
-    _history.append(TuningHistoryItem(
-        instance_id=response.instance_id,
-        question=response.question,
-        analysis=response.analysis,
-        actions=response.actions,
-        tools_used=response.tools_used,
-        model_used=response.model_used,
-        duration_ms=response.duration_ms,
-        created_at=datetime.now(timezone.utc),
-    ))
+    _history.append(
+        TuningHistoryItem(
+            instance_id=response.instance_id,
+            question=response.question,
+            analysis=response.analysis,
+            actions=response.actions,
+            tools_used=response.tools_used,
+            model_used=response.model_used,
+            duration_ms=response.duration_ms,
+            created_at=datetime.now(UTC),
+        )
+    )
     # Cap history size
     while len(_history) > _MAX_HISTORY:
         _history.pop(0)
@@ -172,6 +173,7 @@ async def analyze_tuning(
 # ---------------------------------------------------------------------------
 # GET /api/v1/tuning/history
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/tuning/history",

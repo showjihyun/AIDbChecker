@@ -11,9 +11,7 @@ class InstanceCreate(BaseModel):
     """Request schema for creating a new monitored DB instance."""
 
     name: str = Field(..., max_length=255, description="Unique display name")
-    db_type: str = Field(
-        ..., pattern=r"^(postgresql|mysql|mssql)$", description="Database type"
-    )
+    db_type: str = Field(..., pattern=r"^(postgresql|mysql|mssql)$", description="Database type")
     host: str = Field(..., max_length=255, description="Host address")
     port: int = Field(default=5432, ge=1, le=65535, description="Port number")
     database_name: str = Field(..., max_length=255, description="Database name")
@@ -43,9 +41,7 @@ class InstanceUpdate(BaseModel):
     port: int | None = Field(default=None, ge=1, le=65535)
     database_name: str | None = Field(default=None, max_length=255)
     cluster_id: str | None = None
-    environment: str | None = Field(
-        default=None, pattern=r"^(production|staging|development)$"
-    )
+    environment: str | None = Field(default=None, pattern=r"^(production|staging|development)$")
     connection_config: dict | None = None
     is_active: bool | None = None
     autonomy_level: int | None = Field(default=None, ge=0, le=4)

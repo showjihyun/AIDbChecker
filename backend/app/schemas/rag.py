@@ -11,12 +11,12 @@ class RAGSearchRequest(BaseModel):
     """Request schema for similarity search."""
 
     query: str = Field(
-        ..., min_length=3, max_length=2000,
+        ...,
+        min_length=3,
+        max_length=2000,
         description="Search text (incident description or natural language)",
     )
-    instance_id: UUID | None = Field(
-        default=None, description="Limit search to specific instance"
-    )
+    instance_id: UUID | None = Field(default=None, description="Limit search to specific instance")
     top_k: int = Field(default=3, ge=1, le=10, description="Number of results")
     min_similarity: float = Field(
         default=0.7, ge=0.0, le=1.0, description="Minimum cosine similarity"

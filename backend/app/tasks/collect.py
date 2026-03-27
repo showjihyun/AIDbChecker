@@ -9,7 +9,6 @@ Safety: soft_time_limit=3, acks_late=True, reject_on_worker_lost=True.
 """
 
 import asyncio
-from datetime import datetime, timezone
 from uuid import UUID
 
 import structlog
@@ -17,7 +16,7 @@ from celery import shared_task
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.base import ActiveSessionSample, MetricSample
+from app.adapters.base import MetricSample
 from app.adapters.postgresql.remote import PostgreSQLRemoteAdapter
 from app.db.session import create_worker_session
 from app.models.active_session import ActiveSession as ActiveSessionModel
@@ -175,7 +174,7 @@ async def _collect_metrics_async(category: str) -> None:
         try:
             from app.tasks.analyze import check_anomalies
 
-            for instance_id, sample in broadcast_items:
+            for _instance_id, sample in broadcast_items:
                 check_anomalies.delay(
                     str(sample.instance_id),
                     sample.metrics,

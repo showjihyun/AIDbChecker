@@ -1,12 +1,12 @@
 # Spec: DM-001, MVP-DASH-003
 """ASH API — Active Session History queries, heatmap, wait-event breakdown."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, desc, func, text
+from sqlalchemy import desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -113,12 +113,13 @@ async def get_ash_heatmap(
 
     # Default: last 10 minutes
     if to_ts is None:
-        to_ts = datetime.now(timezone.utc)
+        to_ts = datetime.now(UTC)
     if from_ts is None:
         from_ts = to_ts - timedelta(minutes=10)
 
     # Spec: ADR-002 — use date_trunc + modular arithmetic, NOT time_bucket
     from sqlalchemy import literal_column  # noqa: E402 — needed here for label() support
+
     bucket_expr = literal_column(
         "date_trunc('second', sampled_at) "
         "- (EXTRACT(SECOND FROM sampled_at)::int % 10) * INTERVAL '1 second'"
@@ -127,7 +128,9 @@ async def get_ash_heatmap(
     stmt = (
         select(
             bucket_expr.label("bucket_start"),
-            func.coalesce(ActiveSession.wait_event_type, literal_column("'CPU'")).label("wait_event_type"),
+            func.coalesce(ActiveSession.wait_event_type, literal_column("'CPU'")).label(
+                "wait_event_type"
+            ),
             func.count().label("cnt"),
         )
         .where(
@@ -172,7 +175,7 @@ async def get_wait_breakdown(
     await _verify_instance(session, instance_id)
 
     if to_ts is None:
-        to_ts = datetime.now(timezone.utc)
+        to_ts = datetime.now(UTC)
     if from_ts is None:
         from_ts = to_ts - timedelta(minutes=10)
 

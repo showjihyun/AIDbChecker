@@ -58,9 +58,7 @@ async def create_task(
         from app.models.db_instance import DBInstance
 
         async with AsyncSessionLocal() as session:
-            stmt = select(DBInstance.autonomy_level).where(
-                DBInstance.id == body.instance_id
-            )
+            stmt = select(DBInstance.autonomy_level).where(DBInstance.id == body.instance_id)
             result = await session.execute(stmt)
             level = result.scalar()
             if level is not None:

@@ -9,15 +9,12 @@ PUT  /playbooks/{name}       — Update custom playbook (Phase 3)
 DELETE /playbooks/{name}     — Delete custom playbook (Phase 3)
 """
 
-from uuid import UUID
-
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user, require_role
 from app.models.user import User
-from pydantic import BaseModel, Field
-
 from app.schemas.playbook import (
     PlaybookDetail,
     PlaybookExecuteRequest,
@@ -56,8 +53,7 @@ async def get_playbook(name: str) -> PlaybookDetail:
     if not pb:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Playbook '{name}' not found. "
-            "Use GET /playbooks to see available playbooks.",
+            detail=f"Playbook '{name}' not found. Use GET /playbooks to see available playbooks.",
         )
     return pb
 
@@ -85,7 +81,7 @@ async def execute_playbook(
     # Fetch instance autonomy level
     # For now, use a default. In production, query db_instances table.
     from sqlalchemy import select
-    from app.api.deps import get_session
+
     from app.models.db_instance import DBInstance
 
     # Simplified: we need the instance's autonomy level
@@ -96,9 +92,7 @@ async def execute_playbook(
         from app.db.session import AsyncSessionLocal
 
         async with AsyncSessionLocal() as session:
-            stmt = select(DBInstance.autonomy_level).where(
-                DBInstance.id == body.instance_id
-            )
+            stmt = select(DBInstance.autonomy_level).where(DBInstance.id == body.instance_id)
             result = await session.execute(stmt)
             level = result.scalar()
             if level is not None:

@@ -45,7 +45,9 @@ class Settings(BaseSettings):
     # Spec: FS-AI-LLM-001 — unified provider selection
     AI_PROVIDER: Literal["ollama", "openai", "anthropic", "google"] = "ollama"
     AI_MODEL: str = "mistral:7b"  # Default model for the selected provider
-    AI_MODE: Literal["online", "offline"] = "online"  # Legacy compat: online→first cloud, offline→ollama
+    AI_MODE: Literal["online", "offline"] = (
+        "online"  # Legacy compat: online→first cloud, offline→ollama
+    )
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o"  # Legacy compat (prefer AI_MODEL)
     ANTHROPIC_API_KEY: str = ""

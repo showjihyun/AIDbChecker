@@ -6,7 +6,6 @@ Uses httpx for async HTTP calls.
 """
 
 import asyncio
-import time
 
 import httpx
 import structlog
@@ -47,7 +46,9 @@ async def _send_webhook(webhook_url: str, payload: dict) -> tuple[bool, str]:
                 if 400 <= response.status_code < 500:
                     # Client error — do not retry
                     msg = f"HTTP {response.status_code}: {response.text[:200]}"
-                    logger.error("alert.client_error", status=response.status_code, body=response.text[:200])
+                    logger.error(
+                        "alert.client_error", status=response.status_code, body=response.text[:200]
+                    )
                     return (False, msg)
 
                 # Server error — retry

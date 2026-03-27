@@ -1,9 +1,7 @@
 # Spec: MVP-ADMIN-001 — JWT Authentication endpoints
 """Auth endpoints: login, token refresh, current user info."""
 
-import app.utils.bcrypt_patch  # noqa: F401 — must be imported before passlib
-
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -13,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.utils.bcrypt_patch  # noqa: F401 — must be imported before passlib
 from app.api.deps import get_current_user, get_session
 from app.config import settings
 from app.models.user import User
@@ -25,6 +24,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -52,9 +52,10 @@ class UserMeResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _create_token(sub: str, expires_delta: timedelta) -> str:
-    expire = datetime.now(tz=timezone.utc) + expires_delta
-    payload = {"sub": sub, "exp": expire, "iat": datetime.now(tz=timezone.utc)}
+    expire = datetime.now(tz=UTC) + expires_delta
+    payload = {"sub": sub, "exp": expire, "iat": datetime.now(tz=UTC)}
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -75,6 +76,7 @@ def _create_refresh_token(user_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
@@ -110,7 +112,7 @@ async def login(
         )
 
     # Update last_login_at
-    user.last_login_at = datetime.now(tz=timezone.utc)
+    user.last_login_at = datetime.now(tz=UTC)
     await session.commit()
 
     user_id = str(user.id)

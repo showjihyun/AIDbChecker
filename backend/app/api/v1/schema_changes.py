@@ -1,12 +1,12 @@
 # Spec: FS-SCHEMA-001, MVP-SCHEMA-002
 """Schema Changes API — list detected DDL changes for a monitored instance."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, desc, func
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session

@@ -7,8 +7,6 @@ GET  /api/v1/rag/status — embedding statistics and health
 MVP scope: incident history embeddings only.
 """
 
-from typing import Annotated
-
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,9 +29,7 @@ router = APIRouter()
 @router.post(
     "/rag/search",
     response_model=RAGSearchResponse,
-    dependencies=[
-        Depends(require_role("super_admin", "db_admin", "operator"))
-    ],
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
     summary="Search similar past incidents",
     description="Uses pgvector cosine similarity to find past incidents "
     "similar to the query text. Results are cached in Valkey for 5 minutes.",
@@ -55,8 +51,7 @@ async def search_similar_incidents(
         logger.error("rag.search_api_error", error=str(exc))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"RAG search failed: {exc}. "
-            "Check embedding service availability.",
+            detail=f"RAG search failed: {exc}. Check embedding service availability.",
         )
 
     return RAGSearchResponse(
@@ -70,9 +65,7 @@ async def search_similar_incidents(
 @router.get(
     "/rag/status",
     response_model=RAGStatusResponse,
-    dependencies=[
-        Depends(require_role("super_admin", "db_admin", "operator", "viewer"))
-    ],
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator", "viewer"))],
     summary="Get RAG embedding status",
     description="Returns statistics about the RAG embedding index: "
     "total documents, model info, last embedding time.",

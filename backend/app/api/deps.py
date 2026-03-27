@@ -1,7 +1,7 @@
 # Spec: MVP-ADMIN-001, MVP-ADMIN-002, FS-ADMIN-002
 """FastAPI dependency injection — DB sessions + JWT + API Key authentication."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -62,9 +62,7 @@ async def get_current_user(
         if user_id_str is None:
             raise credentials_exception
         exp = payload.get("exp")
-        if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(
-            tz=timezone.utc
-        ):
+        if exp and datetime.fromtimestamp(exp, tz=UTC) < datetime.now(tz=UTC):
             raise credentials_exception
     except JWTError:
         raise credentials_exception

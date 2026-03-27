@@ -2,13 +2,13 @@
 """Pydantic v2 schemas for AIGC Report generation API."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class ReportType(str, Enum):
+class ReportType(StrEnum):
     """Available report types."""
 
     HEALTH = "health"
@@ -16,14 +16,14 @@ class ReportType(str, Enum):
     INCIDENT = "incident"
 
 
-class ReportFormat(str, Enum):
+class ReportFormat(StrEnum):
     """Report output formats."""
 
     HTML = "html"
     JSON = "json"
 
 
-class SectionSeverity(str, Enum):
+class SectionSeverity(StrEnum):
     """Section health severity."""
 
     GOOD = "good"
@@ -31,7 +31,7 @@ class SectionSeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class RecommendationPriority(str, Enum):
+class RecommendationPriority(StrEnum):
     """Recommendation priority."""
 
     HIGH = "high"

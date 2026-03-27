@@ -46,9 +46,7 @@ def _validate_sql_readonly(sql: str) -> None:
     Raises ``ValueError`` on violation.
     """
     if _WRITE_KEYWORDS.search(sql):
-        raise ValueError(
-            "SQL contains write operations. Only SELECT queries are allowed."
-        )
+        raise ValueError("SQL contains write operations. Only SELECT queries are allowed.")
     if _DANGEROUS_FUNCTIONS.search(sql):
         raise ValueError(
             "SQL contains restricted functions. Only standard SELECT queries are allowed."
@@ -61,6 +59,7 @@ def _validate_sql_readonly(sql: str) -> None:
 # ---------------------------------------------------------------------------
 # Tool 1: explain_query
 # ---------------------------------------------------------------------------
+
 
 async def explain_query(pool: asyncpg.Pool, sql: str) -> str:
     """EXPLAIN ANALYZE a SELECT query and return the execution plan.
@@ -76,10 +75,9 @@ async def explain_query(pool: asyncpg.Pool, sql: str) -> str:
     sql = sql.rstrip(";").strip()
 
     try:
-        async with pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute("SET LOCAL statement_timeout = '5000'")
-                rows = await conn.fetch(f"EXPLAIN ANALYZE {sql}")
+        async with pool.acquire() as conn, conn.transaction():
+            await conn.execute("SET LOCAL statement_timeout = '5000'")
+            rows = await conn.fetch(f"EXPLAIN ANALYZE {sql}")
         plan_lines = [row[0] for row in rows]
         return "\n".join(plan_lines)
     except asyncpg.PostgresError as exc:
@@ -209,7 +207,11 @@ async def index_recommendations(pool: asyncpg.Pool, table_name: str | None = Non
                         f"{tbl:<35} {r['seq_scan']:<12} {r['idx_scan'] or 0:<12} "
                         f"{r['n_live_tup']:<12} {r['seq_scan_pct']}%"
                     )
-                    if r["seq_scan_pct"] and float(r["seq_scan_pct"]) > 80 and r["n_live_tup"] > 1000:
+                    if (
+                        r["seq_scan_pct"]
+                        and float(r["seq_scan_pct"]) > 80
+                        and r["n_live_tup"] > 1000
+                    ):
                         recommendations.append(
                             f"  - {tbl}: {r['seq_scan_pct']}% sequential scans "
                             f"with {r['n_live_tup']} rows. Consider adding an index."
@@ -376,9 +378,7 @@ async def table_bloat(pool: asyncpg.Pool, table_name: str | None = None) -> str:
             f"{r['dead_pct']}%{'':<4} {lv:<24} {la:<24}"
         )
         if r["dead_pct"] and float(r["dead_pct"]) > 10:
-            recommendations.append(
-                f"  VACUUM ANALYZE {tbl};  -- {r['dead_pct']}% dead tuples"
-            )
+            recommendations.append(f"  VACUUM ANALYZE {tbl};  -- {r['dead_pct']}% dead tuples")
 
     if recommendations:
         lines.append("\nRecommended VACUUM commands:")
@@ -439,8 +439,7 @@ async def lock_analysis(pool: asyncpg.Pool) -> str:
         )
 
     lines.append(
-        "\nTo terminate a blocking session (HIGH RISK): "
-        "SELECT pg_terminate_backend(<blocker_pid>);"
+        "\nTo terminate a blocking session (HIGH RISK): SELECT pg_terminate_backend(<blocker_pid>);"
     )
     return "\n".join(lines)
 

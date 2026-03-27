@@ -11,7 +11,6 @@ Features:
 - Status filter queries
 """
 
-import time
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -84,17 +83,15 @@ def _check_concurrency(instance_id: UUID) -> str | None:
 
     # Per-instance limit
     instance_active = [
-        t for t in _task_store.values()
+        t
+        for t in _task_store.values()
         if t.instance_id == instance_id and t.status in active_statuses
     ]
     if len(instance_active) >= MAX_CONCURRENT_PER_INSTANCE:
         return f"Instance {instance_id} already has an active task"
 
     # Global limit
-    global_active = [
-        t for t in _task_store.values()
-        if t.status in active_statuses
-    ]
+    global_active = [t for t in _task_store.values() if t.status in active_statuses]
     if len(global_active) >= MAX_CONCURRENT_GLOBAL:
         return "Global concurrent task limit reached (max 3)"
 
@@ -194,9 +191,7 @@ def approve_task(task_id: UUID) -> tuple[TaskResponse | None, str | None]:
     except Exception as exc:
         task.status = TaskStatus.FAILED
         task.completed_at = datetime.now(UTC)
-        task.execution_log = [
-            TaskStepLog(step_name="execution", status="failed", error=str(exc))
-        ]
+        task.execution_log = [TaskStepLog(step_name="execution", status="failed", error=str(exc))]
         return task, None
 
     logger.info("task.approved_and_completed", task_id=str(task_id))

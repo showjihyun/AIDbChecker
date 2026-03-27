@@ -2,7 +2,7 @@
 """Baseline model — AI-generated automatic baselines for anomaly detection."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
@@ -27,11 +27,13 @@ class Baseline(Base, UUIDMixin, TimestampMixin):
         ForeignKey("db_instances.id", ondelete="CASCADE"), nullable=False
     )
     metric_type: Mapped[str] = mapped_column(
-        String(50), nullable=False,
+        String(50),
+        nullable=False,
         comment="cpu_usage, connections, tps, etc.",
     )
     time_bucket: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="weekday_business / weekday_night / weekend",
     )
     normal_min: Mapped[float] = mapped_column(Float, nullable=False)
@@ -39,17 +41,14 @@ class Baseline(Base, UUIDMixin, TimestampMixin):
     mean: Mapped[float] = mapped_column(Float, nullable=False)
     stddev: Mapped[float] = mapped_column(Float, nullable=False)
     model_type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="stl / isolation_forest / prophet",
     )
     model_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
     training_samples: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_trained_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    last_trained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     # --- Relationships ---
     instance: Mapped["DBInstance"] = relationship(  # noqa: F821
@@ -58,7 +57,9 @@ class Baseline(Base, UUIDMixin, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint(
-            "instance_id", "metric_type", "time_bucket",
+            "instance_id",
+            "metric_type",
+            "time_bucket",
             name="ix_baselines_lookup",
         ),
     )

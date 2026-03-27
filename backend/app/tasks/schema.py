@@ -9,12 +9,10 @@ Resilience: failures on individual instances are logged and skipped.
 """
 
 import asyncio
-from uuid import UUID
 
 import structlog
 from celery import shared_task
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
 from app.models.db_instance import DBInstance

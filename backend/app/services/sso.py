@@ -169,9 +169,7 @@ async def authenticate_ldap(
         name = username
 
         if settings.LDAP_USER_SEARCH_BASE:
-            search_filter = settings.LDAP_USER_SEARCH_FILTER.replace(
-                "{username}", username
-            )
+            search_filter = settings.LDAP_USER_SEARCH_FILTER.replace("{username}", username)
             conn.search(
                 settings.LDAP_USER_SEARCH_BASE,
                 search_filter,
@@ -180,10 +178,7 @@ async def authenticate_ldap(
             if conn.entries:
                 entry = conn.entries[0]
                 email = str(getattr(entry, "mail", email))
-                name = str(
-                    getattr(entry, "displayName", None)
-                    or getattr(entry, "cn", username)
-                )
+                name = str(getattr(entry, "displayName", None) or getattr(entry, "cn", username))
 
         conn.unbind()
 
@@ -191,8 +186,7 @@ async def authenticate_ldap(
         # ldap3 not installed — graceful fallback for dev environments
         logger.warning("sso.ldap3_not_installed")
         raise ValueError(
-            "LDAP authentication requires the 'ldap3' package. "
-            "Install with: uv add ldap3"
+            "LDAP authentication requires the 'ldap3' package. Install with: uv add ldap3"
         )
     except ValueError:
         raise
@@ -225,7 +219,6 @@ async def authenticate_api_key(
     Spec: FS-ADMIN-002 AC-4.
     API Key is stored in users.preferences->>'api_key'.
     """
-    from sqlalchemy.dialects.postgresql import JSONB
 
     # Search for user with matching API key
     stmt = select(User).where(

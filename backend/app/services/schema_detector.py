@@ -9,7 +9,7 @@ Valkey is used for snapshot caching with graceful fallback to in-memory cache.
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -48,6 +48,7 @@ async def _get_valkey_client():
     """Lazy-init Valkey async client. Returns None if unavailable."""
     try:
         import redis.asyncio as aioredis
+
         from app.config import settings
 
         client = aioredis.from_url(settings.VALKEY_URL, socket_timeout=2)
@@ -130,9 +131,7 @@ async def take_snapshot(pool: asyncpg.Pool) -> dict:
     return {"columns": columns, "indexes": indexes}
 
 
-def compare_snapshots(
-    old: dict, new: dict
-) -> list[dict[str, Any]]:
+def compare_snapshots(old: dict, new: dict) -> list[dict[str, Any]]:
     """Compare two snapshots and return a list of detected change dicts.
 
     Spec: FS-SCHEMA-001 §2.3 — change type determination.
@@ -145,32 +144,32 @@ def compare_snapshots(
     new_idxs = new.get("indexes", {})
 
     # --- Table-level detection ---
-    old_tables = {
-        f"{v['table_schema']}.{v['table_name']}" for v in old_cols.values()
-    }
-    new_tables = {
-        f"{v['table_schema']}.{v['table_name']}" for v in new_cols.values()
-    }
+    old_tables = {f"{v['table_schema']}.{v['table_name']}" for v in old_cols.values()}
+    new_tables = {f"{v['table_schema']}.{v['table_name']}" for v in new_cols.values()}
 
     # New tables
     for table in new_tables - old_tables:
-        changes.append({
-            "change_type": "CREATE",
-            "object_type": "TABLE",
-            "object_name": table,
-            "before_state": None,
-            "after_state": {"table": table},
-        })
+        changes.append(
+            {
+                "change_type": "CREATE",
+                "object_type": "TABLE",
+                "object_name": table,
+                "before_state": None,
+                "after_state": {"table": table},
+            }
+        )
 
     # Dropped tables
     for table in old_tables - new_tables:
-        changes.append({
-            "change_type": "DROP",
-            "object_type": "TABLE",
-            "object_name": table,
-            "before_state": {"table": table},
-            "after_state": None,
-        })
+        changes.append(
+            {
+                "change_type": "DROP",
+                "object_type": "TABLE",
+                "object_name": table,
+                "before_state": {"table": table},
+                "after_state": None,
+            }
+        )
 
     # --- Column-level detection (only for tables that exist in both) ---
     surviving_tables = old_tables & new_tables
@@ -181,16 +180,18 @@ def compare_snapshots(
             continue  # Already reported as CREATE TABLE
         if col_key not in old_cols:
             # New column added
-            changes.append({
-                "change_type": "ALTER",
-                "object_type": "COLUMN",
-                "object_name": col_key,
-                "before_state": None,
-                "after_state": {
-                    "data_type": new_col["data_type"],
-                    "is_nullable": new_col["is_nullable"],
-                },
-            })
+            changes.append(
+                {
+                    "change_type": "ALTER",
+                    "object_type": "COLUMN",
+                    "object_name": col_key,
+                    "before_state": None,
+                    "after_state": {
+                        "data_type": new_col["data_type"],
+                        "is_nullable": new_col["is_nullable"],
+                    },
+                }
+            )
 
     for col_key, old_col in old_cols.items():
         table_key = f"{old_col['table_schema']}.{old_col['table_name']}"
@@ -198,24 +199,8 @@ def compare_snapshots(
             continue  # Already reported as DROP TABLE
         if col_key not in new_cols:
             # Column removed
-            changes.append({
-                "change_type": "ALTER",
-                "object_type": "COLUMN",
-                "object_name": col_key,
-                "before_state": {
-                    "data_type": old_col["data_type"],
-                    "is_nullable": old_col["is_nullable"],
-                },
-                "after_state": None,
-            })
-        elif col_key in new_cols:
-            new_col = new_cols[col_key]
-            # Column type or nullable change
-            if (
-                old_col["data_type"] != new_col["data_type"]
-                or old_col["is_nullable"] != new_col["is_nullable"]
-            ):
-                changes.append({
+            changes.append(
+                {
                     "change_type": "ALTER",
                     "object_type": "COLUMN",
                     "object_name": col_key,
@@ -223,32 +208,56 @@ def compare_snapshots(
                         "data_type": old_col["data_type"],
                         "is_nullable": old_col["is_nullable"],
                     },
-                    "after_state": {
-                        "data_type": new_col["data_type"],
-                        "is_nullable": new_col["is_nullable"],
-                    },
-                })
+                    "after_state": None,
+                }
+            )
+        elif col_key in new_cols:
+            new_col = new_cols[col_key]
+            # Column type or nullable change
+            if (
+                old_col["data_type"] != new_col["data_type"]
+                or old_col["is_nullable"] != new_col["is_nullable"]
+            ):
+                changes.append(
+                    {
+                        "change_type": "ALTER",
+                        "object_type": "COLUMN",
+                        "object_name": col_key,
+                        "before_state": {
+                            "data_type": old_col["data_type"],
+                            "is_nullable": old_col["is_nullable"],
+                        },
+                        "after_state": {
+                            "data_type": new_col["data_type"],
+                            "is_nullable": new_col["is_nullable"],
+                        },
+                    }
+                )
 
     # --- Index-level detection ---
     for idx_key in new_idxs.keys() - old_idxs.keys():
         idx = new_idxs[idx_key]
-        changes.append({
-            "change_type": "CREATE",
-            "object_type": "INDEX",
-            "object_name": idx_key,
-            "before_state": None,
-            "after_state": {"indexdef": idx["indexdef"]},
-        })
+        changes.append(
+            {
+                "change_type": "CREATE",
+                "object_type": "INDEX",
+                "object_name": idx_key,
+                "before_state": None,
+                "after_state": {"indexdef": idx["indexdef"]},
+            }
+        )
 
     for idx_key in old_idxs.keys() - new_idxs.keys():
         idx = old_idxs[idx_key]
-        changes.append({
-            "change_type": "DROP",
-            "object_type": "INDEX",
-            "object_name": idx_key,
-            "before_state": {"indexdef": idx["indexdef"]},
-            "after_state": None,
-        })
+        changes.append(
+            {
+                "change_type": "DROP",
+                "object_type": "INDEX",
+                "object_name": idx_key,
+                "before_state": {"indexdef": idx["indexdef"]},
+                "after_state": None,
+            }
+        )
 
     return changes
 
@@ -259,7 +268,7 @@ async def detect_changes(instance_id: UUID, pool: asyncpg.Pool) -> int:
     Returns the number of changes detected.
     Spec: FS-SCHEMA-001 AC-1~AC-5.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Take current snapshot
     new_snapshot = await take_snapshot(pool)
@@ -273,10 +282,12 @@ async def detect_changes(instance_id: UUID, pool: asyncpg.Pool) -> int:
         logger.info(
             "schema_detector.initial_snapshot",
             instance_id=str(instance_id),
-            tables=len({
-                f"{v['table_schema']}.{v['table_name']}"
-                for v in new_snapshot.get("columns", {}).values()
-            }),
+            tables=len(
+                {
+                    f"{v['table_schema']}.{v['table_name']}"
+                    for v in new_snapshot.get("columns", {}).values()
+                }
+            ),
         )
         return 0
 

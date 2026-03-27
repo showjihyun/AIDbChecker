@@ -16,7 +16,6 @@ Usage:
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 
 import structlog
 
@@ -25,7 +24,7 @@ logger = structlog.get_logger(__name__)
 # MCP SDK import — graceful fallback if not installed
 try:
     from mcp.server import Server
-    from mcp.types import Resource, Tool, TextContent
+    from mcp.types import Resource, TextContent, Tool
 
     _MCP_AVAILABLE = True
 except ImportError:
@@ -33,7 +32,7 @@ except ImportError:
     logger.warning("mcp.sdk_not_installed", hint="Install with: uv add mcp")
 
 
-def create_mcp_server() -> "Server | None":
+def create_mcp_server() -> Server | None:
     """Create and configure the NeuralDB MCP server.
 
     Spec: PROTO-MCP-001 Section 2.
@@ -109,7 +108,10 @@ def create_mcp_server() -> "Server | None":
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "severity": {"type": "string", "enum": ["critical", "warning", "notice", "info"]},
+                        "severity": {
+                            "type": "string",
+                            "enum": ["critical", "warning", "notice", "info"],
+                        },
                         "status": {"type": "string", "enum": ["open", "acknowledged", "resolved"]},
                         "limit": {"type": "integer", "default": 20},
                     },
@@ -186,9 +188,10 @@ def create_mcp_server() -> "Server | None":
 async def _read_instances() -> str:
     """Read all instances via internal API."""
     try:
+        from sqlalchemy import select
+
         from app.db.session import AsyncSessionLocal
         from app.models.db_instance import DBInstance
-        from sqlalchemy import select
 
         async with AsyncSessionLocal() as session:
             stmt = select(DBInstance).where(
@@ -197,17 +200,19 @@ async def _read_instances() -> str:
             )
             result = await session.execute(stmt)
             instances = result.scalars().all()
-            return json.dumps([
-                {
-                    "id": str(i.id),
-                    "name": i.name,
-                    "db_type": i.db_type,
-                    "host": i.host,
-                    "environment": i.environment,
-                    "autonomy_level": i.autonomy_level,
-                }
-                for i in instances
-            ])
+            return json.dumps(
+                [
+                    {
+                        "id": str(i.id),
+                        "name": i.name,
+                        "db_type": i.db_type,
+                        "host": i.host,
+                        "environment": i.environment,
+                        "autonomy_level": i.autonomy_level,
+                    }
+                    for i in instances
+                ]
+            )
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
@@ -215,9 +220,10 @@ async def _read_instances() -> str:
 async def _read_incidents() -> str:
     """Read active incidents."""
     try:
+        from sqlalchemy import select
+
         from app.db.session import AsyncSessionLocal
         from app.models.incident import Incident
-        from sqlalchemy import select
 
         async with AsyncSessionLocal() as session:
             stmt = (
@@ -228,16 +234,18 @@ async def _read_incidents() -> str:
             )
             result = await session.execute(stmt)
             incidents = result.scalars().all()
-            return json.dumps([
-                {
-                    "id": str(i.id),
-                    "title": i.title,
-                    "severity": i.severity,
-                    "status": i.status,
-                    "detected_at": str(i.detected_at),
-                }
-                for i in incidents
-            ])
+            return json.dumps(
+                [
+                    {
+                        "id": str(i.id),
+                        "title": i.title,
+                        "severity": i.severity,
+                        "status": i.status,
+                        "detected_at": str(i.detected_at),
+                    }
+                    for i in incidents
+                ]
+            )
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
@@ -248,16 +256,18 @@ def _read_playbooks() -> str:
         from app.services.playbook_executor import list_playbooks
 
         summaries = list_playbooks()
-        return json.dumps([
-            {
-                "name": s.name,
-                "description": s.description,
-                "risk_level": s.risk_level.value,
-                "min_autonomy_level": s.min_autonomy_level,
-                "tags": s.tags,
-            }
-            for s in summaries
-        ])
+        return json.dumps(
+            [
+                {
+                    "name": s.name,
+                    "description": s.description,
+                    "risk_level": s.risk_level.value,
+                    "min_autonomy_level": s.min_autonomy_level,
+                    "tags": s.tags,
+                }
+                for s in summaries
+            ]
+        )
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
@@ -269,9 +279,10 @@ def _read_playbooks() -> str:
 
 async def _tool_query_metrics(args: dict) -> dict:
     """Query metrics for a time range."""
+    from sqlalchemy import select
+
     from app.db.session import AsyncSessionLocal
     from app.models.metric import MetricSample
-    from sqlalchemy import select
 
     instance_id = args["instance_id"]
     async with AsyncSessionLocal() as session:
@@ -286,18 +297,16 @@ async def _tool_query_metrics(args: dict) -> dict:
         return {
             "instance_id": instance_id,
             "count": len(rows),
-            "samples": [
-                {"sampled_at": str(r.sampled_at), "metrics": r.metrics}
-                for r in rows[:20]
-            ],
+            "samples": [{"sampled_at": str(r.sampled_at), "metrics": r.metrics} for r in rows[:20]],
         }
 
 
 async def _tool_list_incidents(args: dict) -> dict:
     """List incidents with filters."""
+    from sqlalchemy import select
+
     from app.db.session import AsyncSessionLocal
     from app.models.incident import Incident
-    from sqlalchemy import select
 
     limit = args.get("limit", 20)
     async with AsyncSessionLocal() as session:
@@ -339,9 +348,10 @@ async def _tool_nl2sql(args: dict) -> dict:
 
 async def _tool_schema_changes(args: dict) -> dict:
     """Get schema changes."""
+    from sqlalchemy import select
+
     from app.db.session import AsyncSessionLocal
     from app.models.schema_change import SchemaChange
-    from sqlalchemy import select
 
     instance_id = args["instance_id"]
     limit = args.get("limit", 10)

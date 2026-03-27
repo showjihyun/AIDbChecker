@@ -18,7 +18,7 @@ Training pipeline (MVP-AI-001):
   6. UPSERT into baselines table
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import numpy as np
@@ -100,7 +100,7 @@ class BaselineAnalyzer:
             # Fetch hot metric samples (last 14 days minimum, up to 30 days)
             from datetime import timedelta
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             cutoff = now - timedelta(days=30)
 
             stmt = (
@@ -201,7 +201,7 @@ class BaselineAnalyzer:
         Returns None if no baseline exists (anomaly detection should skip silently).
         """
         if at_time is None:
-            at_time = datetime.now(timezone.utc)
+            at_time = datetime.now(UTC)
 
         time_bucket = classify_time_bucket(at_time)
 
@@ -240,9 +240,7 @@ class BaselineAnalyzer:
 
         If no baseline exists, returns (0.0, None) -- skip silently.
         """
-        baseline = await self.get_baseline(
-            instance_id, metric_type, at_time, session=session
-        )
+        baseline = await self.get_baseline(instance_id, metric_type, at_time, session=session)
         if baseline is None or baseline.stddev == 0:
             return 0.0, None
 
@@ -356,7 +354,7 @@ async def _upsert_baseline(
     training_samples: int,
 ) -> None:
     """Insert or update a baseline record (UPSERT by unique constraint)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     stmt = select(Baseline).where(
         Baseline.instance_id == instance_id,

@@ -6,12 +6,12 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.models.metric import MetricSample
 from app.models.db_instance import DBInstance
+from app.models.metric import MetricSample
 from app.schemas.metric import (
     MetricLatestResponse,
     MetricListResponse,

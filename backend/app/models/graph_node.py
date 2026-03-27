@@ -32,29 +32,39 @@ class GraphNode(Base, UUIDMixin):
     __tablename__ = "graph_nodes"
 
     node_type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="table / column / metric / concept",
     )
     name: Mapped[str] = mapped_column(
-        String(255), nullable=False,
+        String(255),
+        nullable=False,
     )
     description: Mapped[str | None] = mapped_column(
-        Text, nullable=True,
+        Text,
+        nullable=True,
     )
     metadata_extra: Mapped[dict] = mapped_column(
-        "metadata", JSONB, nullable=False, server_default="{}",
+        "metadata",
+        JSONB,
+        nullable=False,
+        server_default="{}",
         comment="Extra metadata (data_type for columns, schema for tables, etc.)",
     )
     embedding = mapped_column(
-        Vector(384), nullable=True,
+        Vector(384),
+        nullable=True,
         comment="sentence-transformers embedding (384 dim, all-MiniLM-L6-v2)",
     )
     instance_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("db_instances.id", ondelete="CASCADE"), nullable=True,
+        ForeignKey("db_instances.id", ondelete="CASCADE"),
+        nullable=True,
         comment="Target DB instance this node belongs to (null for global concepts)",
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     # --- Relationships ---

@@ -2,13 +2,13 @@
 """Pydantic v2 schemas for Task Queue API operations."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """Task state machine states. Spec: FS-AUTO-004 Section 3."""
 
     QUEUED = "queued"
@@ -23,7 +23,7 @@ class TaskStatus(str, Enum):
     ESCALATED = "escalated"
 
 
-class TaskTrigger(str, Enum):
+class TaskTrigger(StrEnum):
     MANUAL = "manual"
     AUTO = "auto"
 

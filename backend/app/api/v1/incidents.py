@@ -1,7 +1,7 @@
 # Spec: FS-DASH-004
 """Incident list, detail, and status update API."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
@@ -13,7 +13,6 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import require_role
 from app.db.session import get_session
 from app.models.incident import Incident
-from app.models.db_instance import DBInstance
 from app.schemas.incident import (
     IncidentListResponse,
     IncidentResponse,
@@ -61,9 +60,7 @@ async def list_incidents(
         alias="status",
         description="Filter by status: open, acknowledged, in_progress, resolved, closed",
     ),
-    instance_id: UUID | None = Query(
-        default=None, description="Filter by DB instance ID"
-    ),
+    instance_id: UUID | None = Query(default=None, description="Filter by DB instance ID"),
     limit: int = Query(default=50, ge=1, le=200, description="Max items to return"),
     cursor: str | None = Query(
         default=None, description="Cursor for pagination (detected_at ISO string)"
@@ -131,7 +128,7 @@ async def update_incident_status(
 ) -> IncidentResponse:
     """Update an incident's status and set corresponding timestamps."""
     incident = await _get_incident_or_404(session, incident_id)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Validate status transition
     _validate_transition(incident.status, body.status)
@@ -176,14 +173,10 @@ def _validate_transition(current: str, target: str) -> None:
         )
 
 
-async def _get_incident_or_404(
-    session: AsyncSession, incident_id: UUID
-) -> Incident:
+async def _get_incident_or_404(session: AsyncSession, incident_id: UUID) -> Incident:
     """Fetch an incident with its instance relationship or raise 404."""
     stmt = (
-        select(Incident)
-        .options(selectinload(Incident.instance))
-        .where(Incident.id == incident_id)
+        select(Incident).options(selectinload(Incident.instance)).where(Incident.id == incident_id)
     )
     result = await session.execute(stmt)
     incident = result.scalar_one_or_none()

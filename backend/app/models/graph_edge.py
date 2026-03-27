@@ -30,17 +30,23 @@ class GraphEdge(Base, UUIDMixin):
     __tablename__ = "graph_edges"
 
     source_id: Mapped[UUID] = mapped_column(
-        ForeignKey("graph_nodes.id", ondelete="CASCADE"), nullable=False,
+        ForeignKey("graph_nodes.id", ondelete="CASCADE"),
+        nullable=False,
     )
     target_id: Mapped[UUID] = mapped_column(
-        ForeignKey("graph_nodes.id", ondelete="CASCADE"), nullable=False,
+        ForeignKey("graph_nodes.id", ondelete="CASCADE"),
+        nullable=False,
     )
     edge_type: Mapped[str] = mapped_column(
-        String(30), nullable=False,
+        String(30),
+        nullable=False,
         comment="has_column / foreign_key / metric_source / concept_map",
     )
     metadata_extra: Mapped[dict] = mapped_column(
-        "metadata", JSONB, nullable=False, server_default="{}",
+        "metadata",
+        JSONB,
+        nullable=False,
+        server_default="{}",
         comment="Extra edge metadata (constraint_name for FK, etc.)",
     )
 
@@ -55,8 +61,7 @@ class GraphEdge(Base, UUIDMixin):
     )
 
     __table_args__ = (
-        UniqueConstraint("source_id", "target_id", "edge_type",
-                         name="uq_graph_edges_src_tgt_type"),
+        UniqueConstraint("source_id", "target_id", "edge_type", name="uq_graph_edges_src_tgt_type"),
         Index("idx_graph_edges_source", "source_id"),
         Index("idx_graph_edges_target", "target_id"),
     )

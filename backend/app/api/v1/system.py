@@ -2,10 +2,10 @@
 """System health API — check DB, Valkey, Celery component status."""
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -80,9 +80,8 @@ async def health_check() -> HealthStatus:
 @router.get("/system/health/detail", response_model=HealthDetail)
 async def health_detail() -> HealthDetail:
     """Spec: FS-SELF-001 AC-6 — detailed health with uptime, version, latencies."""
-    from app.api.deps import get_current_user  # noqa: F811
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     db_status, db_ms = await _check_db_detail()
     valkey_status, valkey_ms = await _check_valkey_detail()
     celery_status, celery_ms, celery_details = await _check_celery_detail()
@@ -101,14 +100,20 @@ async def health_detail() -> HealthDetail:
         version=_read_version(),
         components={
             "db": ComponentHealthDetail(
-                status=db_status, latency_ms=db_ms, last_checked_at=now,
+                status=db_status,
+                latency_ms=db_ms,
+                last_checked_at=now,
             ),
             "valkey": ComponentHealthDetail(
-                status=valkey_status, latency_ms=valkey_ms, last_checked_at=now,
+                status=valkey_status,
+                latency_ms=valkey_ms,
+                last_checked_at=now,
             ),
             "celery": ComponentHealthDetail(
-                status=celery_status, latency_ms=celery_ms,
-                details=celery_details, last_checked_at=now,
+                status=celery_status,
+                latency_ms=celery_ms,
+                details=celery_details,
+                last_checked_at=now,
             ),
         },
     )
@@ -118,6 +123,7 @@ def _read_version() -> str:
     """Read VERSION file from project root."""
     try:
         from pathlib import Path
+
         vf = Path(__file__).resolve().parents[3] / "VERSION"
         return vf.read_text().strip() if vf.exists() else "unknown"
     except Exception:
@@ -177,6 +183,7 @@ async def _check_celery_detail() -> tuple[str, int | None, dict | None]:
     """Check Celery with latency and worker count."""
     try:
         import asyncio
+
         from app.tasks import celery_app
 
         def _sync_ping() -> dict | None:

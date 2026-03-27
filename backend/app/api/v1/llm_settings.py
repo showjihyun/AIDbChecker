@@ -7,14 +7,11 @@ API keys are NEVER exposed in responses (only has_*_key booleans).
 
 from __future__ import annotations
 
-from typing import Annotated
-
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.api.deps import require_role
 from app.config import settings
-from app.models.user import User
 from app.schemas.llm_settings import (
     LLMSettingsResponse,
     LLMSettingsUpdate,

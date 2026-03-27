@@ -64,7 +64,14 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM"]
-ignore = ["B008"]  # FastAPI Depends() in argument defaults is by design
+ignore = [
+    "B008",   # FastAPI Depends() in argument defaults is by design
+    "B904",   # raise-without-from: HTTPException re-raise pattern is intentional
+    "E501",   # line-too-long: handled by ruff format, remaining are strings/comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["B007"]  # unused loop variable in parameterized tests
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

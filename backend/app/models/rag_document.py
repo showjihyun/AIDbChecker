@@ -8,11 +8,10 @@ Note: HNSW index on embedding column is created in Alembic migration,
 not via SQLAlchemy (requires specific WITH parameters).
 """
 
-from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,21 +29,25 @@ class RAGDocument(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "rag_documents"
 
     source_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="incident",
+        String(20),
+        nullable=False,
+        server_default="incident",
         comment="MVP: 'incident' only. Phase 2: 'document', 'playbook', 'manual'",
     )
     source_id: Mapped[UUID] = mapped_column(
         ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False
     )
-    content: Mapped[str] = mapped_column(
-        Text, nullable=False, comment="Embedding source text"
-    )
+    content: Mapped[str] = mapped_column(Text, nullable=False, comment="Embedding source text")
     metadata_: Mapped[dict] = mapped_column(
-        "metadata", JSONB, nullable=False, server_default="{}",
+        "metadata",
+        JSONB,
+        nullable=False,
+        server_default="{}",
         comment="instance_id, anomaly_type, severity, resolution, was_correct",
     )
     embedding = mapped_column(
-        Vector(384), nullable=False,
+        Vector(384),
+        nullable=False,
         comment="sentence-transformers output (384 dim). Phase 2: 1536 (OpenAI)",
     )
 
