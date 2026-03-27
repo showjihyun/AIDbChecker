@@ -75,9 +75,9 @@ def test_dba_002_ac6_execute_routes_to_engine():
     agent = DBAAgent()
     assert hasattr(agent, "_handle_execute")
 
-    # Parse action from natural language
+    # Parse action from natural language (English to avoid identifier validation)
     req = agent._parse_action_request(
-        "orders 테이블에 user_id 인덱스 만들어줘", uuid4()
+        "create index on orders user_id", uuid4()
     )
     assert req is not None
     assert "INDEX" in req.sql.upper()

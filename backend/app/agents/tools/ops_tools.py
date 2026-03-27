@@ -52,6 +52,14 @@ def create_index(
 
     Always uses CONCURRENTLY to avoid table locks.
     """
+    from app.agents.safety_guard import SafetyGuard
+
+    SafetyGuard.validate_identifier(table)
+    for c in columns:
+        SafetyGuard.validate_identifier(c)
+    if index_name:
+        SafetyGuard.validate_identifier(index_name)
+
     cols = ", ".join(columns)
     name = index_name or f"idx_{table}_{'_'.join(columns)}"
     sql = f"CREATE INDEX CONCURRENTLY IF NOT EXISTS {name} ON {table} ({cols})"
@@ -73,12 +81,15 @@ def create_index(
 def vacuum_table(
     instance_id: UUID,
     table: str,
-    full: bool = False,
+    full: bool = False,  # noqa: FBT001, FBT002
     *,
     requested_by: str = "agent-tuning",
     confidence: float = 0.7,
 ) -> ActionRequest:
     """Spec: FS-DBA-001 AC-6 — VACUUM (FULL is DANGEROUS)."""
+    from app.agents.safety_guard import SafetyGuard
+
+    SafetyGuard.validate_identifier(table)
     if full:
         sql = f"VACUUM FULL VERBOSE {table}"
         action_type = "vacuum_full"
@@ -140,6 +151,27 @@ def alter_parameter(
     confidence: float = 0.7,
 ) -> ActionRequest:
     """Spec: FS-DBA-001 — ALTER SYSTEM SET (DANGEROUS)."""
+    from app.agents.safety_guard import SafetyGuard
+
+    # Finding 1: Allowlist of tunable parameters
+    ALLOWED_PARAMS = {
+        "work_mem", "shared_buffers", "maintenance_work_mem",
+        "effective_cache_size", "random_page_cost", "seq_page_cost",
+        "checkpoint_timeout", "max_wal_size", "min_wal_size",
+        "log_min_duration_statement", "statement_timeout",
+        "idle_in_transaction_session_timeout", "lock_timeout",
+        "temp_buffers", "wal_buffers",
+    }
+    SafetyGuard.validate_identifier(param)
+    if param.lower() not in ALLOWED_PARAMS:
+        raise ValueError(
+            f"Parameter '{param}' not in allowlist. "
+            f"Allowed: {', '.join(sorted(ALLOWED_PARAMS))}"
+        )
+    # Validate value doesn't contain injection
+    if ";" in value or "--" in value or "/*" in value:
+        raise ValueError(f"Invalid parameter value: '{value}'")
+
     sql = f"ALTER SYSTEM SET {param} = '{value}'"
 
     return ActionRequest(
@@ -165,6 +197,9 @@ def reindex(
     confidence: float = 0.8,
 ) -> ActionRequest:
     """Spec: FS-DBA-001 — REINDEX CONCURRENTLY."""
+    from app.agents.safety_guard import SafetyGuard
+
+    SafetyGuard.validate_identifier(index_name)
     sql = f"REINDEX INDEX CONCURRENTLY {index_name}"
 
     return ActionRequest(
@@ -186,6 +221,9 @@ def analyze_table(
     confidence: float = 0.9,
 ) -> ActionRequest:
     """Spec: FS-DBA-001 — ANALYZE (SAFE)."""
+    from app.agents.safety_guard import SafetyGuard
+
+    SafetyGuard.validate_identifier(table)
     sql = f"ANALYZE {table}"
 
     return ActionRequest(

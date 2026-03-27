@@ -132,11 +132,14 @@ def test_dba_001_ac9_4_level_classification():
 
     guard = SafetyGuard()
 
-    assert guard.classify_risk("SELECT 1", "custom_sql") != RiskLevel.CRITICAL
-    assert guard.classify_risk("ANALYZE users", "analyze_table") == RiskLevel.SAFE
+    # Security: SQL patterns always checked, action_type is a floor
+    assert guard.classify_risk("SELECT 1", "custom_sql") == RiskLevel.SAFE
+    assert guard.classify_risk("ANALYZE users", "analyze_table") == RiskLevel.WARNING  # SQL ANALYZE pattern
     assert guard.classify_risk("CREATE INDEX CONCURRENTLY idx ON t(c)", "create_index") == RiskLevel.WARNING
     assert guard.classify_risk("VACUUM FULL t", "vacuum_full") == RiskLevel.DANGEROUS
     assert guard.classify_risk("DROP TABLE users", "custom_sql") == RiskLevel.CRITICAL
+    # Multi-statement injection = CRITICAL regardless
+    assert guard.classify_risk("ANALYZE t; DROP TABLE users", "analyze_table") == RiskLevel.CRITICAL
 
 
 @spec_ref("FS-DBA-001", "AC-10")
@@ -149,11 +152,11 @@ def test_dba_001_ac10_critical_always_blocked():
     assert risk == RiskLevel.CRITICAL
 
     for level in range(4):  # L0~L3
-        policy = guard.check_policy(risk, level)
+        policy = guard.check_policy(risk, level, user_role="super_admin")
         assert policy.action == "blocked", f"L{level} should block CRITICAL"
 
-    # L4: approve (not auto-execute)
-    policy = guard.check_policy(risk, 4)
+    # L4: approve (not auto-execute) — only super_admin can attempt
+    policy = guard.check_policy(risk, 4, user_role="super_admin")
     assert policy.action == "approve_required"
 
 
@@ -164,21 +167,25 @@ def test_dba_001_ac11_policy_matrix():
 
     guard = SafetyGuard()
 
-    # WARNING + L0 = blocked
-    p = guard.check_policy(RiskLevel.WARNING, 0)
+    # WARNING + L0 = blocked (any role)
+    p = guard.check_policy(RiskLevel.WARNING, 0, user_role="db_admin")
     assert p.action == "blocked"
 
-    # WARNING + L2 = execute
-    p = guard.check_policy(RiskLevel.WARNING, 2)
+    # WARNING + L2 = execute (db_admin can do WARNING)
+    p = guard.check_policy(RiskLevel.WARNING, 2, user_role="db_admin")
     assert p.action == "execute"
 
-    # DANGEROUS + L2 = approve
-    p = guard.check_policy(RiskLevel.DANGEROUS, 2)
+    # DANGEROUS + L2 = approve (db_admin can do DANGEROUS)
+    p = guard.check_policy(RiskLevel.DANGEROUS, 2, user_role="db_admin")
     assert p.action == "approve_required"
 
-    # DANGEROUS + L3 = execute
-    p = guard.check_policy(RiskLevel.DANGEROUS, 3)
+    # DANGEROUS + L3 = execute (db_admin)
+    p = guard.check_policy(RiskLevel.DANGEROUS, 3, user_role="db_admin")
     assert p.action == "execute"
+
+    # DANGEROUS + L3 but operator = blocked (role ceiling)
+    p = guard.check_policy(RiskLevel.DANGEROUS, 3, user_role="operator")
+    assert p.action == "blocked"
 
 
 @spec_ref("FS-DBA-001", "AC-12")
@@ -189,11 +196,11 @@ def test_dba_001_ac12_low_confidence_blocks():
     guard = SafetyGuard()
 
     # High autonomy but low confidence
-    p = guard.check_policy(RiskLevel.DANGEROUS, autonomy_level=3, confidence=0.4)
+    p = guard.check_policy(RiskLevel.DANGEROUS, autonomy_level=3, confidence=0.4, user_role="db_admin")
     assert p.action == "blocked"
 
     # Same autonomy, sufficient confidence
-    p = guard.check_policy(RiskLevel.DANGEROUS, autonomy_level=3, confidence=0.6)
+    p = guard.check_policy(RiskLevel.DANGEROUS, autonomy_level=3, confidence=0.6, user_role="db_admin")
     assert p.action == "execute"
 
 
