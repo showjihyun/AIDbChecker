@@ -15,6 +15,9 @@ import { IncidentsPage } from '@/routes/pages/IncidentsPage';
 import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
 import { TuningPage } from '@/routes/pages/TuningPage';
 import { DBAAgentPage } from '@/routes/pages/DBAAgentPage';
+import { PlaybooksPage } from '@/routes/pages/PlaybooksPage';
+import { TasksPage } from '@/routes/pages/TasksPage';
+import { ReportsPage } from '@/routes/pages/ReportsPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -101,9 +104,31 @@ const dbaAgentRoute = createRoute({
   component: DBAAgentPage,
 });
 
+const playbooksRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/playbooks',
+  component: PlaybooksPage,
+});
+
+const tasksRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/tasks',
+  component: TasksPage,
+});
+
+const reportsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/reports',
+  component: ReportsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, tuningRoute, dbaAgentRoute, settingsRoute, llmSettingsRoute]),
+  authenticatedRoute.addChildren([
+    dashboardRoute, ashRoute, incidentsRoute, instancesRoute,
+    tuningRoute, dbaAgentRoute, playbooksRoute, tasksRoute, reportsRoute,
+    settingsRoute, llmSettingsRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });

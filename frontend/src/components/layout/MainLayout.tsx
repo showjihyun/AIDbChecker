@@ -9,7 +9,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/common/Badge';
 import { NotificationPanel } from '@/components/common/NotificationPanel';
 import { ToastContainer } from '@/components/common/Toast';
-// NL2SQL chat widget unified into DBA Agent (/dba page)
+import { DBAMiniChat } from '@/components/dba/DBAMiniChat';
 
 interface NavItem {
   to: string;
@@ -243,7 +243,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
-      {/* NL2SQL chat widget removed — unified into DBA Agent (/dba page) */}
+      {/* Spec: FS-DBA-002 AC-11 — DBA Agent mini chat widget, all authenticated pages */}
+      <DBAMiniChat />
       <ToastContainer />
     </div>
   );
