@@ -1,11 +1,12 @@
-# Spec: FS-AUTO-003 (Lite)
-"""Playbook Lite API — list, detail, execute, and approve built-in playbooks.
+# Spec: FS-AUTO-003 (Lite + Phase 3 Custom)
+"""Playbook API — list, detail, execute built-in + custom playbooks.
 
-GET  /playbooks              — List all 7 built-in playbooks
+GET  /playbooks              — List all playbooks (built-in + custom)
 GET  /playbooks/{name}       — Get playbook detail with YAML
 POST /playbooks/{name}/execute — Execute a playbook on an instance
-GET  /playbooks/{name}/history — Execution history (stub)
-POST /playbooks/{name}/approve/{log_id} — Approve pending execution (stub)
+POST /playbooks              — Create custom playbook (Phase 3)
+PUT  /playbooks/{name}       — Update custom playbook (Phase 3)
+DELETE /playbooks/{name}     — Delete custom playbook (Phase 3)
 """
 
 from uuid import UUID
@@ -15,6 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_current_user, require_role
 from app.models.user import User
+from pydantic import BaseModel, Field
+
 from app.schemas.playbook import (
     PlaybookDetail,
     PlaybookExecuteRequest,
@@ -122,3 +125,65 @@ async def execute_playbook(
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Custom Playbook CRUD
+# Spec: FS-AUTO-003 Phase 3
+# ---------------------------------------------------------------------------
+
+
+class CustomPlaybookRequest(BaseModel):
+    yaml_content: str = Field(..., min_length=10, description="Full YAML content")
+
+
+class CustomPlaybookResponse(BaseModel):
+    name: str
+    status: str
+
+
+@router.post(
+    "/playbooks",
+    response_model=CustomPlaybookResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("super_admin", "db_admin"))],
+    summary="Create a custom playbook (Phase 3)",
+)
+async def create_custom_playbook(
+    body: CustomPlaybookRequest,
+) -> CustomPlaybookResponse:
+    """Upload a custom playbook YAML."""
+    name, error = playbook_executor.create_custom_playbook(body.yaml_content)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    return CustomPlaybookResponse(name=name, status="created")
+
+
+@router.put(
+    "/playbooks/{name}",
+    response_model=CustomPlaybookResponse,
+    dependencies=[Depends(require_role("super_admin", "db_admin"))],
+    summary="Update a custom playbook (Phase 3)",
+)
+async def update_custom_playbook(
+    name: str,
+    body: CustomPlaybookRequest,
+) -> CustomPlaybookResponse:
+    """Update an existing custom playbook YAML."""
+    ok, error = playbook_executor.update_custom_playbook(name, body.yaml_content)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    return CustomPlaybookResponse(name=name, status="updated")
+
+
+@router.delete(
+    "/playbooks/{name}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("super_admin", "db_admin"))],
+    summary="Delete a custom playbook (Phase 3)",
+)
+async def delete_custom_playbook(name: str):
+    """Delete a custom playbook."""
+    ok, error = playbook_executor.delete_custom_playbook(name)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
