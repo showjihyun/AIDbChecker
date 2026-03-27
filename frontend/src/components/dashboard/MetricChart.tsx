@@ -18,12 +18,14 @@ interface TimePreset {
   getFrom: () => Date;
 }
 
+// Spec: FS-KPI-001 §4.5 — X축 시간 정책 (해상도 표시)
 const timePresets: TimePreset[] = [
-  { label: '15m', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
-  { label: '1h', value: '1h', getFrom: () => subHours(new Date(), 1) },
-  { label: '6h', value: '6h', getFrom: () => subHours(new Date(), 6) },
-  { label: '24h', value: '24h', getFrom: () => subDays(new Date(), 1) },
-  { label: '7d', value: '7d', getFrom: () => subDays(new Date(), 7) },
+  { label: '5분 (1초)', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
+  { label: '15분 (1초)', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
+  { label: '1시간 (10초)', value: '1h', getFrom: () => subHours(new Date(), 1) },
+  { label: '6시간 (1분)', value: '6h', getFrom: () => subHours(new Date(), 6) },
+  { label: '24시간 (20분)', value: '24h', getFrom: () => subDays(new Date(), 1) },
+  { label: '7일 (2시간)', value: '7d', getFrom: () => subDays(new Date(), 7) },
 ];
 
 export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartProps) {
@@ -44,14 +46,16 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
     );
 
     // Spec: FS-KPI-001 §4.5 — Adaptive chart config per time range
+    // Spec: FS-KPI-001 §4.5 — 프리셋별 포인트 간격 + X축 레이블 ~12개 목표
     const chartConfig = (() => {
       switch (activePreset) {
-        case '15m': return { maxPoints: 150, format: 'HH:mm:ss', labelInterval: 14,  rotate: 0  };
-        case '1h':  return { maxPoints: 120, format: 'HH:mm',    labelInterval: 11,  rotate: 0  };
-        case '6h':  return { maxPoints: 90,  format: 'HH:mm',    labelInterval: 8,   rotate: 0  };
+        case '5m':  return { maxPoints: 60,  format: 'HH:mm:ss', labelInterval: 4,   rotate: 0  };
+        case '15m': return { maxPoints: 90,  format: 'HH:mm:ss', labelInterval: 8,   rotate: 0  };
+        case '1h':  return { maxPoints: 120, format: 'HH:mm',    labelInterval: 9,   rotate: 0  };
+        case '6h':  return { maxPoints: 72,  format: 'HH:mm',    labelInterval: 5,   rotate: 0  };
         case '24h': return { maxPoints: 72,  format: 'HH:mm',    labelInterval: 5,   rotate: 35 };
-        case '7d':  return { maxPoints: 56,  format: 'MM/dd HH',  labelInterval: 3,   rotate: 35 };
-        default:    return { maxPoints: 120, format: 'HH:mm:ss', labelInterval: 11,  rotate: 0  };
+        case '7d':  return { maxPoints: 84,  format: 'MM/dd HH', labelInterval: 6,   rotate: 35 };
+        default:    return { maxPoints: 120, format: 'HH:mm',    labelInterval: 9,   rotate: 0  };
       }
     })();
 
@@ -204,16 +208,16 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         <h3 className="text-sm font-semibold text-on-surface">
           Metrics Timeline
         </h3>
-        <div className="flex gap-1" role="group" aria-label="Time range selection">
+        <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Time range selection">
           {timePresets.map((preset) => (
             <button
               key={preset.value}
               onClick={() => handlePresetClick(preset)}
               className={cn(
-                'px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 ease-out',
+                'px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors duration-200 ease-out whitespace-nowrap',
                 activePreset === preset.value
-                  ? 'bg-primary-container text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
               )}
               aria-pressed={activePreset === preset.value}
             >

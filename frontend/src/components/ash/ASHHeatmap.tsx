@@ -18,7 +18,9 @@ interface HeatmapPreset {
   getFrom: () => Date;
 }
 
+// Spec: FS-KPI-001 §4.5 — X축 시간 정책 (Metrics Timeline과 동일)
 const heatmapPresets: HeatmapPreset[] = [
+  { label: '5분 (1초)', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
   { label: '15분 (1초)', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
   { label: '30분 (1초)', value: '30m', getFrom: () => subMinutes(new Date(), 30) },
   { label: '1시간 (10초)', value: '1h', getFrom: () => subHours(new Date(), 1) },
