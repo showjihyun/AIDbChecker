@@ -11,7 +11,6 @@ relevant subgraph and build a focused schema prompt. Falls back to the
 hardcoded system schema prompt if no graph is available.
 """
 
-import hashlib
 import re
 import time
 from uuid import UUID
@@ -117,14 +116,12 @@ def _validate_sql_readonly(sql: str) -> None:
     # Block write operations
     if _WRITE_KEYWORDS.search(sql):
         raise ValueError(
-            "Generated SQL contains write operations. "
-            "Only SELECT queries are allowed."
+            "Generated SQL contains write operations. Only SELECT queries are allowed."
         )
     # Block dangerous functions (data exfiltration via pg_read_file etc.)
     if _DANGEROUS_FUNCTIONS.search(sql):
         raise ValueError(
-            "Generated SQL contains restricted functions. "
-            "Only standard SELECT queries are allowed."
+            "Generated SQL contains restricted functions. Only standard SELECT queries are allowed."
         )
     # Block queries against sensitive tables
     if _BLOCKED_TABLES.search(sql):
@@ -135,15 +132,11 @@ def _validate_sql_readonly(sql: str) -> None:
         )
     # Block multi-statement (semicolons)
     if ";" in sql.strip():
-        raise ValueError(
-            "Multi-statement SQL is not allowed. Use a single SELECT query."
-        )
+        raise ValueError("Multi-statement SQL is not allowed. Use a single SELECT query.")
     # Must start with SELECT (after whitespace)
     stripped = sql.strip().upper()
     if not stripped.startswith("SELECT") and not stripped.startswith("WITH"):
-        raise ValueError(
-            "Only SELECT or WITH (CTE) queries are allowed."
-        )
+        raise ValueError("Only SELECT or WITH (CTE) queries are allowed.")
 
 
 def _clean_sql(raw: str) -> str:
@@ -184,17 +177,17 @@ async def generate_sql(question: str, instance_id: UUID) -> str:
     )
 
     try:
-        response = await llm.ainvoke([
-            SystemMessage(content=_NL2SQL_SYSTEM_PROMPT),
-            HumanMessage(content=user_prompt),
-        ])
+        response = await llm.ainvoke(
+            [
+                SystemMessage(content=_NL2SQL_SYSTEM_PROMPT),
+                HumanMessage(content=user_prompt),
+            ]
+        )
         # LangChain returns AIMessage for chat models, plain str for LLMs
         raw_sql = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
         logger.error("nl2sql.llm_call_failed", error=str(exc), question=question)
-        raise RuntimeError(
-            f"LLM call failed: {exc}. Check AI_MODE setting and API keys."
-        ) from exc
+        raise RuntimeError(f"LLM call failed: {exc}. Check AI_MODE setting and API keys.") from exc
 
     sql = _clean_sql(raw_sql)
     _validate_sql_readonly(sql)
@@ -237,9 +230,7 @@ async def execute_readonly_sql(
     start = time.monotonic()
     try:
         # Set statement_timeout for this transaction
-        await session.execute(
-            text(f"SET LOCAL statement_timeout = '{timeout_seconds * 1000}'")
-        )
+        await session.execute(text(f"SET LOCAL statement_timeout = '{timeout_seconds * 1000}'"))
         await session.execute(text("SET LOCAL default_transaction_read_only = on"))
 
         # Add LIMIT if not present
@@ -273,9 +264,7 @@ async def execute_readonly_sql(
         )
         # Rollback the failed transaction so session can be reused (e.g., history save)
         await session.rollback()
-        raise RuntimeError(
-            f"SQL execution failed: {exc}. Verify the query is valid."
-        ) from exc
+        raise RuntimeError(f"SQL execution failed: {exc}. Verify the query is valid.") from exc
 
 
 def get_model_name() -> str:
@@ -385,10 +374,12 @@ async def generate_sql_with_graph(
     )
 
     try:
-        response = await llm.ainvoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt),
-        ])
+        response = await llm.ainvoke(
+            [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+            ]
+        )
         raw_sql = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
         logger.error(
@@ -396,9 +387,7 @@ async def generate_sql_with_graph(
             error=str(exc),
             question=question,
         )
-        raise RuntimeError(
-            f"LLM call failed: {exc}. Check AI_MODE setting and API keys."
-        ) from exc
+        raise RuntimeError(f"LLM call failed: {exc}. Check AI_MODE setting and API keys.") from exc
 
     sql = _clean_sql(raw_sql)
 

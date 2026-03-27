@@ -9,7 +9,7 @@ Spec: FS-AI-012 Section 3.1
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
@@ -39,6 +39,7 @@ _MAX_SESSIONS = 100
 # ---------------------------------------------------------------------------
 # POST /api/v1/copilot/diagnose
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/copilot/diagnose",
@@ -97,17 +98,19 @@ async def diagnose_copilot(
     )
 
     # 4. Store session in history
-    _sessions.append(CopilotSessionItem(
-        session_id=response.session_id,
-        instance_id=response.instance_id,
-        incident_id=body.incident_id,
-        branches_explored=response.branches_explored,
-        selected_branch=response.selected_branch,
-        confidence=response.confidence,
-        execution_status=response.execution_status,
-        autonomy_level_applied=response.autonomy_level_applied,
-        created_at=datetime.now(timezone.utc),
-    ))
+    _sessions.append(
+        CopilotSessionItem(
+            session_id=response.session_id,
+            instance_id=response.instance_id,
+            incident_id=body.incident_id,
+            branches_explored=response.branches_explored,
+            selected_branch=response.selected_branch,
+            confidence=response.confidence,
+            execution_status=response.execution_status,
+            autonomy_level_applied=response.autonomy_level_applied,
+            created_at=datetime.now(UTC),
+        )
+    )
     while len(_sessions) > _MAX_SESSIONS:
         _sessions.pop(0)
 
@@ -117,6 +120,7 @@ async def diagnose_copilot(
 # ---------------------------------------------------------------------------
 # GET /api/v1/copilot/sessions
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/copilot/sessions",

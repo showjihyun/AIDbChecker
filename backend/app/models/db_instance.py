@@ -1,10 +1,7 @@
 # Spec: DM-001
 """DBInstance model — monitored database instances."""
 
-from datetime import datetime
-from uuid import UUID, uuid4
-
-from sqlalchemy import Boolean, DateTime, Index, Integer, SmallInteger, String, func
+from sqlalchemy import Boolean, Index, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,27 +17,19 @@ class DBInstance(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "db_instances"
 
-    name: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False
-    )
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     db_type: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="postgresql / mysql / mssql"
     )
     host: Mapped[str] = mapped_column(String(255), nullable=False)
     port: Mapped[int] = mapped_column(Integer, nullable=False, default=5432)
     database_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    cluster_id: Mapped[str | None] = mapped_column(
-        String(100), nullable=True
-    )
+    cluster_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     environment: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="production / staging / development"
     )
-    connection_config: Mapped[dict] = mapped_column(
-        JSONB, nullable=False, server_default="{}"
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    connection_config: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     autonomy_level: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, comment="Adaptive autonomy 0-4"
     )

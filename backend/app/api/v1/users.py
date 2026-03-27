@@ -1,12 +1,12 @@
 # Spec: MVP-ADMIN-001, MVP-ADMIN-002, MVP-ADMIN-003
 """User CRUD API -- list, create, update, soft-delete users (admin only)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -156,7 +156,7 @@ async def delete_user(
     """Soft-delete a user. Requires super_admin role."""
     # Spec: DM-001 -- soft delete via deleted_at
     user = await _get_user_or_404(session, user_id)
-    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_at = datetime.now(UTC)
     user.is_active = False
     await session.commit()
 

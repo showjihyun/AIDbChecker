@@ -76,16 +76,18 @@ def list_playbooks() -> list[PlaybookSummary]:
         meta = data.get("metadata", {})
         trigger = data.get("trigger", {})
         steps = data.get("steps", [])
-        result.append(PlaybookSummary(
-            name=meta.get("name", "unknown"),
-            version=meta.get("version", "1.0"),
-            description=meta.get("description", ""),
-            risk_level=meta.get("risk_level", "medium"),
-            min_autonomy_level=meta.get("min_autonomy_level", 2),
-            tags=meta.get("tags", []),
-            trigger_type=trigger.get("type", "manual"),
-            steps_count=len(steps),
-        ))
+        result.append(
+            PlaybookSummary(
+                name=meta.get("name", "unknown"),
+                version=meta.get("version", "1.0"),
+                description=meta.get("description", ""),
+                risk_level=meta.get("risk_level", "medium"),
+                min_autonomy_level=meta.get("min_autonomy_level", 2),
+                tags=meta.get("tags", []),
+                trigger_type=trigger.get("type", "manual"),
+                steps_count=len(steps),
+            )
+        )
     return result
 
 
@@ -194,7 +196,7 @@ async def execute_playbook(
             playbook_name=playbook_name,
             instance_id=instance_id,
             status=ExecutionStatus.BLOCKED,
-            reason=f"Autonomy L0: monitoring only, execution blocked",
+            reason="Autonomy L0: monitoring only, execution blocked",
             started_at=now,
             total_duration_ms=elapsed,
         )
@@ -245,22 +247,26 @@ async def execute_playbook(
             # In real execution, SQL would run against target DB with timeout.
             # For now, record the step as executed.
             step_ms = int((time.monotonic() - step_start) * 1000)
-            executed_steps.append(StepResult(
-                step_name=step.name,
-                status="success",
-                result={"query": step.query[:200]},
-                duration_ms=step_ms,
-            ))
+            executed_steps.append(
+                StepResult(
+                    step_name=step.name,
+                    status="success",
+                    result={"query": step.query[:200]},
+                    duration_ms=step_ms,
+                )
+            )
             logger.info("playbook.step_done", step=step.name, status="success")
 
         except Exception as exc:
             step_ms = int((time.monotonic() - step_start) * 1000)
-            executed_steps.append(StepResult(
-                step_name=step.name,
-                status="failed",
-                error=str(exc),
-                duration_ms=step_ms,
-            ))
+            executed_steps.append(
+                StepResult(
+                    step_name=step.name,
+                    status="failed",
+                    error=str(exc),
+                    duration_ms=step_ms,
+                )
+            )
             logger.error("playbook.step_failed", step=step.name, error=str(exc))
 
             # Rollback executed steps in reverse (FS-AUTO-003 AC-6)

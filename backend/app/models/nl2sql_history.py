@@ -2,7 +2,7 @@
 """NL2SQLHistory model — natural language to SQL query history."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB

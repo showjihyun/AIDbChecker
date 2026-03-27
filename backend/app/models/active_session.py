@@ -24,9 +24,7 @@ class ActiveSession(Base):
 
     __tablename__ = "active_sessions"
 
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     instance_id: Mapped[UUID] = mapped_column(
         ForeignKey("db_instances.id", ondelete="CASCADE"), nullable=False
     )
@@ -39,27 +37,22 @@ class ActiveSession(Base):
         BigInteger, nullable=True, comment="pg_stat_statements queryid"
     )
     state: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="active / idle / idle in transaction / locked",
     )
     wait_event_type: Mapped[str | None] = mapped_column(
         String(30), nullable=True, comment="CPU, LWLock, Lock, I/O, IPC, etc."
     )
-    wait_event: Mapped[str | None] = mapped_column(
-        String(100), nullable=True
-    )
+    wait_event: Mapped[str | None] = mapped_column(String(100), nullable=True)
     backend_type: Mapped[str | None] = mapped_column(
         String(30), nullable=True, comment="client backend, autovacuum, etc."
     )
     client_addr: Mapped[str | None] = mapped_column(
         String(45), nullable=True, comment="Client IP address (INET)"
     )
-    application_name: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
-    query_start: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    application_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    query_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[float | None] = mapped_column(
         Float, nullable=True, comment="Elapsed time in milliseconds"
     )

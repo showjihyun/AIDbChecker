@@ -6,33 +6,33 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
 # --- Request Schemas ---
+
 
 class GraphBuildRequest(BaseModel):
     """Request to build a Schema Knowledge Graph for an instance."""
 
-    instance_id: UUID = Field(
-        ..., description="Target DB instance to extract schema from"
-    )
+    instance_id: UUID = Field(..., description="Target DB instance to extract schema from")
 
 
 class GraphMetricRequest(BaseModel):
     """Request to add a business metric node to the graph."""
 
-    instance_id: UUID = Field(
-        ..., description="Target DB instance"
-    )
+    instance_id: UUID = Field(..., description="Target DB instance")
     name: str = Field(
-        ..., min_length=1, max_length=255,
+        ...,
+        min_length=1,
+        max_length=255,
         description="Metric name (e.g. 'avg_query_time')",
     )
     description: str = Field(
-        ..., min_length=1,
+        ...,
+        min_length=1,
         description="Metric description for embedding",
     )
     source_columns: list[str] = Field(
-        ..., min_length=1,
+        ...,
+        min_length=1,
         description="Source columns in 'table.column' format (e.g. ['active_sessions.duration_ms'])",
     )
 
@@ -40,24 +40,27 @@ class GraphMetricRequest(BaseModel):
 class GraphConceptRequest(BaseModel):
     """Request to add a business concept node to the graph."""
 
-    instance_id: UUID = Field(
-        ..., description="Target DB instance"
-    )
+    instance_id: UUID = Field(..., description="Target DB instance")
     name: str = Field(
-        ..., min_length=1, max_length=255,
+        ...,
+        min_length=1,
+        max_length=255,
         description="Concept name (e.g. 'slow_query')",
     )
     description: str = Field(
-        ..., min_length=1,
+        ...,
+        min_length=1,
         description="Concept description for embedding",
     )
     related_metrics: list[str] = Field(
-        ..., min_length=1,
+        ...,
+        min_length=1,
         description="Related metric names (e.g. ['avg_query_time'])",
     )
 
 
 # --- Response Schemas ---
+
 
 class GraphBuildResponse(BaseModel):
     """Response after building a Schema Knowledge Graph."""

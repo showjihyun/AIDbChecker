@@ -14,6 +14,7 @@ Both tasks follow the same resilience pattern as collect.py:
 """
 
 import asyncio
+from datetime import UTC
 from uuid import UUID
 
 import structlog
@@ -22,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analyzers.anomaly import AnomalyDetector
-from app.analyzers.baseline import BaselineAnalyzer, HOT_METRIC_KEYS
+from app.analyzers.baseline import HOT_METRIC_KEYS, BaselineAnalyzer
 from app.db.session import AsyncSessionLocal
 from app.models.db_instance import DBInstance
 
@@ -92,7 +93,7 @@ async def _check_anomalies_async(
 
     Spec: MVP-AI-002 -- dynamic anomaly detection after each hot metric collection.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     detector = AnomalyDetector()
 
@@ -101,7 +102,7 @@ async def _check_anomalies_async(
         try:
             sampled_at = datetime.fromisoformat(sampled_at_iso)
         except (ValueError, TypeError):
-            sampled_at = datetime.now(timezone.utc)
+            sampled_at = datetime.now(UTC)
 
     try:
         incidents = await detector.check(

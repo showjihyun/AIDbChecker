@@ -12,7 +12,7 @@ metric_samples.
 Storage KPIs (DB Size, Replication Lag) use the latest cold metric_samples.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -58,9 +58,7 @@ _THRESHOLDS_LOWER = {
 }
 
 
-def _evaluate_status(
-    metric_name: str, value: float | int | None
-) -> str:
+def _evaluate_status(metric_name: str, value: float | int | None) -> str:
     """Determine KPI status based on spec-defined thresholds.
 
     Returns "normal", "warning", "critical", or "unknown".
@@ -89,9 +87,7 @@ def _evaluate_status(
     return "normal"
 
 
-def _make_kpi(
-    metric_name: str, value: float | int | None, unit: str
-) -> KPIValue:
+def _make_kpi(metric_name: str, value: float | int | None, unit: str) -> KPIValue:
     """Create a KPIValue with auto-evaluated status."""
     return KPIValue(
         value=value,
@@ -125,9 +121,7 @@ class KPICalculator:
         return max(0.0, (current - previous) / interval_sec)
 
     @staticmethod
-    def compute_hit_ratio(
-        delta_hit: int | float, delta_read: int | float
-    ) -> float:
+    def compute_hit_ratio(delta_hit: int | float, delta_read: int | float) -> float:
         """Buffer cache hit ratio from delta values.
 
         Spec: FS-KPI-001 Section 2.2 (KPI-05)
@@ -139,9 +133,7 @@ class KPICalculator:
         return round((delta_hit / total) * 100, 2)
 
     @staticmethod
-    async def _fetch_last_two_hot(
-        session: AsyncSession, instance_id: UUID
-    ) -> list[MetricSample]:
+    async def _fetch_last_two_hot(session: AsyncSession, instance_id: UUID) -> list[MetricSample]:
         """Fetch the 2 most recent hot metric_samples for delta calculation."""
         stmt = (
             select(MetricSample)
@@ -156,9 +148,7 @@ class KPICalculator:
         return list(result.scalars().all())
 
     @staticmethod
-    async def _fetch_latest_cold(
-        session: AsyncSession, instance_id: UUID
-    ) -> MetricSample | None:
+    async def _fetch_latest_cold(session: AsyncSession, instance_id: UUID) -> MetricSample | None:
         """Fetch the latest cold metric_sample for storage KPIs."""
         stmt = (
             select(MetricSample)
@@ -173,9 +163,7 @@ class KPICalculator:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def _fetch_latest_warm(
-        session: AsyncSession, instance_id: UUID
-    ) -> MetricSample | None:
+    async def _fetch_latest_warm(session: AsyncSession, instance_id: UUID) -> MetricSample | None:
         """Fetch the latest warm metric_sample for avg response time."""
         stmt = (
             select(MetricSample)
@@ -209,7 +197,7 @@ class KPICalculator:
         Returns:
             KPIResponse with all 5 categories populated.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # --- Delta-based KPIs from stored hot metrics ---
         hot_samples = await cls._fetch_last_two_hot(session, instance_id)
@@ -222,9 +210,7 @@ class KPICalculator:
         if len(hot_samples) >= 2:
             current = hot_samples[0]  # most recent
             previous = hot_samples[1]  # second most recent
-            interval = (
-                current.sampled_at - previous.sampled_at
-            ).total_seconds()
+            interval = (current.sampled_at - previous.sampled_at).total_seconds()
 
             if interval > 0:
                 cm = current.metrics
@@ -233,25 +219,19 @@ class KPICalculator:
                 # KPI-01: TPS (xact_commit delta/s)
                 if "xact_commit" in cm and "xact_commit" in pm:
                     tps_val = round(
-                        cls.compute_delta_rate(
-                            cm["xact_commit"], pm["xact_commit"], interval
-                        ),
+                        cls.compute_delta_rate(cm["xact_commit"], pm["xact_commit"], interval),
                         2,
                     )
 
                 # KPI-02: QPS (tup_returned delta/s)
                 if "tup_returned" in cm and "tup_returned" in pm:
                     qps_val = round(
-                        cls.compute_delta_rate(
-                            cm["tup_returned"], pm["tup_returned"], interval
-                        ),
+                        cls.compute_delta_rate(cm["tup_returned"], pm["tup_returned"], interval),
                         2,
                     )
 
                 # KPI-05: Buffer Hit Ratio (delta-based)
-                if all(
-                    k in cm and k in pm for k in ("blks_hit", "blks_read")
-                ):
+                if all(k in cm and k in pm for k in ("blks_hit", "blks_read")):
                     delta_hit = cm["blks_hit"] - pm["blks_hit"]
                     delta_read = cm["blks_read"] - pm["blks_read"]
                     hit_ratio_val = cls.compute_hit_ratio(delta_hit, delta_read)
@@ -259,18 +239,14 @@ class KPICalculator:
                 # KPI-06: Disk IOPS (blks_read delta/s)
                 if "blks_read" in cm and "blks_read" in pm:
                     iops_val = round(
-                        cls.compute_delta_rate(
-                            cm["blks_read"], pm["blks_read"], interval
-                        ),
+                        cls.compute_delta_rate(cm["blks_read"], pm["blks_read"], interval),
                         2,
                     )
 
                 # KPI-10: Deadlocks (delta/s) — from pg_stat_database
                 if "deadlocks" in cm and "deadlocks" in pm:
                     deadlocks_val = round(
-                        cls.compute_delta_rate(
-                            cm["deadlocks"], pm["deadlocks"], interval
-                        ),
+                        cls.compute_delta_rate(cm["deadlocks"], pm["deadlocks"], interval),
                         4,
                     )
 
@@ -318,9 +294,7 @@ class KPICalculator:
                 numbackends = live_data.get("numbackends")
                 max_connections = live_data.get("max_connections")
                 if numbackends is not None and max_connections and max_connections > 0:
-                    connection_usage_val = round(
-                        (numbackends / max_connections) * 100, 1
-                    )
+                    connection_usage_val = round((numbackends / max_connections) * 100, 1)
 
                 # KPI-10: If no delta data, try getting deadlocks from live
                 if deadlocks_val is None and "deadlocks" in live_data:
@@ -366,36 +340,24 @@ class KPICalculator:
             throughput=ThroughputKPI(
                 tps=_make_kpi("tps", tps_val, "tx/s"),
                 qps=_make_kpi("qps", qps_val, "q/s"),
-                avg_response_time_ms=_make_kpi(
-                    "avg_response_time_ms", avg_rt_val, "ms"
-                ),
+                avg_response_time_ms=_make_kpi("avg_response_time_ms", avg_rt_val, "ms"),
                 slow_queries=_make_kpi("slow_queries", slow_queries_val, "count"),
             ),
             resource=ResourceKPI(
-                buffer_hit_ratio=_make_kpi(
-                    "buffer_hit_ratio", hit_ratio_val, "%"
-                ),
+                buffer_hit_ratio=_make_kpi("buffer_hit_ratio", hit_ratio_val, "%"),
                 disk_iops=_make_kpi("disk_iops", iops_val, "ops/s"),
             ),
             connection=ConnectionKPI(
-                active_sessions=_make_kpi(
-                    "active_sessions", active_sessions_val, "count"
-                ),
-                connection_usage_pct=_make_kpi(
-                    "connection_usage_pct", connection_usage_val, "%"
-                ),
+                active_sessions=_make_kpi("active_sessions", active_sessions_val, "count"),
+                connection_usage_pct=_make_kpi("connection_usage_pct", connection_usage_val, "%"),
             ),
             lock=LockKPI(
                 lock_waits=_make_kpi("lock_waits", lock_waits_val, "count"),
-                deadlocks_per_sec=_make_kpi(
-                    "deadlocks_per_sec", deadlocks_val, "count/s"
-                ),
+                deadlocks_per_sec=_make_kpi("deadlocks_per_sec", deadlocks_val, "count/s"),
             ),
             storage=StorageKPI(
                 db_size_bytes=_make_kpi("db_size_bytes", db_size_val, "bytes"),
-                replication_lag_sec=_make_kpi(
-                    "replication_lag_sec", replication_lag_val, "sec"
-                ),
+                replication_lag_sec=_make_kpi("replication_lag_sec", replication_lag_val, "sec"),
             ),
             advisories=advisories,
         )

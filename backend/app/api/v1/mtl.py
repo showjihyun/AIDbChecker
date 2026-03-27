@@ -6,9 +6,6 @@ POST /api/v1/mtl/predict — run MTL Lite diagnosis on an incident
   for simultaneous anomaly classification, root cause, severity, and actions.
 """
 
-from typing import Annotated
-from uuid import UUID
-
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -17,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_session, require_role
 from app.models.incident import Incident
 from app.schemas.mtl import MTLPredictRequest, MTLPredictResponse
-from app.services import mtl_lite, rag as rag_service
+from app.services import mtl_lite
+from app.services import rag as rag_service
 
 logger = structlog.get_logger(__name__)
 
@@ -28,9 +26,7 @@ router = APIRouter()
 @router.post(
     "/mtl/predict",
     response_model=MTLPredictResponse,
-    dependencies=[
-        Depends(require_role("super_admin", "db_admin", "operator"))
-    ],
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
     summary="Run MTL Lite 4-Head RCA prediction",
     description="Performs simultaneous anomaly classification, root cause "
     "identification, severity assessment, and action recommendation "
@@ -53,8 +49,7 @@ async def mtl_predict(
     if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Incident {body.incident_id} not found. "
-            "Verify the incident ID is correct.",
+            detail=f"Incident {body.incident_id} not found. Verify the incident ID is correct.",
         )
 
     # Step 2: Build metrics snapshot context
@@ -102,8 +97,7 @@ async def mtl_predict(
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"MTL prediction failed: {exc}. "
-            "Check AI_MODE setting and LLM availability.",
+            detail=f"MTL prediction failed: {exc}. Check AI_MODE setting and LLM availability.",
         )
 
     return prediction

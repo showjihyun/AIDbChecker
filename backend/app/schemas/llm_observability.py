@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,7 @@ class LLMCallRecord(BaseModel):
     cost: float  # USD
     has_hallucination: bool = False
     is_correct: bool | None = None  # operator feedback
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class LLMObservabilitySummary(BaseModel):

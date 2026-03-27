@@ -8,7 +8,7 @@ Partitioning is handled in Alembic migration, NOT by SQLAlchemy.
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,18 +26,14 @@ class MetricSample(Base):
 
     __tablename__ = "metric_samples"
 
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     instance_id: Mapped[UUID] = mapped_column(
         ForeignKey("db_instances.id", ondelete="CASCADE"), nullable=False
     )
     sampled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), primary_key=True, nullable=False
     )
-    category: Mapped[str] = mapped_column(
-        String(10), nullable=False, comment="hot / warm / cold"
-    )
+    category: Mapped[str] = mapped_column(String(10), nullable=False, comment="hot / warm / cold")
     metrics: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
     # --- Relationships ---

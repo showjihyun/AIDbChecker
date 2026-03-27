@@ -26,32 +26,32 @@ class AuditLog(Base):
 
     __tablename__ = "audit_logs"
 
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
         comment="Actor; null = system-generated",
     )
     action: Mapped[str] = mapped_column(
-        String(50), nullable=False,
+        String(50),
+        nullable=False,
         comment="login / create / update / delete / execute / ai_decision",
     )
     resource_type: Mapped[str] = mapped_column(
-        String(50), nullable=False,
+        String(50),
+        nullable=False,
         comment="incident / playbook / instance / user, etc.",
     )
     resource_id: Mapped[UUID | None] = mapped_column(nullable=True)
     details: Mapped[dict] = mapped_column(
-        JSONB, nullable=False,
+        JSONB,
+        nullable=False,
         comment="WHO/WHAT/WHEN/WHERE/WHY + before/after state",
     )
     ip_address: Mapped[str | None] = mapped_column(
         String(45), nullable=True, comment="Client IP (IPv4 or IPv6)"
     )
-    user_agent: Mapped[str | None] = mapped_column(
-        String(500), nullable=True
-    )
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         primary_key=True,

@@ -2,7 +2,7 @@
 """Incident model — detected anomalies and failures."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -24,37 +24,31 @@ class Incident(Base, UUIDMixin, TimestampMixin):
         ForeignKey("db_instances.id", ondelete="SET NULL"), nullable=True
     )
     severity: Mapped[str] = mapped_column(
-        String(10), nullable=False,
+        String(10),
+        nullable=False,
         comment="critical / warning / notice / info",
     )
     status: Mapped[str] = mapped_column(
-        String(15), nullable=False, server_default="open",
+        String(15),
+        nullable=False,
+        server_default="open",
         comment="open / acknowledged / in_progress / resolved / closed",
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(
-        String(30), nullable=False,
+        String(30),
+        nullable=False,
         comment="ai_baseline / threshold / manual / schema_change",
     )
-    metric_type: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
-    metric_value: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )
-    baseline_value: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )
+    metric_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    metric_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    baseline_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     detected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    acknowledged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    resolved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_by: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

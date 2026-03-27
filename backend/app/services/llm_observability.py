@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import statistics
 from collections import deque
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 
 import structlog
@@ -85,7 +85,7 @@ class LLMObservabilityService:
             cost=cost,
             has_hallucination=has_hallucination,
             is_correct=is_correct,
-            timestamp=timestamp or datetime.now(timezone.utc),
+            timestamp=timestamp or datetime.now(UTC),
         )
         self._records.append(record)
         logger.debug(
@@ -155,12 +155,10 @@ class LLMObservabilityService:
 
         Returns True if budget is exceeded.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_records = self._filter_records(from_ts=day_start, to_ts=now)
-        total_tokens = sum(
-            r.prompt_tokens + r.completion_tokens for r in today_records
-        )
+        total_tokens = sum(r.prompt_tokens + r.completion_tokens for r in today_records)
         exceeded = total_tokens >= daily_limit
         if exceeded:
             logger.warning(
@@ -177,7 +175,7 @@ class LLMObservabilityService:
 
         Returns True if accuracy is below threshold (alert needed).
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         week_start = now - timedelta(days=7)
         records = self._filter_records(from_ts=week_start, to_ts=now)
 
@@ -208,7 +206,7 @@ class LLMObservabilityService:
         window against the full historical baseline. Drift score is the normalized
         deviation.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         recent_start = now - timedelta(hours=window_hours)
 
         all_records = list(self._records)
@@ -235,9 +233,7 @@ class LLMObservabilityService:
         )
 
         # Normalized deviation (0~1 scale, clamped)
-        latency_drift = (
-            abs(recent_latency - hist_latency) / max(hist_latency, 1.0)
-        )
+        latency_drift = abs(recent_latency - hist_latency) / max(hist_latency, 1.0)
         token_drift = abs(recent_tokens - hist_tokens) / max(hist_tokens, 1.0)
 
         # Weighted drift score

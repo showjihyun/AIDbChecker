@@ -6,8 +6,7 @@ Uses read-only connection pool (pool_size=2) with statement_timeout=500ms.
 Silent failure on collection errors to avoid cascading impact to other instances.
 """
 
-import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import asyncpg
@@ -159,7 +158,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 instance_id=str(self._instance_id),
             )
             return True
-        except (asyncpg.PostgresError, OSError, asyncio.TimeoutError) as exc:
+        except (TimeoutError, asyncpg.PostgresError, OSError) as exc:
             logger.warning(
                 "adapter.connect_failed",
                 instance_id=str(self._instance_id),
@@ -191,7 +190,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
             async with pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
             return (True, "OK")
-        except (asyncpg.PostgresError, OSError, asyncio.TimeoutError) as exc:
+        except (TimeoutError, asyncpg.PostgresError, OSError) as exc:
             return (False, str(exc))
         finally:
             if pool is not None:
@@ -208,7 +207,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
             return None
 
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             if category == "hot":
                 return await self._collect_hot(now)
@@ -224,7 +223,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 )
                 return None
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "adapter.collect_timeout",
                 instance_id=str(self._instance_id),
@@ -278,23 +277,31 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
 
         tables = []
         for row in rows:
-            tables.append({
-                "schema": row["schemaname"],
-                "table": row["table_name"],
-                "seq_scan": row["seq_scan"],
-                "seq_tup_read": row["seq_tup_read"],
-                "idx_scan": row["idx_scan"],
-                "idx_tup_fetch": row["idx_tup_fetch"],
-                "n_tup_ins": row["n_tup_ins"],
-                "n_tup_upd": row["n_tup_upd"],
-                "n_tup_del": row["n_tup_del"],
-                "n_live_tup": row["n_live_tup"],
-                "n_dead_tup": row["n_dead_tup"],
-                "last_vacuum": row["last_vacuum"].isoformat() if row["last_vacuum"] else None,
-                "last_autovacuum": row["last_autovacuum"].isoformat() if row["last_autovacuum"] else None,
-                "last_analyze": row["last_analyze"].isoformat() if row["last_analyze"] else None,
-                "last_autoanalyze": row["last_autoanalyze"].isoformat() if row["last_autoanalyze"] else None,
-            })
+            tables.append(
+                {
+                    "schema": row["schemaname"],
+                    "table": row["table_name"],
+                    "seq_scan": row["seq_scan"],
+                    "seq_tup_read": row["seq_tup_read"],
+                    "idx_scan": row["idx_scan"],
+                    "idx_tup_fetch": row["idx_tup_fetch"],
+                    "n_tup_ins": row["n_tup_ins"],
+                    "n_tup_upd": row["n_tup_upd"],
+                    "n_tup_del": row["n_tup_del"],
+                    "n_live_tup": row["n_live_tup"],
+                    "n_dead_tup": row["n_dead_tup"],
+                    "last_vacuum": row["last_vacuum"].isoformat() if row["last_vacuum"] else None,
+                    "last_autovacuum": row["last_autovacuum"].isoformat()
+                    if row["last_autovacuum"]
+                    else None,
+                    "last_analyze": row["last_analyze"].isoformat()
+                    if row["last_analyze"]
+                    else None,
+                    "last_autoanalyze": row["last_autoanalyze"].isoformat()
+                    if row["last_autoanalyze"]
+                    else None,
+                }
+            )
 
         return MetricSample(
             instance_id=self._instance_id,
@@ -313,9 +320,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 "FROM pg_stat_replication;"
             )
             # Database size
-            db_size = await conn.fetchval(
-                "SELECT pg_database_size(current_database());"
-            )
+            db_size = await conn.fetchval("SELECT pg_database_size(current_database());")
 
         return MetricSample(
             instance_id=self._instance_id,
@@ -326,7 +331,9 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                     {
                         "client_addr": r["client_addr"],
                         "state": r["state"],
-                        "replay_lag_seconds": float(r["replay_lag_seconds"]) if r["replay_lag_seconds"] else None,
+                        "replay_lag_seconds": float(r["replay_lag_seconds"])
+                        if r["replay_lag_seconds"]
+                        else None,
                     }
                     for r in rep_rows
                 ],
@@ -344,7 +351,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
             return []
 
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
                 rows = await conn.fetch(_SQL_ASH)
 
@@ -364,12 +371,14 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                         client_addr=row["client_addr"],
                         application_name=row["application_name"],
                         query_start=row["query_start"],
-                        duration_ms=float(row["duration_ms"]) if row["duration_ms"] is not None else None,
+                        duration_ms=float(row["duration_ms"])
+                        if row["duration_ms"] is not None
+                        else None,
                     )
                 )
             return samples
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "adapter.ash_timeout",
                 instance_id=str(self._instance_id),
@@ -417,7 +426,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                     rt_row = await conn.fetchrow(_SQL_AVG_RESPONSE_TIME)
                     if rt_row and rt_row["avg_response_time_ms"] is not None:
                         avg_rt = float(rt_row["avg_response_time_ms"])
-            except (asyncpg.PostgresError, asyncio.TimeoutError):
+            except (TimeoutError, asyncpg.PostgresError):
                 pass  # Extension not installed — avg_response_time stays None
 
             return {
@@ -430,7 +439,7 @@ class PostgreSQLRemoteAdapter(BaseAdapter):
                 "deadlocks": row["deadlocks"],
             }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "adapter.kpi_timeout",
                 instance_id=str(self._instance_id),

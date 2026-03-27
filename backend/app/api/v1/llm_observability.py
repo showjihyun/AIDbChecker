@@ -9,7 +9,7 @@ Provides endpoints for querying LLM pipeline metrics:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field

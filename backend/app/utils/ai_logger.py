@@ -116,9 +116,8 @@ def log_ai_decision(resource_type: str):
 
                 if result is not None:
                     confidence = getattr(result, "confidence", None)
-                    tokens = (
-                        getattr(result, "tokens_used", None)
-                        or getattr(result, "total_tokens", None)
+                    tokens = getattr(result, "tokens_used", None) or getattr(
+                        result, "total_tokens", None
                     )
                     model_name = getattr(result, "ai_model", None) or "unknown"
 
@@ -142,6 +141,7 @@ def log_ai_decision(resource_type: str):
                         logger.debug("ai_logger.decorator_write_skipped")
 
         return wrapper
+
     return decorator
 
 

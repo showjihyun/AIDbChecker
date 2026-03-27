@@ -13,7 +13,7 @@ Phase 2: Transformer Encoder fine-tuning (PyTorch)
 
 import json
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from statistics import mean
 from uuid import UUID, uuid4
 
@@ -28,7 +28,6 @@ from app.schemas.mtl import (
     SeverityLevel,
     SuggestedAction,
 )
-from app.schemas.rag import RAGSearchResult
 
 logger = structlog.get_logger(__name__)
 
@@ -99,9 +98,7 @@ _MTL_FALLBACK = {
     "severity_score": 0.5,
     "suggested_actions": [],
     "confidence": 0.0,
-    "reasoning_chain": [
-        "AI analysis was unable to complete. Please review manually."
-    ],
+    "reasoning_chain": ["AI analysis was unable to complete. Please review manually."],
 }
 
 
@@ -146,25 +143,18 @@ def _compute_overall_confidence(prediction: dict) -> float:
     }
 
     actions = prediction.get("suggested_actions", [])
-    action_conf = (
-        mean([a.get("confidence", 0) for a in actions]) if actions else 0.0
-    )
+    action_conf = mean([a.get("confidence", 0) for a in actions]) if actions else 0.0
 
     overall = (
-        weights["anomaly_confidence"]
-        * prediction.get("anomaly_confidence", 0)
-        + weights["root_cause_confidence"]
-        * prediction.get("root_cause_confidence", 0)
-        + weights["severity_accuracy"]
-        * prediction.get("severity_score", 0)
+        weights["anomaly_confidence"] * prediction.get("anomaly_confidence", 0)
+        + weights["root_cause_confidence"] * prediction.get("root_cause_confidence", 0)
+        + weights["severity_accuracy"] * prediction.get("severity_score", 0)
         + weights["action_confidence"] * action_conf
     )
     return round(min(max(overall, 0.0), 1.0), 3)
 
 
-def _build_evidence_links(
-    instance_id: UUID, incident_id: UUID, detected_at: datetime
-) -> list[str]:
+def _build_evidence_links(instance_id: UUID, incident_id: UUID, detected_at: datetime) -> list[str]:
     """Build API links to evidence data.
 
     Spec: FS-AI-010 Section 3.4 — evidence link generation.
@@ -232,7 +222,7 @@ async def predict(
     from langchain_core.messages import HumanMessage, SystemMessage
 
     prediction_id = uuid4()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     detected = detected_at or now
     start = time.monotonic()
     tokens_used = None
@@ -253,15 +243,13 @@ async def predict(
 
     for attempt in range(1, max_retries + 1):
         try:
-            response = await llm.ainvoke([
-                SystemMessage(content=_MTL_SYSTEM_PROMPT),
-                HumanMessage(content=user_prompt),
-            ])
-            raw = (
-                response.content
-                if hasattr(response, "content")
-                else str(response)
+            response = await llm.ainvoke(
+                [
+                    SystemMessage(content=_MTL_SYSTEM_PROMPT),
+                    HumanMessage(content=user_prompt),
+                ]
             )
+            raw = response.content if hasattr(response, "content") else str(response)
 
             # Extract token usage if available
             if hasattr(response, "response_metadata"):
@@ -309,12 +297,14 @@ async def predict(
     suggested_actions = []
     for a in raw_actions[:3]:  # Max 3 actions
         if isinstance(a, dict):
-            suggested_actions.append(SuggestedAction(
-                action=a.get("action", "Review manually"),
-                description=a.get("description", ""),
-                confidence=min(max(float(a.get("confidence", 0)), 0.0), 1.0),
-                risk=_safe_risk(a.get("risk", "LOW")),
-            ))
+            suggested_actions.append(
+                SuggestedAction(
+                    action=a.get("action", "Review manually"),
+                    description=a.get("description", ""),
+                    confidence=min(max(float(a.get("confidence", 0)), 0.0), 1.0),
+                    risk=_safe_risk(a.get("risk", "LOW")),
+                )
+            )
 
     # Parse root cause detail
     raw_detail = parsed.get("root_cause_detail")
@@ -337,25 +327,15 @@ async def predict(
         incident_id=incident_id,
         timestamp=now,
         # Head 1
-        anomaly_type=_safe_anomaly_type(
-            parsed.get("anomaly_type", "unknown")
-        ),
-        anomaly_confidence=min(
-            max(float(parsed.get("anomaly_confidence", 0)), 0.0), 1.0
-        ),
+        anomaly_type=_safe_anomaly_type(parsed.get("anomaly_type", "unknown")),
+        anomaly_confidence=min(max(float(parsed.get("anomaly_confidence", 0)), 0.0), 1.0),
         # Head 2
-        root_cause=parsed.get(
-            "root_cause", "AI analysis incomplete. Manual review needed."
-        ),
+        root_cause=parsed.get("root_cause", "AI analysis incomplete. Manual review needed."),
         root_cause_detail=root_cause_detail,
-        root_cause_confidence=min(
-            max(float(parsed.get("root_cause_confidence", 0)), 0.0), 1.0
-        ),
+        root_cause_confidence=min(max(float(parsed.get("root_cause_confidence", 0)), 0.0), 1.0),
         # Head 3
         severity=_safe_severity(parsed.get("severity", "NOTICE")),
-        severity_score=min(
-            max(float(parsed.get("severity_score", 0.5)), 0.0), 1.0
-        ),
+        severity_score=min(max(float(parsed.get("severity_score", 0.5)), 0.0), 1.0),
         # Head 4
         suggested_actions=suggested_actions,
         # Explainable AI

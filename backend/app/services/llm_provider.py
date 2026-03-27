@@ -70,8 +70,7 @@ class LLMProviderManager:
 
         # Spec: FS-AI-LLM-001 — fallback chain
         fallback_order = [resolved_provider] + [
-            p for p in ["ollama", "openai", "anthropic", "google"]
-            if p != resolved_provider
+            p for p in ["ollama", "openai", "anthropic", "google"] if p != resolved_provider
         ]
 
         last_error: Exception | None = None
@@ -122,8 +121,9 @@ class LLMProviderManager:
         elif provider == "google":
             return self._create_google(model, temperature, max_tokens, request_timeout)
         else:
-            raise ValueError(f"Unknown LLM provider: '{provider}'. "
-                             f"Supported: ollama, openai, anthropic, google.")
+            raise ValueError(
+                f"Unknown LLM provider: '{provider}'. Supported: ollama, openai, anthropic, google."
+            )
 
     def _create_ollama(self, model: str, temperature: float, max_tokens: int):
         """Create Ollama ChatModel via langchain-community."""
@@ -220,11 +220,13 @@ class LLMProviderManager:
             for m in data.get("models", []):
                 size_bytes = m.get("size", 0)
                 size_str = f"{size_bytes / (1024**3):.1f} GB" if size_bytes else "unknown"
-                models.append(OllamaModel(
-                    name=m.get("name", "unknown"),
-                    size=size_str,
-                    modified_at=m.get("modified_at", ""),
-                ))
+                models.append(
+                    OllamaModel(
+                        name=m.get("name", "unknown"),
+                        size=size_str,
+                        modified_at=m.get("modified_at", ""),
+                    )
+                )
             return models
         except httpx.ConnectError:
             logger.warning("llm_provider.ollama_unreachable", url=url)
@@ -244,61 +246,73 @@ class LLMProviderManager:
         ollama_available = False
         try:
             from langchain_community.chat_models import ChatOllama  # noqa: F401
+
             ollama_available = True
         except ImportError:
             pass
 
-        providers.append(ProviderInfo(
-            name="ollama",
-            display_name=_DISPLAY_NAMES["ollama"],
-            available=ollama_available,
-            models=[],  # Populated dynamically via list_ollama_models()
-        ))
+        providers.append(
+            ProviderInfo(
+                name="ollama",
+                display_name=_DISPLAY_NAMES["ollama"],
+                available=ollama_available,
+                models=[],  # Populated dynamically via list_ollama_models()
+            )
+        )
 
         # OpenAI
         openai_available = False
         if settings.OPENAI_API_KEY:
             try:
                 from langchain_openai import ChatOpenAI  # noqa: F401
+
                 openai_available = True
             except ImportError:
                 pass
-        providers.append(ProviderInfo(
-            name="openai",
-            display_name=_DISPLAY_NAMES["openai"],
-            available=openai_available,
-            models=_OPENAI_MODELS if openai_available else [],
-        ))
+        providers.append(
+            ProviderInfo(
+                name="openai",
+                display_name=_DISPLAY_NAMES["openai"],
+                available=openai_available,
+                models=_OPENAI_MODELS if openai_available else [],
+            )
+        )
 
         # Anthropic
         anthropic_available = False
         if settings.ANTHROPIC_API_KEY:
             try:
                 from langchain_anthropic import ChatAnthropic  # noqa: F401
+
                 anthropic_available = True
             except ImportError:
                 pass
-        providers.append(ProviderInfo(
-            name="anthropic",
-            display_name=_DISPLAY_NAMES["anthropic"],
-            available=anthropic_available,
-            models=_ANTHROPIC_MODELS if anthropic_available else [],
-        ))
+        providers.append(
+            ProviderInfo(
+                name="anthropic",
+                display_name=_DISPLAY_NAMES["anthropic"],
+                available=anthropic_available,
+                models=_ANTHROPIC_MODELS if anthropic_available else [],
+            )
+        )
 
         # Google
         google_available = False
         if settings.GOOGLE_API_KEY:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+
                 google_available = True
             except ImportError:
                 pass
-        providers.append(ProviderInfo(
-            name="google",
-            display_name=_DISPLAY_NAMES["google"],
-            available=google_available,
-            models=_GOOGLE_MODELS if google_available else [],
-        ))
+        providers.append(
+            ProviderInfo(
+                name="google",
+                display_name=_DISPLAY_NAMES["google"],
+                available=google_available,
+                models=_GOOGLE_MODELS if google_available else [],
+            )
+        )
 
         return providers
 
@@ -312,8 +326,11 @@ class LLMProviderManager:
         start = time.monotonic()
         try:
             llm = self._create_llm(
-                provider, model,
-                temperature=0.0, max_tokens=50, request_timeout=15,
+                provider,
+                model,
+                temperature=0.0,
+                max_tokens=50,
+                request_timeout=15,
             )
             if llm is None:
                 return {

@@ -2,7 +2,7 @@
 """SchemaChange model — DDL change tracking on monitored databases."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -24,11 +24,13 @@ class SchemaChange(Base, UUIDMixin):
         ForeignKey("db_instances.id", ondelete="CASCADE"), nullable=False
     )
     change_type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="CREATE / ALTER / DROP / REINDEX / PARAM_CHANGE",
     )
     object_type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
+        String(20),
+        nullable=False,
         comment="TABLE / INDEX / COLUMN / FUNCTION / PARAMETER",
     )
     object_name: Mapped[str] = mapped_column(String(255), nullable=False)

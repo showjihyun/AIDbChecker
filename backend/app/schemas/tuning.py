@@ -17,8 +17,12 @@ class TuningAction(BaseModel):
     """
 
     action_type: Literal[
-        "CREATE_INDEX", "VACUUM", "ALTER_SYSTEM",
-        "KILL_SESSION", "REWRITE_QUERY", "OTHER",
+        "CREATE_INDEX",
+        "VACUUM",
+        "ALTER_SYSTEM",
+        "KILL_SESSION",
+        "REWRITE_QUERY",
+        "OTHER",
     ]
     description: str
     sql: str | None = None

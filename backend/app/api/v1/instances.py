@@ -1,17 +1,17 @@
 # Spec: DM-001, MVP-DASH-001
 """Instance CRUD API -- register, update, delete, test monitored DB instances."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.adapters.postgresql.remote import PostgreSQLRemoteAdapter
 from app.db.session import get_session, remove_target_pool
-from app.utils.dsn import build_target_dsn
 from app.models.db_instance import DBInstance
 from app.schemas.instance import (
     ConnectionTestResponse,
@@ -20,8 +20,8 @@ from app.schemas.instance import (
     InstanceResponse,
     InstanceUpdate,
 )
-from app.utils.encryption import encrypt_value, decrypt_value
-from app.adapters.postgresql.remote import PostgreSQLRemoteAdapter
+from app.utils.dsn import build_target_dsn
+from app.utils.encryption import encrypt_value
 
 logger = structlog.get_logger(__name__)
 
@@ -29,16 +29,18 @@ router = APIRouter()
 
 # Explicit allowlist of fields that can be set via the update endpoint.
 # Prevents setattr from modifying internal/sensitive ORM attributes.
-_ALLOWED_UPDATE_FIELDS = frozenset({
-    "name",
-    "host",
-    "port",
-    "database_name",
-    "cluster_id",
-    "environment",
-    "is_active",
-    "autonomy_level",
-})
+_ALLOWED_UPDATE_FIELDS = frozenset(
+    {
+        "name",
+        "host",
+        "port",
+        "database_name",
+        "cluster_id",
+        "environment",
+        "is_active",
+        "autonomy_level",
+    }
+)
 
 
 def _to_response(instance: DBInstance) -> InstanceResponse:
@@ -195,7 +197,7 @@ async def delete_instance(
     """Soft-delete a monitored DB instance."""
     # Spec: DM-001 -- soft delete via deleted_at
     instance = await _get_instance_or_404(session, instance_id)
-    instance.deleted_at = datetime.now(timezone.utc)
+    instance.deleted_at = datetime.now(UTC)
     instance.is_active = False
     await session.commit()
 

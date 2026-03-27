@@ -11,7 +11,6 @@ Phase 2: extends to documents, playbooks, manuals.
 import hashlib
 import json
 import time
-from datetime import datetime
 from uuid import UUID, uuid4
 
 import structlog
@@ -87,9 +86,7 @@ def _compute_embedding(text_content: str) -> list[float]:
     return embedding.tolist()
 
 
-async def embed_incident(
-    session: AsyncSession, incident: Incident
-) -> RAGDocument:
+async def embed_incident(session: AsyncSession, incident: Incident) -> RAGDocument:
     """Create or update a RAG embedding for an incident.
 
     Spec: FS-AI-RAG-001 Section 3.1 — embedding triggers:
@@ -241,14 +238,16 @@ async def search_similar(
 
     results = []
     for row in rows:
-        results.append(RAGSearchResult(
-            incident_id=row.incident_id,
-            similarity=round(float(row.similarity), 4),
-            summary=row.title + (f": {row.summary}" if row.summary else ""),
-            root_cause=None,  # Populated from RCA results in Phase 2
-            resolution=row.resolution,
-            created_at=row.created_at,
-        ))
+        results.append(
+            RAGSearchResult(
+                incident_id=row.incident_id,
+                similarity=round(float(row.similarity), 4),
+                summary=row.title + (f": {row.summary}" if row.summary else ""),
+                root_cause=None,  # Populated from RCA results in Phase 2
+                resolution=row.resolution,
+                created_at=row.created_at,
+            )
+        )
 
     elapsed = int((time.monotonic() - start) * 1000)
 
@@ -274,9 +273,7 @@ def format_for_prompt(results: list[RAGSearchResult]) -> str:
 
     lines = []
     for i, r in enumerate(results, 1):
-        lines.append(
-            f"--- Similar Incident #{i} (similarity: {r.similarity:.2f}) ---"
-        )
+        lines.append(f"--- Similar Incident #{i} (similarity: {r.similarity:.2f}) ---")
         lines.append(f"Summary: {r.summary}")
         if r.root_cause:
             lines.append(f"Root Cause: {r.root_cause}")
@@ -297,17 +294,13 @@ async def get_embedding_status(session: AsyncSession) -> dict:
     total = (await session.execute(total_stmt)).scalar_one()
 
     # Total incidents embedded
-    incident_stmt = select(func.count()).select_from(RAGDocument).where(
-        RAGDocument.source_type == "incident"
+    incident_stmt = (
+        select(func.count()).select_from(RAGDocument).where(RAGDocument.source_type == "incident")
     )
     incident_count = (await session.execute(incident_stmt)).scalar_one()
 
     # Last embedding time
-    last_stmt = (
-        select(RAGDocument.created_at)
-        .order_by(RAGDocument.created_at.desc())
-        .limit(1)
-    )
+    last_stmt = select(RAGDocument.created_at).order_by(RAGDocument.created_at.desc()).limit(1)
     last_result = await session.execute(last_stmt)
     last_row = last_result.scalar_one_or_none()
 
@@ -361,9 +354,7 @@ async def _set_to_cache(key: str, results: list[RAGSearchResult]) -> None:
 
         client = aioredis.from_url(settings.VALKEY_URL)
         try:
-            data = json.dumps(
-                [r.model_dump(mode="json") for r in results]
-            )
+            data = json.dumps([r.model_dump(mode="json") for r in results])
             await client.setex(key, _RAG_CACHE_TTL, data)
         finally:
             await client.aclose()

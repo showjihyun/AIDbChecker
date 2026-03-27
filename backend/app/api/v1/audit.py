@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session, require_role
@@ -50,11 +50,7 @@ async def list_audit_logs(
     total = (await session.execute(count_stmt)).scalar_one()
 
     # Data query -- newest first
-    data_stmt = (
-        select(AuditLog)
-        .order_by(AuditLog.created_at.desc())
-        .limit(limit)
-    )
+    data_stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
     if conditions:
         data_stmt = data_stmt.where(*conditions)
 

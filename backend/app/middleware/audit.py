@@ -174,8 +174,6 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         if request.method in _METHOD_ACTION_MAP:
             user_id = _extract_user_id_from_jwt(request)
             # Fire-and-forget: don't await -- Spec: FS-ADMIN-003 Section 3.3
-            asyncio.create_task(
-                _write_audit_log(request, response, user_id)
-            )
+            asyncio.create_task(_write_audit_log(request, response, user_id))
 
         return response

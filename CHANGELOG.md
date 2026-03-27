@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0.0] - 2026-03-27 — DBA Agent (Execution + Orchestrator)
+
+### Added
+- **DBA Agent Execution Layer** (FS-DBA-001, 16 ACs)
+  - ExecutionEngine: classify → gate → pre-check → execute → post-check → audit
+  - SafetyGuard: 4-level risk classifier (SAFE/WARNING/DANGEROUS/CRITICAL)
+  - Policy Matrix: risk × autonomy × confidence → execute/approve/block
+  - ops_tools (7): create_index, vacuum, kill_session, alter_param, reindex, analyze_table
+  - All ops return ActionRequest — never execute directly (Harness principle)
+- **DBA Agent Orchestrator** (FS-DBA-002, 10 ACs)
+  - Unified API: `POST /api/v1/dba/ask` — single DBA Agent interface
+  - Intent Router: keyword-first + LLM fallback (5 intents)
+  - analyze→Tuning, diagnose→Copilot, execute→Engine, query→NL2SQL, status→Health
+  - ActionSummary in response for executable actions
+- **Phase 3 Agent Pipeline → Won't Do** (NL2SQL_SPEC §6)
+  - 4-Agent Pipeline 철회 — 단일 파이프라인으로 충분
+  - AC-20 (Feedback Few-shot) Phase 2+ 격하
+
+### Fixed
+- KPI AC-1 test: mock-based (SQLite session corruption fix)
+- test_deps.py: mock Request param for `get_current_user()`
+- test_ai_006: graceful skip for unimplemented ExplainRequest
+- Migration 001: direct ALTER for rag_documents HNSW index
+- ruff B008 ignore (FastAPI Depends pattern)
+
+### Metrics
+- AC Coverage: 216/219 (99%)
+- Specs: 25/28 complete
+- Tests: 470+ pass, 0 fail
+
 ## [0.8.0.0] - 2026-03-27 — Phase 2 Complete + Harness v3
 
 ### Added

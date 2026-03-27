@@ -74,7 +74,9 @@ class CopilotDiagnoseResponse(BaseModel):
     total_inference_time_ms: int
     total_tokens_used: int
     autonomy_level_applied: int
-    execution_status: str  # recommended | awaiting_approval | executed | blocked | copilot_recommended
+    execution_status: (
+        str  # recommended | awaiting_approval | executed | blocked | copilot_recommended
+    )
 
     # Spec: FS-AI-012 AC-7 — Playbook 하이브리드 연동 (ADR-008)
     recommended_playbook: str | None = Field(

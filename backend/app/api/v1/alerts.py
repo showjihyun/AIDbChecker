@@ -1,7 +1,7 @@
 # Spec: DM-001, MVP-ALERT-001
 """Alert channels API — manage Slack/Webhook notification channels."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
@@ -26,9 +26,7 @@ class AlertChannelCreate(BaseModel):
     """Request to create a new alert channel."""
 
     name: str = Field(..., max_length=255, description='Channel display name, e.g. "#db-alerts"')
-    channel_type: str = Field(
-        ..., pattern=r"^(slack|email|webhook|pagerduty)$"
-    )
+    channel_type: str = Field(..., pattern=r"^(slack|email|webhook|pagerduty)$")
     config: dict = Field(
         ..., description="Channel-specific settings: {webhook_url} for slack/webhook"
     )
@@ -78,11 +76,7 @@ async def list_channels(
     session: AsyncSession = Depends(get_session),
 ) -> AlertChannelListResponse:
     """List all active (non-deleted) alert channels."""
-    stmt = (
-        select(AlertChannel)
-        .where(AlertChannel.deleted_at.is_(None))
-        .order_by(AlertChannel.name)
-    )
+    stmt = select(AlertChannel).where(AlertChannel.deleted_at.is_(None)).order_by(AlertChannel.name)
     result = await session.execute(stmt)
     channels = list(result.scalars().all())
 
@@ -148,7 +142,7 @@ async def test_alert(
     from app.utils.encryption import decrypt_value as _decrypt
 
     config = channel.config or {}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if channel.channel_type in ("slack", "webhook"):
         webhook_url_enc = config.get("webhook_url", "")

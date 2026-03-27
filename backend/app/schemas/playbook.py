@@ -2,26 +2,26 @@
 """Pydantic v2 schemas for Playbook Lite API operations."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class PlaybookTriggerType(str, Enum):
+class PlaybookTriggerType(StrEnum):
     METRIC_THRESHOLD = "metric_threshold"
     ANOMALY_DETECTION = "anomaly_detection"
     MANUAL = "manual"
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     BLOCKED = "blocked"
     PENDING_APPROVAL = "pending_approval"
     APPROVED = "approved"
@@ -66,6 +66,7 @@ class PlaybookMetadata(BaseModel):
 
 class PlaybookSummary(BaseModel):
     """GET /playbooks list item."""
+
     name: str
     version: str
     description: str
@@ -78,6 +79,7 @@ class PlaybookSummary(BaseModel):
 
 class PlaybookDetail(BaseModel):
     """GET /playbooks/{name} detail."""
+
     metadata: PlaybookMetadata
     trigger: PlaybookTrigger
     steps: list[PlaybookStep]
@@ -89,6 +91,7 @@ class PlaybookDetail(BaseModel):
 
 class PlaybookExecuteRequest(BaseModel):
     """POST /playbooks/{name}/execute"""
+
     instance_id: UUID
     confidence_score: float = Field(0.8, ge=0.0, le=1.0)
     dry_run: bool = False
@@ -104,6 +107,7 @@ class StepResult(BaseModel):
 
 class PlaybookExecuteResponse(BaseModel):
     """Execution result."""
+
     execution_id: UUID
     playbook_name: str
     instance_id: UUID
@@ -132,5 +136,6 @@ class ExecutionHistoryItem(BaseModel):
 
 class PlaybookApproveRequest(BaseModel):
     """POST /playbooks/{name}/approve/{log_id}"""
+
     approved: bool = True
     comment: str | None = None

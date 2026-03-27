@@ -8,7 +8,6 @@ POST /api/v1/graph/concept  — add a business concept node
 """
 
 import time
-from typing import Annotated
 from uuid import UUID
 
 import structlog
@@ -94,8 +93,7 @@ async def build_graph(
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Cannot connect to target DB: {exc}. "
-            "Verify the instance connection settings.",
+            detail=f"Cannot connect to target DB: {exc}. Verify the instance connection settings.",
         )
 
     try:
@@ -141,7 +139,9 @@ async def list_graph_nodes(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
     instance_id: UUID | None = Query(None, description="Filter by instance"),
-    node_type: str | None = Query(None, description="Filter by node type (table/column/metric/concept)"),
+    node_type: str | None = Query(
+        None, description="Filter by node type (table/column/metric/concept)"
+    ),
     name_contains: str | None = Query(None, description="Filter by name substring"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
