@@ -1,6 +1,7 @@
-// Spec: MVP-ADMIN — Settings page (instance registration, alerts, users, system config)
+// Spec: MVP-ADMIN, FS-SELF-001 — Settings + System Health
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/lib/cn';
+import { SystemHealthPanel } from '@/components/dashboard/SystemHealth';
 
 interface SettingsSectionProps {
   title: string;
@@ -197,12 +198,16 @@ export function SettingsPage() {
               label: 'Baseline Training',
               detail: 'STL + Isolation Forest, retrained every 6 hours',
             },
-            {
-              label: 'System Health',
-              detail: 'DB / Valkey / Celery status monitoring',
-            },
           ]}
         />
+      </div>
+
+      {/* System Health — NeuralDB 자체 인프라 상태 (Spec: FS-SELF-001) */}
+      <div className="mt-6">
+        <h2 className="text-sm font-semibold text-on-surface-variant mb-3">
+          NeuralDB System Health
+        </h2>
+        <SystemHealthPanel />
       </div>
     </div>
   );

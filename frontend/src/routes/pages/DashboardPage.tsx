@@ -13,7 +13,7 @@ import {
 } from '@/components/dashboard/InstanceCard';
 import { KPIOverviewPanel } from '@/components/dashboard/KPIOverviewPanel';
 import { MetricChart } from '@/components/dashboard/MetricChart';
-import { SystemHealthPanel } from '@/components/dashboard/SystemHealth';
+// SystemHealth moved to Settings page (FS-SELF-001 — NeuralDB 자체 상태는 Settings에서 표시)
 import { useMetricStore, useLatestMetricsShallow } from '@/stores/metricStore';
 import type { TimeRange } from '@/types/api';
 
@@ -139,17 +139,19 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* KPI overview + Charts + system health */}
+        {/* Right panel: Metrics + KPI (DBA 전문가 관점 배치) */}
         <div className="lg:col-span-8 space-y-6">
-          {selectedInstanceId && (
-            <KPIOverviewPanel instanceId={selectedInstanceId} />
-          )}
+          {/* Row 1: Metrics Timeline (가장 중요 — 실시간 추세) */}
           <MetricChart
             data={metricsData}
             isLoading={metricsLoading}
             onTimeRangeChange={handleTimeRangeChange}
           />
-          <SystemHealthPanel />
+
+          {/* Row 2: KPI Overview (선택된 인스턴스 상세 지표) */}
+          {selectedInstanceId && (
+            <KPIOverviewPanel instanceId={selectedInstanceId} />
+          )}
         </div>
       </div>
     </div>
