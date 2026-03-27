@@ -1,7 +1,7 @@
 // Spec: MVP-DASH-002, FS-KPI-001 §4.5 — ECharts time-series for metrics
 import { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { format, subMinutes, subHours, subDays } from 'date-fns';
+import { subMinutes, subHours, subDays } from 'date-fns';
 import { cn } from '@/lib/cn';
 import { EmptyState } from '@/components/common/EmptyState';
 import type { MetricSample } from '@/types/api';
@@ -18,34 +18,15 @@ interface TimePreset {
   getFrom: () => Date;
 }
 
-// Spec: FS-KPI-001 §4.5 — X축 시간 정책 (해상도 표시)
+// Spec: FS-KPI-001 §4.5 — 프리셋 라벨은 시간 범위만 표시 (CloudWatch 스타일)
 const timePresets: TimePreset[] = [
-  { label: '5분 (1초)', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
-  { label: '15분 (1초)', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
-  { label: '1시간 (10초)', value: '1h', getFrom: () => subHours(new Date(), 1) },
-  { label: '6시간 (1분)', value: '6h', getFrom: () => subHours(new Date(), 6) },
-  { label: '24시간 (20분)', value: '24h', getFrom: () => subDays(new Date(), 1) },
-  { label: '7일 (2시간)', value: '7d', getFrom: () => subDays(new Date(), 7) },
+  { label: '5분', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
+  { label: '15분', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
+  { label: '1시간', value: '1h', getFrom: () => subHours(new Date(), 1) },
+  { label: '6시간', value: '6h', getFrom: () => subHours(new Date(), 6) },
+  { label: '24시간', value: '24h', getFrom: () => subDays(new Date(), 1) },
+  { label: '7일', value: '7d', getFrom: () => subDays(new Date(), 7) },
 ];
-
-// Spec: FS-KPI-001 §4.5 — 프리셋별 차트 설정
-interface ChartConfig {
-  maxPoints: number;
-  format: string;
-  rotate: number;
-}
-
-function getChartConfig(preset: string): ChartConfig {
-  switch (preset) {
-    case '5m':  return { maxPoints: 60,  format: 'HH:mm:ss', rotate: 0  };
-    case '15m': return { maxPoints: 90,  format: 'HH:mm:ss', rotate: 0  };
-    case '1h':  return { maxPoints: 120, format: 'HH:mm',    rotate: 0  };
-    case '6h':  return { maxPoints: 72,  format: 'HH:mm',    rotate: 0  };
-    case '24h': return { maxPoints: 72,  format: 'HH:mm',    rotate: 35 };
-    case '7d':  return { maxPoints: 84,  format: 'MM/dd HH', rotate: 35 };
-    default:    return { maxPoints: 120, format: 'HH:mm',    rotate: 0  };
-  }
-}
 
 /**
  * 균등 다운샘플링 — 시간 간격이 일정하게 유지되도록 추출.
@@ -72,70 +53,6 @@ function downsample(sorted: MetricSample[], maxPoints: number): MetricSample[] {
   return result;
 }
 
-/**
- * TPS 계산 — 튀는 값(spike) 방지:
- * 1. timeDiff가 0이면 skip
- * 2. delta가 음수면 counter reset → skip
- * 3. TPS가 비정상적으로 높으면 (이전 값의 10배 초과) → 이전 값으로 클램핑
- */
-function computeTPS(sorted: MetricSample[]): (number | null)[] {
-  const tps: (number | null)[] = [null]; // 첫 포인트는 delta 계산 불가
-  let prevValidTPS: number | null = null;
-
-  for (let i = 1; i < sorted.length; i++) {
-    const curr = sorted[i];
-    const prev = sorted[i - 1];
-
-    const currCommit = curr.metrics.xact_commit ?? curr.metrics.tps ?? null;
-    const prevCommit = prev.metrics.xact_commit ?? prev.metrics.tps ?? null;
-
-    // 값이 없으면 null (gap 없이 이전 값 연결)
-    if (currCommit === null || prevCommit === null) {
-      tps.push(prevValidTPS); // 끊김 방지: 이전 유효값 유지
-      continue;
-    }
-
-    const delta = currCommit - prevCommit;
-    const timeDiffSec =
-      (new Date(curr.sampled_at).getTime() - new Date(prev.sampled_at).getTime()) / 1000;
-
-    // 비정상 케이스
-    if (timeDiffSec <= 0 || delta < 0) {
-      tps.push(prevValidTPS); // counter reset → 이전 값 유지
-      continue;
-    }
-
-    let value = Math.round(delta / timeDiffSec);
-
-    // Spike 방지: 이전 유효값의 10배 초과 시 클램핑
-    if (prevValidTPS !== null && prevValidTPS > 0 && value > prevValidTPS * 10) {
-      value = prevValidTPS; // 비정상 spike → 이전 값으로
-    }
-
-    prevValidTPS = value;
-    tps.push(value);
-  }
-
-  return tps;
-}
-
-/**
- * Connection 계산 — null gap 방지:
- * 값이 없으면 이전 유효값을 유지 (끊김 방지)
- */
-function computeConnections(sorted: MetricSample[]): (number | null)[] {
-  let lastValid: number | null = null;
-
-  return sorted.map((d) => {
-    const value = d.metrics.numbackends ?? d.metrics.active_connections ?? null;
-    if (value !== null) {
-      lastValid = value;
-      return value;
-    }
-    return lastValid; // 값 없으면 이전 값 유지 (gap 방지)
-  });
-}
-
 export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartProps) {
   const [activePreset, setActivePreset] = useState('1h');
 
@@ -152,32 +69,65 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
       (a, b) => new Date(a.sampled_at).getTime() - new Date(b.sampled_at).getTime()
     );
 
-    const chartConfig = getChartConfig(activePreset);
+    // Spec: FS-KPI-001 §4.5 — CloudWatch 스타일: xAxis type='time'
+    const maxPoints = (() => {
+      switch (activePreset) {
+        case '5m': return 60;
+        case '15m': return 90;
+        case '1h': return 120;
+        case '6h': return 72;
+        case '24h': return 72;
+        case '7d': return 84;
+        default: return 120;
+      }
+    })();
 
-    // 시간 기반 균등 다운샘플링 (불균일 간격 방지)
-    const sorted = downsample(rawSorted, chartConfig.maxPoints);
+    const sorted = downsample(rawSorted, maxPoints);
 
-    const timestamps = sorted.map((d) => format(new Date(d.sampled_at), chartConfig.format));
-
-    // X축 레이블 간격: 데이터 수 기반으로 ~12개 레이블 목표
-    const labelInterval = Math.max(1, Math.floor(sorted.length / 12) - 1);
-
+    // time 타입 → [ISO timestamp, value] 쌍
     // Connections (gauge — gap 방지)
-    const connData = computeConnections(sorted);
+    let lastConn: number | null = null;
+    const connData: [string, number | null][] = sorted.map((d) => {
+      const v = d.metrics.numbackends ?? d.metrics.active_connections ?? null;
+      if (v !== null) lastConn = v;
+      return [d.sampled_at, lastConn];
+    });
 
     // TPS (delta/sec — spike 방지 + gap 방지)
-    const tpsData = computeTPS(sorted);
+    const tpsData: [string, number | null][] = [[sorted[0].sampled_at, null]];
+    let prevTPS: number | null = null;
+    for (let i = 1; i < sorted.length; i++) {
+      const curr = sorted[i];
+      const prev = sorted[i - 1];
+      const cVal = curr.metrics.xact_commit ?? curr.metrics.tps ?? null;
+      const pVal = prev.metrics.xact_commit ?? prev.metrics.tps ?? null;
+
+      if (cVal === null || pVal === null) {
+        tpsData.push([curr.sampled_at, prevTPS]);
+        continue;
+      }
+      const delta = cVal - pVal;
+      const sec = (new Date(curr.sampled_at).getTime() - new Date(prev.sampled_at).getTime()) / 1000;
+      if (sec <= 0 || delta < 0) {
+        tpsData.push([curr.sampled_at, prevTPS]);
+        continue;
+      }
+      let v = Math.round(delta / sec);
+      if (prevTPS !== null && prevTPS > 0 && v > prevTPS * 10) v = prevTPS;
+      prevTPS = v;
+      tpsData.push([curr.sampled_at, v]);
+    }
 
     // Buffer Hit Ratio (delta-based)
-    const hitRatioData = sorted.map((d, i) => {
-      if (i === 0) return null;
-      const prev = sorted[i - 1];
-      const deltaHit = (d.metrics.blks_hit ?? 0) - (prev.metrics.blks_hit ?? 0);
-      const deltaRead = (d.metrics.blks_read ?? 0) - (prev.metrics.blks_read ?? 0);
-      const total = deltaHit + deltaRead;
-      if (total <= 0) return 100;
-      return Math.round((deltaHit / total) * 10000) / 100;
-    });
+    const hitData: [string, number | null][] = [[sorted[0].sampled_at, null]];
+    for (let i = 1; i < sorted.length; i++) {
+      const d = sorted[i];
+      const p = sorted[i - 1];
+      const dHit = (d.metrics.blks_hit ?? 0) - (p.metrics.blks_hit ?? 0);
+      const dRead = (d.metrics.blks_read ?? 0) - (p.metrics.blks_read ?? 0);
+      const total = dHit + dRead;
+      hitData.push([d.sampled_at, total <= 0 ? 100 : Math.round((dHit / total) * 10000) / 100]);
+    }
 
     return {
       backgroundColor: 'transparent',
@@ -200,19 +150,18 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         left: 48,
         right: 16,
         top: 36,
-        bottom: chartConfig.rotate > 0 ? 48 : 24,
+        bottom: 28,
       },
+      // CloudWatch 스타일: type='time' → ECharts가 범위에 맞춰 자동 레이블
       xAxis: {
-        type: 'category' as const,
-        data: timestamps,
+        type: 'time' as const,
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
           color: '#88929b',
           fontSize: 10,
           fontFamily: 'JetBrains Mono',
-          interval: labelInterval,
-          rotate: chartConfig.rotate,
+          hideOverlap: true,
         },
         splitLine: { show: false },
       },
@@ -239,7 +188,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
         {
           name: 'Hit Ratio',
           type: 'line' as const,
-          data: hitRatioData,
+          data: hitData,
           smooth: true,
           symbol: 'none',
           connectNulls: true,

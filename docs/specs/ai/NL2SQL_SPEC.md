@@ -422,7 +422,21 @@ GraphRAG 전환 후에도 동일하게 적용:
 
 ### Phase 2+ (피드백)
 
-- [ ] AC-20: 피드백 기반 Few-shot 학습 (Agent 없이 서비스 로직으로 구현)
+- [x] ~~AC-20: 피드백 기반 Few-shot 학습~~ → **Deferred** (현재 불필요)
+
+> **결정 (2026-03-27)**: Few-shot 학습 도입을 연기합니다.
+>
+> **근거**:
+> 1. 현재 정확도 10/10 (100%) — 개선 여지 없음
+> 2. 피드백 데이터 0건 (is_correct 피드백 UI 미구현)
+> 3. 7b 로컬 모델의 context window에서 Few-shot 예시는 토큰 낭비
+> 4. GraphRAG + System Prompt가 이미 충분한 스키마 컨텍스트 제공
+> 5. DBA Agent intent router가 query 라우팅을 담당 — NL2SQL 자체의 판단력보다 DBA Agent의 라우팅이 핵심
+>
+> **도입 조건**: NL2SQL 정확도가 80% 이하로 떨어지거나, 피드백 데이터가 50건 이상 축적된 경우
+>
+> **대신 구현**: DBA Agent Chat UI에 👍/👎 피드백 버튼 추가 → is_correct 필드 업데이트
+> (피드백 수집은 가치 있음 — Few-shot 적용 여부와 무관하게 LLM Observability 데이터)
 
 ---
 

@@ -18,13 +18,13 @@ interface HeatmapPreset {
   getFrom: () => Date;
 }
 
-// Spec: FS-KPI-001 §4.5 — X축 시간 정책 (Metrics Timeline과 동일)
+// Spec: FS-KPI-001 §4.5 — 프리셋 라벨은 시간 범위만 표시
 const heatmapPresets: HeatmapPreset[] = [
-  { label: '5분 (1초)', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
-  { label: '15분 (1초)', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
-  { label: '30분 (1초)', value: '30m', getFrom: () => subMinutes(new Date(), 30) },
-  { label: '1시간 (10초)', value: '1h', getFrom: () => subHours(new Date(), 1) },
-  { label: '6시간 (1분)', value: '6h', getFrom: () => subHours(new Date(), 6) },
+  { label: '5분', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
+  { label: '15분', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
+  { label: '30분', value: '30m', getFrom: () => subMinutes(new Date(), 30) },
+  { label: '1시간', value: '1h', getFrom: () => subHours(new Date(), 1) },
+  { label: '6시간', value: '6h', getFrom: () => subHours(new Date(), 6) },
 ];
 
 export function ASHHeatmap({ data, isLoading, onTimeRangeChange }: ASHHeatmapProps) {
