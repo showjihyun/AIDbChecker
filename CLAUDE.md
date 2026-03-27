@@ -29,7 +29,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect (7-Phase Loop)
 - **Backend**: Python 3.11+ / FastAPI / SQLAlchemy 2.0 / Celery
 - **Database**: PostgreSQL 16 (Meta + Metrics + Vector)
 - **Cache**: Valkey (BSD 3-Clause, Redis API 호환)
-- **Async Tasks**: Celery + Valkey (Kafka planned for Phase 3+)
+- **Async Tasks**: Celery + Valkey (ADR-011: Kafka 제거, gRPC로 에이전트 동기 통신)
 - **AI/ML**: LangChain / scikit-learn / statsmodels / OpenAI / Ollama
 - **Package Manager**: uv (pip 금지)
 
@@ -78,6 +78,7 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | ADR-008 | `@docs/ADR/008-lightweight-playbook-hybrid.md` | 경량 Playbook + DB Copilot 하이브리드 전략 |
 | ADR-009 | `@docs/ADR/009-langchain-langgraph-framework.md` | LangChain/LangGraph AI 프레임워크 선택 |
 | ADR-010 | `@docs/ADR/010-graphrag-integration.md` | GraphRAG 통합 (Phase 2 RAG 전략) |
+| ADR-011 | `@docs/ADR/011-remove-kafka.md` | Kafka 제거 — Celery + Valkey + gRPC로 통합 |
 
 ### docs/specs/ — Feature Specifications
 
