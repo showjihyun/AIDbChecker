@@ -25,9 +25,9 @@ from app.schemas.llm_settings import OllamaModel, ProviderInfo
 logger = structlog.get_logger(__name__)
 
 # Spec: FS-AI-LLM-001 Section 5 — known models per cloud provider
-_OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
-_ANTHROPIC_MODELS = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"]
-_GOOGLE_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro"]
+_OPENAI_MODELS = ["gpt-5.4", "gpt-4o", "gpt-4o-mini"]
+_ANTHROPIC_MODELS = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-20250514"]
+_GOOGLE_MODELS = ["gemini-3.1-pro", "gemini-2.0-flash", "gemini-1.5-pro"]
 
 # Provider display names
 _DISPLAY_NAMES = {

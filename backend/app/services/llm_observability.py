@@ -26,9 +26,15 @@ logger = structlog.get_logger(__name__)
 
 # Spec: FR-AI-013 Section 4.3 — model pricing (approximate)
 MODEL_PRICING: dict[str, dict[str, float]] = {
+    "gpt-5.4": {"input": 0.000015, "output": 0.00006},
     "gpt-4o": {"input": 0.00001, "output": 0.00003},
     "gpt-4o-mini": {"input": 0.00000015, "output": 0.0000006},
+    "claude-opus-4-6": {"input": 0.000015, "output": 0.000075},
+    "claude-sonnet-4-6": {"input": 0.000003, "output": 0.000015},
     "claude-sonnet-4-20250514": {"input": 0.000003, "output": 0.000015},
+    "gemini-3.1-pro": {"input": 0.000007, "output": 0.000021},
+    "gemini-2.0-flash": {"input": 0.0000001, "output": 0.0000004},
+    "gemini-1.5-pro": {"input": 0.00000125, "output": 0.000005},
     "mistral:7b": {"input": 0.0, "output": 0.0},
     "qwen2.5:14b": {"input": 0.0, "output": 0.0},
 }
