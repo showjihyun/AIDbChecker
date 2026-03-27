@@ -15,11 +15,23 @@ from fastapi import HTTPException
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from unittest.mock import MagicMock
+
 from app.api.deps import get_current_user, require_role
 from app.api.v1.auth import _create_access_token, _create_token, pwd_context
 from app.config import settings
 from app.models.user import User
 from tests.conftest import spec_ref
+
+
+def _mock_request(api_key: str | None = None):
+    """Create a mock Request with optional X-API-Key header."""
+    req = MagicMock()
+    headers = {}
+    if api_key:
+        headers[settings.API_KEY_HEADER] = api_key
+    req.headers = headers
+    return req
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +77,7 @@ class TestGetCurrentUser:
         user = await _insert_user(async_session)
         token = _create_access_token(str(user.id))
 
-        result = await get_current_user(token=token, session=async_session)
+        result = await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert result.id == user.id
         assert result.email == user.email
@@ -83,7 +95,7 @@ class TestGetCurrentUser:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, session=async_session)
+            await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
@@ -93,7 +105,7 @@ class TestGetCurrentUser:
         """A completely invalid (garbage) token should raise HTTPException 401."""
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(
-                token="not.a.valid.jwt.token", session=async_session
+                request=_mock_request(), token="not.a.valid.jwt.token", session=async_session
             )
 
         assert exc_info.value.status_code == 401
@@ -111,7 +123,7 @@ class TestGetCurrentUser:
         bad_token = jwt.encode(payload, "wrong-secret", algorithm=settings.JWT_ALGORITHM)
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=bad_token, session=async_session)
+            await get_current_user(request=_mock_request(), token=bad_token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
@@ -124,7 +136,7 @@ class TestGetCurrentUser:
         token = _create_access_token(str(user.id))
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, session=async_session)
+            await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
@@ -140,7 +152,7 @@ class TestGetCurrentUser:
         token = _create_access_token(str(user.id))
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, session=async_session)
+            await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
@@ -152,7 +164,7 @@ class TestGetCurrentUser:
         token = _create_access_token(fake_id)
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, session=async_session)
+            await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
@@ -169,7 +181,7 @@ class TestGetCurrentUser:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, session=async_session)
+            await get_current_user(request=_mock_request(), token=token, session=async_session)
 
         assert exc_info.value.status_code == 401
 
