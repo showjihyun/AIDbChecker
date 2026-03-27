@@ -13,106 +13,128 @@ You are generating tests for the **NeuralDB** system.
 - Target file/module: $0
 - Test type: $1 (default: unit)
 
-## Reference Specs
-- **Spec-Driven Strategy**: `docs/specs/tests/TEST_STRATEGY.md` ← **반드시 먼저 읽을 것**
-- FE Unit: `docs/specs/tests/FRONTEND_TEST_SPEC.md`
-- BE Unit: `docs/specs/tests/BACKEND_TEST_SPEC.md`
-- Integration/E2E: `docs/specs/tests/TEST_SPEC.md`
-- AI Feature Specs: `docs/specs/ai/*.md` (AC 기반 테스트 생성)
+## Pre-Flight (MUST execute before writing any code)
 
-## Test Frameworks by Layer
+1. READ `docs/specs/tests/TEST_STRATEGY.md` — extract Spec-Driven rules.
+2. READ `docs/specs/tests/BACKEND_TEST_SPEC.md` — extract BE test patterns.
+3. READ `docs/specs/tests/FRONTEND_TEST_SPEC.md` — extract FE test patterns.
+4. FIND the Feature Spec for the target module:
+   - GREP `# Spec:` in target file → extract Spec IDs (e.g., `FS-AI-005`).
+   - READ the corresponding Spec file in `docs/specs/`.
+   - EXTRACT all `**AC-N**:` lines from the "인수 기준" section.
+5. COUNT ACs. Each AC MUST produce ≥1 test function. Zero AC = abort with message.
 
-| Layer | Framework | Config | 외부 의존 |
-|-------|-----------|--------|----------|
-| FE Unit | Vitest + React Testing Library + MSW | vitest.config.ts | 없음 |
+## Test Frameworks
+
+| Layer | Framework | Config | External Deps |
+|-------|-----------|--------|---------------|
+| FE Unit | Vitest + RTL + MSW | vitest.config.ts | None |
 | FE E2E | Playwright | playwright.config.ts | BE + DB |
-| BE Unit | pytest + pytest-asyncio + mock | pyproject.toml | 없음 |
+| BE Unit | pytest + pytest-asyncio + mock | pyproject.toml | None |
 | BE Integration | pytest + testcontainers | pyproject.toml | DB + Kafka + Valkey |
 
-## Test File Structure
+## Output File Locations
+
 ```
-# Frontend (컴포넌트 옆에 위치)
-frontend/src/components/{Category}/{Component}/{Component}.test.tsx
-frontend/src/hooks/{hookName}.test.ts
-frontend/src/api/hooks/{hookName}.test.ts
-frontend/src/stores/{storeName}.test.ts
+# Backend Unit
+backend/tests/unit/test_{spec_id_snake}_spec.py
 
-# Backend Unit (외부 의존 없음)
-backend/tests/unit/test_schemas.py
-backend/tests/unit/test_services.py
-backend/tests/unit/test_adapters.py
-backend/tests/unit/test_analyzers.py
-backend/tests/api/test_instances_api.py
+# Backend API
+backend/tests/api/test_{module}_api.py
 
-# Backend Integration (실제 DB/Kafka)
-backend/tests/integration/test_metric_collection.py
-backend/tests/integration/test_ash_collection.py
+# Frontend Unit
+frontend/tests/unit/{componentName}.test.ts(x)
+
+# Backend Integration
+backend/tests/integration/test_{feature}_e2e.py
 ```
 
-## Test Coverage Targets
-- Unit tests: > 80% line coverage
-- Integration tests: All API endpoints and DB operations
-- E2E tests: Critical user flows (dashboard, diagnosis, playbook execution)
+## File Structure Rules (every generated file MUST contain)
 
-## Test Patterns
-
-### Frontend Component Test
-- Render test (component mounts without errors)
-- Props test (renders correctly with different props)
-- Interaction test (click, hover, input events)
-- Accessibility test (ARIA labels, keyboard navigation)
-- Snapshot test (visual regression for complex components)
-
-### Backend Service Test (pytest)
-- Happy path for each method
-- Error handling (invalid input, not found, unauthorized)
-- Database interaction (mock SQLAlchemy AsyncSession)
-- WebSocket event emission (mock python-socketio)
-
-### Python Agent Test
-- Agent initialization with config
-- Tool execution (mock external dependencies)
-- Autonomy level enforcement
-- Audit log generation
-- Error recovery and rollback
-
-## Spec-Driven Test Generation Rules (MUST FOLLOW)
-
-### 규칙 1: Spec AC에서 테스트 파생
-1. 대상 모듈의 Feature Spec을 먼저 읽는다 (docs/specs/ai/*.md, API_SPEC.md 등)
-2. Spec의 **인수 기준(AC)** 섹션에서 각 AC를 1개 이상의 테스트 함수로 변환한다
-3. AC가 없는 기능의 테스트는 생성하지 않는다
-
-### 규칙 2: Spec 참조 필수
+### Rule 1: Header Comment
 ```python
-# Backend: @spec_ref 데코레이터 사용
-@spec_ref("FS-AI-010", "AC-1")
-async def test_fs_ai_010_ac1_mtl_predict_returns_4_heads():
-    """FS-AI-010 AC-1: POST /mtl/predict 호출 시 4개 Head 결과 반환"""
+# Spec: {SPEC_ID}
+"""Spec-Driven tests for {feature name}.
+
+Feature Spec: docs/specs/{category}/{SPEC_FILE}.md
+Test Strategy: docs/specs/tests/TEST_STRATEGY.md
+
+AC Coverage:
+  AC-1: {description} → test_{spec_snake}_ac1_{desc}
+  AC-2: {description} → test_{spec_snake}_ac2_{desc}
+  ...
+"""
+```
+
+### Rule 2: Import spec_ref
+```python
+from tests.conftest import spec_ref
+```
+
+### Rule 3: Every test function MUST have @spec_ref
+```python
+@spec_ref("{SPEC_ID}", "AC-{N}")
+@pytest.mark.asyncio
+async def test_{spec_id_snake}_ac{n}_{description}():
+    """FS-AI-005 AC-1: {AC description from Spec}"""
     ...
 ```
 
-```typescript
-// Frontend: @spec JSDoc 주석 사용
-/**
- * @spec FS-AI-011 AC-4
- * @description Confidence Badge 4단계 색상 코딩 표시
- */
-it('renders green badge for confidence >= 0.8', () => { ... });
-```
+### Rule 4: Function Naming Convention
+- Backend: `test_{spec_id_snake}_ac{n}_{description}` (snake_case)
+  - Example: `test_fs_ai_005_ac1_report_generation_within_30s`
+- Frontend: `describe('[Spec: FS-XXX]')` → `it('AC-N: {description}')`
 
-### 규칙 3: 함수명 규칙
-- Backend: `test_{spec_id}_{ac}_{description}` (snake_case)
-- Frontend: describe 블록에 `[Spec: FS-XXX-XXX]`, it 블록에 AC 내용
+### Rule 5: AC → Test Mapping (minimum)
+- Each AC → ≥1 happy-path test
+- Each AC with error condition → +1 error-path test
+- Each AC with boundary value → +1 boundary test
+- Schema validation AC → Pydantic ValidationError test
 
-### 규칙 4: Spec 변경 추적
-- Spec AC가 추가되면 → 대응 테스트 추가
-- Spec AC가 수정되면 → assertion 값 수정
-- Spec AC가 삭제되면 → 대응 테스트 삭제
+## Test Pattern Rules
 
-## General Rules
-- Mock external services (DB, LLM APIs, Kafka)
-- Use factories/fixtures for test data
-- No flaky tests (no sleep/setTimeout, use waitFor)
-- Test error paths, not just happy paths
-- Include edge cases for metrics (zero values, null, overflow)
+### Backend Service Test (pytest)
+1. MOCK all external deps: DB session (`AsyncMock`), LLM (`AsyncMock`), Valkey, Celery.
+2. USE `mock_session` fixture with `MagicMock` for `.execute()`, `.scalars()`, `.all()`.
+3. TEST happy path for each service method.
+4. TEST error handling: invalid input, not found, LLM failure.
+5. ASSERT response schema matches Pydantic model.
+6. ASSERT timing: `generation_time_ms >= 0` (mock is instant).
+
+### Backend API Test (httpx)
+1. USE `client` fixture from `conftest.py` (httpx.AsyncClient).
+2. USE `auth_client` fixture for authenticated endpoints (override `get_current_user`).
+3. ASSERT HTTP status codes: 200/201/204/400/401/403/404/409.
+4. ASSERT response JSON matches schema.
+5. ASSERT OpenAPI route is registered: check `app.routes`.
+
+### Frontend Component Test (Vitest + RTL)
+1. RENDER component with minimal required props.
+2. ASSERT component mounts without errors.
+3. ASSERT ARIA labels present for accessibility.
+4. TEST user interactions (click, input) with `userEvent`.
+5. USE MSW for API mocking (no fetch mocking).
+
+### Agent Test
+1. MOCK LLM via `_get_llm` patch.
+2. TEST autonomy level enforcement (FS-AUTO-002).
+3. TEST confidence gate (score < 0.5 → blocked).
+4. ASSERT audit log generation for ai_decision.
+
+## Validation Checklist (self-verify before outputting)
+
+- [ ] Every AC in the Feature Spec has ≥1 test function
+- [ ] Every test function has `@spec_ref` decorator
+- [ ] Function names follow `test_{spec_snake}_ac{n}_{desc}` pattern
+- [ ] File header lists AC → test mapping
+- [ ] No external deps in unit tests (all mocked)
+- [ ] No `sleep()` or `time.sleep()` in tests
+- [ ] `import from tests.conftest import spec_ref` present
+- [ ] RUN `uv run pytest {test_file} -v --tb=short` and report results
+
+## Post-Generation (MUST execute after writing)
+
+1. RUN `uv run pytest {generated_file} -v --tb=short` — all tests must pass.
+2. VERIFY AC summary output: `SPEC ACCEPTANCE CRITERIA SUMMARY` section in pytest output.
+3. REPORT: `{N} tests, {M} ACs, {P} passed, {F} failed`.
+4. If failures exist, FIX and re-run until 0 failures.
