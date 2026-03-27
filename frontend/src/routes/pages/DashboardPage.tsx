@@ -111,10 +111,10 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Instance list */}
         <div className="lg:col-span-4 space-y-3">
-          <h2 className="text-xs font-semibold tracking-wider uppercase text-on-surface-variant">
+          <h2 className="text-xs font-semibold tracking-wider uppercase text-on-surface-variant h-5 flex items-center">
             Instances
           </h2>
           {instancesLoading ? (
@@ -140,7 +140,11 @@ export function DashboardPage() {
         </div>
 
         {/* Right panel: Metrics + KPI (DBA 전문가 관점 배치) */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-4">
+          {/* 섹션 헤더 — Instances 헤더와 높이 맞춤 */}
+          <h2 className="text-xs font-semibold tracking-wider uppercase text-on-surface-variant h-5 flex items-center">
+            Performance
+          </h2>
           {/* Row 1: Metrics Timeline (가장 중요 — 실시간 추세) */}
           <MetricChart
             data={metricsData}

@@ -57,6 +57,8 @@ React SPA (3000) → FastAPI (8000) → PostgreSQL 16 (5432)
 | MTL Lite RCA | 4-Head simultaneous inference (anomaly/cause/severity/action) | FS-AI-010 |
 | RAG Search | pgvector incident similarity search | FS-AI-RAG-001 |
 | NL2SQL + GraphRAG | Natural language to SQL with Knowledge Graph | FS-AI-NL2SQL-001 |
+| **DBA Agent** | Unified AI DBA: analyze/diagnose/execute/query/status | FS-DBA-001/002 |
+| Execution Engine | SafetyGuard 4-level risk + Autonomy Policy Matrix | FS-DBA-001 |
 | DB Copilot | Tree-of-Thought 8-branch diagnosis | FS-AI-012 |
 | AIGC Report | LLM-generated health reports (weekly auto) | FS-AI-005 |
 | Playbook Lite | 7 built-in + custom YAML, Autonomy Gate L0~L4 | FS-AUTO-003 |
@@ -64,6 +66,7 @@ React SPA (3000) → FastAPI (8000) → PostgreSQL 16 (5432)
 | MCP Server | External AI tool integration (Claude Code, Copilot) | PROTO-MCP-001 |
 | SSO/LDAP | OIDC + LDAP + API Key authentication | FS-ADMIN-002 |
 | LLM Observability | Token/latency/cost/hallucination tracking | FS-AI-013 |
+| Harness v3 | 4-Pillar Pre-Commit Quality Gate (lint/type/test/AC) | FS-HARNESS-001 |
 
 ## Tech Stack
 
