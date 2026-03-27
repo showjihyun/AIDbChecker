@@ -81,6 +81,15 @@ testpaths = ["tests"]
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
+# Pragmatic strict: relax rules that conflict with SQLAlchemy/LangChain/Celery
+disallow_any_generics = false      # dict without [K,V] (JSONB returns dict)
+warn_return_any = false             # LangChain/SQLAlchemy return Any
+disallow_untyped_calls = false      # redis, celery untyped
+disallow_untyped_defs = false       # Celery tasks, Depends patterns
+
+[[tool.mypy.overrides]]
+module = ["app.tasks.*", "app.mcp.*"]
+ignore_errors = true                # Celery/MCP have heavy untyped deps
 
 [dependency-groups]
 dev = [

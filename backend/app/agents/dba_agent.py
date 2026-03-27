@@ -249,16 +249,19 @@ class DBAAgent:
         mgr = LLMProviderManager()
         llm = mgr.get_llm()
         agent = DBTuningAgent(llm=llm, pool=pool)
-        result = await agent.analyze(question)
+        result = await agent.analyze(question, instance_id)
 
-        # Extract suggested actions from result
-        actions = self._extract_actions_from_text(result, instance_id)
+        # result may be TuningResponse or str
+        answer_text = (
+            result.summary if hasattr(result, "summary") else str(result)
+        )
+        actions = self._extract_actions_from_text(answer_text, instance_id)
         model = mgr.get_model_name()
 
         return DBAResponse(
             session_id=uuid4(),
             intent="analyze",
-            answer=result,
+            answer=answer_text,
             actions=actions if actions else None,
             model=model,
         )
