@@ -1,10 +1,57 @@
-# Component Spec: MVP React 컴포넌트 인터페이스
+# Component Spec: React 컴포넌트 인터페이스
 
 > **Spec ID**: FE-COMP-001
 > **PRD 참조**: FR-DASH-001~005, FR-AI-011, FR-AI-014
-> **상태**: Approved
+> **상태**: Approved (Revised v2.0 — 2026-03-27 현행화)
 > **디자인 참조**: FRONTEND_DESIGN.md
 > **API 참조**: API_SPEC.md (API-001)
+
+---
+
+## 구현 현황 (v2.0 — 2026-03-27 현행화)
+
+### 컴포넌트 구현 상태
+
+| # | Spec 컴포넌트 | 실제 구현 파일 | Phase | 상태 |
+|---|-------------|-------------|-------|------|
+| 3.1 | SummaryCard | *(KPIOverviewPanel에 통합)* | MVP | ✅ 통합 구현 |
+| 3.2 | InstanceCard | `dashboard/InstanceCard.tsx` | MVP | ✅ |
+| 3.3 | InstanceGrid | `instances/InstanceListItem.tsx` (리스트 형태로 변경) | MVP | ✅ 이름 변경 |
+| 3.4 | MetricChart | `dashboard/MetricChart.tsx` | MVP | ✅ |
+| 3.5 | ASHHeatmap | `ash/ASHHeatmap.tsx` | MVP | ✅ |
+| 3.6 | SessionTable | `ash/SessionTable.tsx` | MVP | ✅ |
+| 3.7 | WaitBreakdownPanel | *(ASHHeatmap에 통합)* | Phase 2 | ⏳ 별도 분리 예정 |
+| 3.8 | IncidentList | `incidents/IncidentRow.tsx` (행 단위로 변경) | MVP | ✅ 이름 변경 |
+| 3.9 | IncidentCard | *(IncidentRow로 대체)* | MVP | ✅ 통합 |
+| 3.10 | ConfidenceBadge | `common/Badge.tsx` (범용 배지에 포함) | Phase 2 | ⏳ 전용 분리 예정 |
+| 3.11 | ReasoningChainPanel | - | Phase 2 | ⏳ |
+| 3.12 | MTLPredictionCard | - | Phase 2 | ⏳ |
+| 3.13 | NL2SQLChat | `nl2sql/NL2SQLChat.tsx` | MVP | ✅ |
+| 3.14 | ChatMessage | *(NL2SQLChat 내부 구현)* | MVP | ✅ 통합 |
+| 3.15 | AddDatabaseWizard | `instances/RegisterInstanceModal.tsx` (모달 형태) | MVP | ✅ 이름 변경 |
+| 3.16 | AlertChannelForm | *(Settings 페이지 내부)* | Phase 2 | ⏳ |
+| 3.17 | UserTable | *(Settings 페이지 내부)* | Phase 2 | ⏳ |
+| 3.18 | SchemaChangeTimeline | - | Phase 2 | ⏳ |
+| 3.19 | SystemHealthCard | `dashboard/SystemHealth.tsx` | MVP | ✅ 이름 변경 |
+| 3.20 | 공통 UI | `common/Toast.tsx`, `common/EmptyState.tsx`, `common/Badge.tsx` | MVP | ✅ |
+
+### Spec에 없지만 구현된 컴포넌트 (추가 등록)
+
+| 구현 파일 | 역할 | Phase |
+|----------|------|-------|
+| `dashboard/KPIOverviewPanel.tsx` | 인스턴스별 12개 KPI 패널 (FS-KPI-001) | MVP |
+| `common/NotificationPanel.tsx` | 알림/Advisory 패널 | MVP |
+| `layout/MainLayout.tsx` | 인증된 앱 쉘 (TopNav + SideNav + Content) | MVP |
+
+### 이름 변경 이력
+
+| Spec 이름 | 구현 이름 | 변경 사유 |
+|----------|----------|----------|
+| InstanceGrid | InstanceListItem | 그리드 → 리스트 UI 변경 |
+| IncidentCard / IncidentList | IncidentRow | 카드 → 테이블 행 UI 변경 |
+| AddDatabaseWizard | RegisterInstanceModal | 위저드 → 모달 단순화 |
+| SystemHealthCard | SystemHealth | Card 접미사 제거 |
+| SummaryCard | KPIOverviewPanel | 4개 Summary → 12개 KPI 통합 패널 |
 
 ---
 

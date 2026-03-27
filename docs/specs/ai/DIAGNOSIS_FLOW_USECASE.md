@@ -1,8 +1,9 @@
 # AI Diagnosis & RCA: User Flow & Use Case Specification
 
-**문서 번호:** UC-DIAG-001
+**Spec ID:** FS-AI-DIAG-001
+**PRD 참조:** FR-AI-010, FR-AI-014
 **상태:** Draft v1.0
-**관련 화면:** {{DATA:SCREEN:SCREEN_13}} (AI Diagnosis & RCA Panel)
+**관련 화면:** AI Diagnosis & RCA Panel
 
 ---
 

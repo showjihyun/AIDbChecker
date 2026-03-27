@@ -110,31 +110,41 @@ RECEIVED → GATHERING_CONTEXT → RAG_SEARCH → MTL_INFERENCE
 
 ### 2.3 Remediation Agent
 
+> **ADR-008 적용**: Phase 2는 경량 Playbook(Lite) + DB Copilot 하이브리드.
+> Remediation Agent는 Phase 2에서 Built-in Playbook 실행기 역할,
+> Phase 3에서 Full Playbook + Multi-Agent 전환.
+
 | Field | Value |
 |-------|-------|
 | **ID** | `agent-remediation` |
-| **Role** | 자가 치유 실행, Playbook 실행, 자동 쿼리 튜닝, 롤백 |
-| **Input** | `rca_result` + `playbook` (Diagnosis Agent가 A2A로 전달) |
+| **Role** | Built-in Playbook 실행, 롤백 (Phase 2) / Full Playbook + 자동 쿼리 튜닝 (Phase 3) |
+| **Input** | `rca_result` + `matched_playbook` (Diagnosis Agent 또는 DB Copilot이 전달) |
 | **Output** | `remediation_logs` |
-| **Autonomy** | **Level 제어 핵심 대상** — Level별 행동이 다름 |
-| **Framework** | LangGraph (실행 그래프) + CrewAI (멀티 스텝) |
+| **Autonomy** | **Phase 2: L0~L2만** / Phase 3: L0~L4 |
+| **Framework** | Phase 2: 기본 실행기 (순차 SQL) / Phase 3: LangGraph + CrewAI |
 
-**Autonomy Behavior**:
+**Autonomy Behavior (Phase 2 — L0~L2)**:
 ```
-Level 0: 알림만 발송 → 사람이 수동 실행
+Level 0: 알림만 발송 → Playbook 실행 불가
 Level 1: Playbook 추천 표시 → 사람 승인 대기
-Level 2: 사람 승인 후 실행 → 결과 보고
+Level 2: 사람 승인 후 실행 → 결과 보고 → 실패 시 역순 롤백
+```
+
+**Autonomy Behavior (Phase 3 — L3~L4 추가)**:
+```
 Level 3: 자동 실행 → 결과 보고 → 실패 시 자동 롤백
 Level 4: 완전 자율 → 에스컬레이션 시에만 사람 개입
 ```
 
-**State Machine**:
+**State Machine (Phase 2 Lite)**:
 ```
-RECEIVED → AUTONOMY_CHECK → [WAIT_APPROVAL | EXECUTE]
-    EXECUTE → STEP_1 → VALIDATE → STEP_2 → VALIDATE → ...
+RECEIVED → CONFIDENCE_CHECK (≥0.5?)
+    → AUTONOMY_CHECK (L0~L2)
+    → [BLOCKED | WAIT_APPROVAL | EXECUTE]
+    EXECUTE → STEP_1 → STEP_2 → ...
         → [SUCCESS | FAILURE]
-    FAILURE → ROLLBACK → ESCALATE
-    SUCCESS → SLO_CHECK → COMPLETE
+    FAILURE → ROLLBACK (역순)
+    SUCCESS → COMPLETE
 ```
 
 **Tools**:
@@ -143,14 +153,15 @@ RECEIVED → AUTONOMY_CHECK → [WAIT_APPROVAL | EXECUTE]
 - `kill_session(instance_id, pid)` — 프로세스 종료
 - `adjust_parameter(instance_id, param, value)` — DB 파라미터 변경
 - `rollback_action(remediation_log_id)` — 롤백 실행
-- `check_slo(instance_id, metrics)` — SLO 달성 여부 검증
+- `check_slo(instance_id, metrics)` — SLO 달성 여부 검증 (Phase 3)
 
 **Safety Rules (MUST)**:
 1. 모든 쓰기 액션 전 `AUTONOMY_CHECK` 필수
-2. `blast_radius` 평가 — 영향 범위가 큰 액션은 Level 자동 상향 요구
+2. Confidence < 0.5 시 자동 차단 (`CONFIDENCE_CHECK`)
 3. `statement_timeout` 설정 — 무한 실행 방지
 4. `dry_run` 모드 지원 — 실제 실행 없이 시뮬레이션
-5. 실패 시 **자동 롤백** + Autonomy Level 1단계 격하
+5. 실패 시 **역순 롤백** (Phase 2) / + Autonomy 격하 (Phase 3)
+6. Phase 2에서 Built-in Playbook만 실행 가능 — 커스텀 YAML 실행 불가
 
 ---
 

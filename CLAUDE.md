@@ -75,22 +75,25 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | ADR-005 | `@docs/ADR/005-react-spa-over-nextjs.md` | React SPA 선택 근거 |
 | ADR-006 | `@docs/ADR/006-hybrid-adapter-collection.md` | 2-Tier 수집 전략 근거 |
 | ADR-007 | `@docs/ADR/007-credential-encryption.md` | 자격증명 암호화 근거 |
+| ADR-008 | `@docs/ADR/008-lightweight-playbook-hybrid.md` | 경량 Playbook + DB Copilot 하이브리드 전략 |
+| ADR-009 | `@docs/ADR/009-langchain-langgraph-framework.md` | LangChain/LangGraph AI 프레임워크 선택 |
+| ADR-010 | `@docs/ADR/010-graphrag-integration.md` | GraphRAG 통합 (Phase 2 RAG 전략) |
 
 ### docs/specs/ — Feature Specifications
 
 | 카테고리 | 경로 | Spec 목록 |
 |----------|------|----------|
 | **Agents** | `@docs/specs/agents/` | AGENT_SPEC.md |
-| **AI** | `@docs/specs/ai/` | CONFIDENCE_SCORE_SPEC.md, COPILOT_SPEC.md, DIAGNOSIS_FLOW_USECASE.md, LIGHTWEIGHT_RAG_SPEC.md, LLM_OBSERVABILITY_SPEC.md, LLM_PROVIDER_SPEC.md, MTL_RCA_SPEC.md, NL2SQL_SPEC.md, DB_TUNING_AGENT_SPEC.md |
+| **AI** | `@docs/specs/ai/` | AIGC_REPORT_SPEC.md, AUTO_BASELINE_SPEC.md, ADAPTIVE_AUTONOMY_SPEC.md, CONFIDENCE_SCORE_SPEC.md, COPILOT_SPEC.md, DIAGNOSIS_FLOW_USECASE.md, LIGHTWEIGHT_RAG_SPEC.md, LLM_OBSERVABILITY_SPEC.md, LLM_PROVIDER_SPEC.md, MTL_RCA_SPEC.md, NL2SQL_SPEC.md, DB_TUNING_AGENT_SPEC.md |
 | **API** | `@docs/specs/api/` | API_SPEC.md, ERROR_CODES_SPEC.md, GRAPHQL_SCHEMA.md |
 | **Config** | `@docs/specs/config/` | SETTINGS_SPEC.md |
 | **Data Model** | `@docs/specs/data-model/` | ERD.md, MIGRATION_SPEC.md |
 | **Frontend** | `@docs/specs/frontend/` | COMPONENT_SPEC.md, REACT_HOOKS_SPEC.md, WEBSOCKET_EVENTS_SPEC.md, DB_KPI_SPEC.md, INCIDENT_LIST_SPEC.md |
 | **Playbooks** | `@docs/specs/playbooks/` | PLAYBOOK_SPEC.md |
 | **Protocols** | `@docs/specs/protocols/` | A2A_PROTOCOL.md, KAFKA_SPEC.md, MCP_INTEGRATION.md |
-| **Services** | `@docs/specs/services/` | SERVICE_LAYER_SPEC.md |
+| **Services** | `@docs/specs/services/` | SERVICE_LAYER_SPEC.md, AUDIT_LOG_SPEC.md, SCHEMA_CHANGE_SPEC.md, AI_DECISION_LOG_SPEC.md, TASK_QUEUE_SPEC.md, SYSTEM_HEALTH_SPEC.md |
 | **Tasks** | `@docs/specs/tasks/` | CELERY_TASKS_SPEC.md |
-| **Tests** | `@docs/specs/tests/` | BACKEND_TEST_SPEC.md, FRONTEND_TEST_SPEC.md, TEST_SPEC.md, TEST_STRATEGY.md |
+| **Tests** | `@docs/specs/tests/` | BACKEND_TEST_SPEC.md, FRONTEND_TEST_SPEC.md, INTEGRATION_TEST_SPEC.md, TEST_SPEC.md, TEST_STRATEGY.md |
 
 ### docs/review/ — Technical Reviews
 

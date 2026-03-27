@@ -387,9 +387,7 @@ SELECT * FROM metric_samples OFFSET 100; -- 커서 페이지네이션 사용
 | Infra | `gen-celery-task` | `/gen-celery-task [name] [schedule]` |
 | | `gen-websocket` | `/gen-websocket [ns] [events]` |
 | | `gen-docker` | `/gen-docker [target]` |
-| 공통 | `gen-playbook` | `/gen-playbook [name] [db-type]` |
-| | `gen-test` | `/gen-test [path] [type]` |
-| 디자인 | `stitch-sync` | `/stitch-sync [all]` |
+| 공통 | `gen-test` | `/gen-test [path] [type]` |
 
 ### Layer 2: gstack Workflow Skills (선별 사용)
 

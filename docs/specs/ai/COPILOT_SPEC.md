@@ -198,7 +198,63 @@ CREATE INDEX idx_copilot_sessions_created ON copilot_sessions(created_at);
 
 ---
 
-## 5. 인수 기준 (Acceptance Criteria)
+## 5. Playbook 하이브리드 연동 (ADR-008)
+
+> DB Copilot과 Built-in Playbook은 위험 수준에 따라 역할을 분담합니다.
+
+### 5.1 역할 분담
+
+| 위험 수준 | 주 담당 | 보조 | 예시 |
+|----------|---------|------|------|
+| **고위험** (DDL, 파라미터 변경) | Built-in Playbook | Copilot이 Playbook 추천 | CREATE INDEX, ALTER SYSTEM |
+| **중위험** (세션 kill, VACUUM) | DB Copilot 판단 | Playbook 절차 참조 | pg_terminate_backend, VACUUM |
+| **저위험** (조회, 분석, 추천) | DB Copilot 자유 실행 | - | EXPLAIN, pg_stat 조회 |
+
+### 5.2 Copilot → Playbook 연동 흐름
+
+```python
+# Spec: FR-AI-012, FR-AUTO-003 (Lite)
+async def copilot_diagnose_with_playbook(
+    instance_id: UUID,
+    incident_id: UUID,
+) -> CopilotDiagnoseResponse:
+    """DB Copilot 진단 후 Playbook 매칭"""
+
+    # 1. ToT 분기 분석
+    diagnosis = await tree_of_thought(instance_id, incident_id)
+
+    # 2. Built-in Playbook 매칭
+    matched_playbook = match_builtin_playbook(
+        anomaly_type=diagnosis.anomaly_type,
+        risk_level=diagnosis.risk_level,
+    )
+
+    if matched_playbook:
+        # 고위험: Playbook 추천/실행
+        diagnosis.recommended_playbook = matched_playbook.name
+        diagnosis.execution_status = "playbook_recommended"
+    else:
+        # Playbook 없는 신규 패턴: Copilot 추천만
+        diagnosis.execution_status = "copilot_recommended"
+        # Phase 3: 반복 패턴 → Playbook 승격 후보로 기록
+        await record_playbook_candidate(diagnosis)
+
+    return diagnosis
+```
+
+### 5.3 Playbook 승격 경로 (Phase 3 준비)
+
+DB Copilot이 동일 패턴을 **3회 이상** 추천한 경우, 해당 패턴을 `playbook_candidates` 로그에 기록합니다. Phase 3에서 운영자가 이를 검토하여 커스텀 Playbook으로 승격할 수 있습니다.
+
+```
+Copilot 추천 패턴 반복 (≥3회)
+    → playbook_candidates에 기록
+    → Phase 3: 운영자 검토 → 커스텀 Playbook YAML 생성
+```
+
+---
+
+## 6. 인수 기준 (Acceptance Criteria)
 
 - [ ] **AC-1**: POST `/api/v1/copilot/diagnose` 호출 시 최소 2개 이상 Branch 탐색 결과 반환
 - [ ] **AC-2**: 각 Branch에 `final_score`가 계산되어 최고 점수 경로가 `selected_branch`로 선택
@@ -206,10 +262,13 @@ CREATE INDEX idx_copilot_sessions_created ON copilot_sessions(created_at);
 - [ ] **AC-4**: Confidence < 0.5인 경우 `execution_status: "blocked"` 반환
 - [ ] **AC-5**: Phase 2 완료 시 12개 시나리오 중 10개 이상 자동 진단 가능
 - [ ] **AC-6**: `copilot_sessions` 테이블에 전체 세션 이력 저장
+- [ ] **AC-7**: 진단 결과에 매칭 Built-in Playbook이 있으면 `recommended_playbook` 필드에 포함
+- [ ] **AC-8**: Playbook 없는 신규 패턴의 경우 `execution_status: "copilot_recommended"` 반환
 
 ---
 
-## 6. 의존성
+## 7. 의존성
 
 - **선행 Spec**: FS-AI-010 (MTL), FS-AI-011 (Confidence), FS-AUTO-002 (Autonomy)
-- **사용 Spec**: FS-AI-RAG-001 (RAG 검색), PLAYBOOK_SPEC (Playbook 실행)
+- **사용 Spec**: FS-AI-RAG-001 (RAG 검색), FS-AUTO-003 (Playbook Lite — Built-in 매칭/실행)
+- **ADR**: ADR-008 (경량 Playbook + DB Copilot 하이브리드)
