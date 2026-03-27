@@ -238,7 +238,7 @@ class TestGetIncident:
             headers=_auth_header(str(auth_user.id)),
         )
         assert resp.status_code == 404
-        assert "not found" in resp.json()["detail"]
+        assert "not found" in resp.json()["message"]
 
 
 # ---------------------------------------------------------------------------

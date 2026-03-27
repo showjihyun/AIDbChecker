@@ -76,6 +76,8 @@ async def ask_dba(
             session=session,
             pool=pool,
             autonomy_level=instance.autonomy_level,
+            user_id=str(current_user.id),
+            user_role=current_user.role,
         )
         return response
     finally:

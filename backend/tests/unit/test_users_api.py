@@ -180,7 +180,7 @@ class TestCreateUser:
             headers=_auth_header(str(admin_user.id)),
         )
         assert resp.status_code == 409
-        assert "already exists" in resp.json()["detail"]
+        assert "already exists" in resp.json()["message"]
 
     async def test_create_user_invalid_role_returns_422(
         self, client: AsyncClient, admin_user: User
@@ -311,7 +311,7 @@ class TestUpdateUser:
             headers=_auth_header(str(admin_user.id)),
         )
         assert resp.status_code == 404
-        assert "not found" in resp.json()["detail"]
+        assert "not found" in resp.json()["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -393,7 +393,7 @@ class TestRBAC:
             "/api/v1/users", headers=_auth_header(str(viewer_user.id))
         )
         assert resp.status_code == 403
-        assert "not authorized" in resp.json()["detail"]
+        assert "not authorized" in resp.json()["message"]
 
     async def test_create_user_as_viewer_returns_403(
         self, client: AsyncClient, viewer_user: User

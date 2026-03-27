@@ -179,6 +179,8 @@ class DBAAgent:
         session: AsyncSession,
         pool=None,
         autonomy_level: int = 0,
+        user_id: str | None = None,
+        user_role: str = "operator",
     ) -> DBAResponse:
         """Spec: FS-DBA-002 AC-1 — unified DBA Agent entry point.
 
@@ -212,6 +214,7 @@ class DBAAgent:
                     session,
                     pool,
                     autonomy_level,
+                    user_role=user_role,
                 )
             elif intent == "query":
                 response = await self._handle_query(question, instance_id, session)
@@ -232,7 +235,7 @@ class DBAAgent:
             response = DBAResponse(
                 session_id=session_id,
                 intent=intent,
-                answer=f"처리 중 오류가 발생했습니다: {exc}",
+                answer="처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
         elapsed = int((time.monotonic() - start) * 1000)
@@ -307,6 +310,7 @@ class DBAAgent:
         session: AsyncSession,
         pool,
         autonomy_level: int,
+        user_role: str = "operator",
     ) -> DBAResponse:
         """Parse action from question, route to ExecutionEngine."""
         from app.agents.execution_engine import ExecutionEngine

@@ -97,3 +97,6 @@ class MTLPredictResponse(BaseModel):
     model_version: str
     inference_time_ms: int
     tokens_used: int | None = None
+
+    # Spec: FS-AI-TRACE-001 — ReAct reasoning trace
+    trace: dict | None = Field(None, description="ReAct trace (collapsed by default in UI)")

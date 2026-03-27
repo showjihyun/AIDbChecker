@@ -209,13 +209,21 @@ class ExecutionEngine:
         )
 
     async def _pre_check(self, pool, sql: str) -> dict:
-        """Spec: FS-DBA-001 AC-2 — EXPLAIN cost estimate before execution."""
+        """Spec: FS-DBA-001 AC-2 — EXPLAIN cost estimate before execution.
+
+        Finding 5: Reject multi-statement SQL before EXPLAIN.
+        Uses EXPLAIN (not ANALYZE) to avoid actual execution.
+        """
         try:
             explain_sql = sql.strip().rstrip(";")
-            # Only EXPLAIN for DML/DDL-like, skip for utility commands
+            # Security: reject multi-statement
+            if ";" in explain_sql:
+                return {}
             if explain_sql.upper().startswith(("SELECT", "INSERT", "UPDATE", "DELETE")):
                 async with pool.acquire() as conn:
-                    rows = await conn.fetch(f"EXPLAIN (FORMAT JSON) {explain_sql}")
+                    # Wrap in read-only transaction for safety
+                    async with conn.transaction(readonly=True):
+                        rows = await conn.fetch(f"EXPLAIN (FORMAT JSON) {explain_sql}")
                     if rows:
                         import json
 
@@ -225,18 +233,28 @@ class ExecutionEngine:
                             "plan_rows": plan[0].get("Plan", {}).get("Plan Rows"),
                         }
         except Exception:
-            pass  # Pre-check failure should not block execution
+            pass
         return {}
 
     async def _execute_with_timeout(self, pool, sql: str, timeout_sec: int = 30) -> int:
-        """Execute SQL with statement_timeout."""
+        """Execute SQL with statement_timeout in explicit transaction.
+
+        Finding 7: SET LOCAL requires transaction context.
+        Finding 1: Reject multi-statement SQL.
+        """
+        # Security: reject semicolons (multi-statement)
+        if ";" in sql.strip().rstrip(";"):
+            raise ValueError("Multi-statement SQL rejected for safety.")
+
         async with pool.acquire() as conn:
-            await conn.execute(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'")
-            result = await conn.execute(sql)
-            # asyncpg returns status string like "CREATE INDEX" or "VACUUM"
-            if isinstance(result, str):
+            async with conn.transaction():
+                await conn.execute(
+                    f"SET LOCAL statement_timeout = '{int(timeout_sec) * 1000}'"
+                )
+                result = await conn.execute(sql)
+                if isinstance(result, str):
+                    return 0
                 return 0
-            return 0
 
     async def _post_check(self, pool, action_type: str) -> dict:
         """Spec: FS-DBA-001 AC-3 — verify execution result."""
@@ -297,7 +315,16 @@ class ExecutionEngine:
             )
             await session.flush()
         except Exception as exc:
-            logger.error("execution_engine.save_failed", error=str(exc))
+            # Finding 6: For DANGEROUS+, audit failure must be flagged
+            if request.risk_level in ("dangerous", "critical"):
+                logger.critical(
+                    "execution_engine.AUDIT_FAILED_DANGEROUS",
+                    action_type=request.action_type,
+                    sql=request.sql[:100],
+                    error=str(exc),
+                )
+            else:
+                logger.error("execution_engine.save_failed", error=str(exc))
 
     async def _audit_log(
         self,
