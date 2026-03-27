@@ -14,10 +14,7 @@ so the logger can write to audit_logs in the same transaction.
 
 from __future__ import annotations
 
-import time
-from functools import wraps
 from typing import Any
-from uuid import uuid4
 
 import structlog
 from sqlalchemy import text
@@ -74,7 +71,78 @@ def truncate_prompt(prompt: str, max_len: int = 200) -> str:
     """Spec: FS-ADMIN-004 §4.2 — prompt summary 200 chars max."""
     if len(prompt) <= max_len:
         return prompt
-    return prompt[:max_len - 3] + "..."
+    return prompt[: max_len - 3] + "..."
+
+
+def log_ai_decision(resource_type: str):
+    """Decorator to auto-log AI calls to audit_logs.
+
+    Spec: FS-ADMIN-004 §4.1 — decorator pattern.
+    Wraps an async function, records timing/tokens/confidence automatically.
+
+    The decorated function MAY return an object with these attributes:
+      - confidence (float)
+      - tokens_used / total_tokens (int)
+      - ai_model (str)
+
+    Usage:
+        @log_ai_decision("mtl_rca")
+        async def predict(session, *, context): ...
+    """
+    import functools
+    import time as _time
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            start = _time.monotonic()
+            session = kwargs.get("session") or (args[0] if args else None)
+            error_msg = None
+            result = None
+
+            try:
+                result = await func(*args, **kwargs)
+                return result
+            except Exception as exc:
+                error_msg = str(exc)
+                raise
+            finally:
+                elapsed_ms = int((_time.monotonic() - start) * 1000)
+
+                # Extract metadata from result if available
+                confidence = None
+                tokens = None
+                model_name = "unknown"
+
+                if result is not None:
+                    confidence = getattr(result, "confidence", None)
+                    tokens = (
+                        getattr(result, "tokens_used", None)
+                        or getattr(result, "total_tokens", None)
+                    )
+                    model_name = getattr(result, "ai_model", None) or "unknown"
+
+                details = build_ai_details(
+                    ai_model=model_name,
+                    inference_time_ms=elapsed_ms,
+                    decision="completed" if error_msg is None else "failed",
+                    confidence=confidence,
+                    total_tokens=tokens,
+                    error=error_msg,
+                )
+
+                if session is not None and hasattr(session, "execute"):
+                    try:
+                        await create_ai_decision_log(
+                            session,
+                            resource_type=resource_type,
+                            details=details,
+                        )
+                    except Exception:
+                        logger.debug("ai_logger.decorator_write_skipped")
+
+        return wrapper
+    return decorator
 
 
 def build_ai_details(
