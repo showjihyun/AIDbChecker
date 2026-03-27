@@ -433,9 +433,9 @@ class DBAAgent:
 
         q = question.lower()
 
-        # CREATE INDEX pattern
+        # CREATE INDEX pattern: "index on TABLE COLUMN" or "인덱스 TABLE COLUMN"
         m = re.search(
-            r"(?:인덱스|index).*?(\w+)\s*(?:테이블|table)?.*?(\w+)",
+            r"(?:인덱스|index)\s+(?:on\s+)?([a-zA-Z_]\w*)\s+([a-zA-Z_]\w*)",
             q,
         )
         if ("인덱스" in q or "index" in q) and m:
