@@ -1,169 +1,150 @@
 # NeuralDB — AI-Powered Intelligent DB Monitoring System
 
-> PostgreSQL 장애 원인을 5분 안에 데이터로 특정하는 AI 기반 DB 모니터링 시스템
+> PostgreSQL 10+ instances monitoring with AI-driven anomaly detection, root cause analysis, and self-healing.
 
 ## Quick Start
 
 ```bash
-# 1. 전체 스택 기동 (PostgreSQL + Valkey + Backend + Celery + Frontend)
-cd infra/docker && docker compose up -d
+# 1. Clone
+git clone <repo-url> && cd AIDbChecker
 
-# 2. 브라우저 접속
-open http://localhost:3000
+# 2. Infrastructure
+cd infra/docker && docker compose up -d postgres valkey
 
-# 3. 로그인
-# Email: admin@neuraldb.local
-# Password: NeuralDB@2026!
+# 3. Backend
+cd ../../backend
+uv sync                                    # Install dependencies
+uv run alembic upgrade head                # DB migration
+uv run uvicorn app.main:app --reload       # API server (port 8000)
+
+# 4. Celery Workers (separate terminal)
+cd backend
+uv run celery -A app.tasks worker -l info -Q collect,alert,analyze
+uv run celery -A app.tasks beat -l info
+
+# 5. Frontend (separate terminal)
+cd frontend
+npm install && npm run dev                 # Vite dev server (port 3000)
 ```
 
-`docker compose up` 한 줄로 DB 마이그레이션, 시드 유저 생성, 서버 기동이 자동으로 진행됩니다.
-
-## Features (v0.4.0)
-
-### Dashboard
-- **12개 핵심 KPI** — TPS, QPS, Hit Ratio, Connections, Lock Waits, Deadlocks 등
-- **실시간 메트릭 차트** — ECharts 시계열 (Hit Ratio / Connections / TPS/s)
-- **System Health** — DB, Valkey, Celery 상태 모니터링
-- **Advisory 알림** — pg_stat_statements 미설치 등 구성 문제 자동 감지 + Toast
-
-### ASH Explorer
-- **Wait Event 히트맵** — 10초 버킷 단위 세션 분석
-- **세션 테이블** — pid, query, wait_event, duration 실시간 표시
-
-### AI Engine
-- **Auto-Baselining** — STL 분해 + Isolation Forest, 6시간마다 재학습
-- **Anomaly Detection** — z-score 기반 이상 탐지 → 인시던트 자동 생성
-- **NL2SQL** — 자연어 → SQL 변환 (GPT-4o / Ollama)
-- **Lightweight RAG** — pgvector 인시던트 유사 검색
-- **MTL Lite RCA** — 4-Head 동시 추론 (이상분류/원인/심각도/액션)
-
-### Security
-- **JWT 인증 + RBAC** — 5개 역할 (super_admin, db_admin, operator, viewer, api_user)
-- **감사 로그** — 모든 상태 변경 WHO/WHAT/WHEN 자동 기록
-- **DSN 검증** — 호스트/포트/DB명 정규식 검증 (injection 방지)
-- **NL2SQL 방어** — 5계층 (write 차단, 위험 함수 차단, 테이블 차단, multi-statement 차단, SELECT 강제)
+Open http://localhost:3000
 
 ## Architecture
 
 ```
-Frontend (React 18 + Vite + TailwindCSS)
-    ↓ REST API + WebSocket
-Backend (FastAPI + SQLAlchemy 2.0 + Celery)
-    ↓
-PostgreSQL 16 (meta + metrics + pgvector) + Valkey
+React SPA (3000) → FastAPI (8000) → PostgreSQL 16 (5432)
+                        ↕                    ↑
+                   Socket.io            pgvector + pg_partman
+                        ↕
+                  Celery Workers → Valkey (6379)
+                        ↕
+              Ollama / OpenAI / Claude (LLM)
 ```
+
+**5-Layer Architecture:**
+- **Presentation**: React 18 + Vite + TailwindCSS + ECharts + Socket.io
+- **API Gateway**: FastAPI + JWT/RBAC + Prometheus /metrics
+- **Core Engine**: LangChain + scikit-learn + Celery + 14 services
+- **DB Adapter**: PostgreSQL Remote Adapter (1-second ASH sampling)
+- **Infrastructure**: PostgreSQL 16 (meta+metrics+vector) + Valkey
+
+## Key Features
+
+| Feature | Description | Spec |
+|---------|-------------|------|
+| 1-Second Metrics | Hot/Warm/Cold tier collection via pg_stat_* | FS-AI-001 |
+| AI Baseline | STL decomposition + Isolation Forest anomaly detection | FS-AI-001 |
+| MTL Lite RCA | 4-Head simultaneous inference (anomaly/cause/severity/action) | FS-AI-010 |
+| RAG Search | pgvector incident similarity search | FS-AI-RAG-001 |
+| NL2SQL + GraphRAG | Natural language to SQL with Knowledge Graph | FS-AI-NL2SQL-001 |
+| DB Copilot | Tree-of-Thought 8-branch diagnosis | FS-AI-012 |
+| AIGC Report | LLM-generated health reports (weekly auto) | FS-AI-005 |
+| Playbook Lite | 7 built-in + custom YAML, Autonomy Gate L0~L4 | FS-AUTO-003 |
+| Task Queue | State machine + approval workflow + concurrency control | FS-AUTO-004 |
+| MCP Server | External AI tool integration (Claude Code, Copilot) | PROTO-MCP-001 |
+| SSO/LDAP | OIDC + LDAP + API Key authentication | FS-ADMIN-002 |
+| LLM Observability | Token/latency/cost/hallucination tracking | FS-AI-013 |
 
 ## Tech Stack
 
 | Layer | Technology | License |
 |-------|-----------|---------|
-| Frontend | React 18, Vite 6, TypeScript, TailwindCSS, ECharts, Zustand, TanStack | MIT |
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0, Celery, LangChain | MIT/BSD |
-| Database | PostgreSQL 16, pgvector | PostgreSQL License |
-| Cache | Valkey 8 (Redis-compatible) | BSD 3-Clause |
-| AI/ML | scikit-learn, statsmodels, sentence-transformers | BSD/MIT |
+| Frontend | React 18, Vite, TypeScript, TailwindCSS, ECharts, TanStack | MIT |
+| Backend | Python 3.11+, FastAPI, SQLAlchemy 2.0, Celery | MIT/BSD |
+| Database | PostgreSQL 16, pgvector, pg_partman | PostgreSQL License |
+| Cache | Valkey 8 (Redis-compatible, BSD) | BSD 3-Clause |
+| AI/LLM | LangChain, Ollama, OpenAI, Anthropic, Google | MIT |
+| Package | uv (not pip) | MIT |
 
-## Development Setup
-
-### Prerequisites
-- Python 3.11+
-- Node.js 22 LTS
-- Docker + Docker Compose
-- uv (Python package manager)
-
-### Backend
-```bash
-cd backend
-uv sync                              # 의존성 설치
-uv run alembic upgrade head          # DB 마이그레이션
-uv run python -m app.db.seed         # 시드 유저 생성
-uv run uvicorn app.main:app --reload # 개발 서버 (port 8000)
-uv run pytest tests/                 # 테스트 (80 pass + 74 AC stubs)
-```
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev     # Vite dev server (port 3000)
-npm run build   # Production build
-```
-
-### Infrastructure
-```bash
-cd infra/docker
-docker compose up -d postgres valkey   # 인프라만
-docker compose up -d                   # 전체
-```
-
-## Testing
-
-### Harness Engineering (Spec-Driven Testing)
-
-```bash
-# Spec 품질 검증
-uv run python -m scripts.validate_spec --all
-
-# AC 테스트 스텁 자동 생성
-uv run python -m scripts.gen_spec_tests
-
-# AC 커버리지 대시보드
-uv run python -m scripts.spec_dashboard
-
-# 테스트 실행 (AC Summary 포함)
-uv run pytest tests/ -v
-```
-
-Spec 파일에 인수 기준(AC)을 정의하면, 테스트 스텁이 자동 생성되고 `@spec_ref` 데코레이터로 추적됩니다.
-
-## API Documentation
-
-Backend 실행 후: http://localhost:8000/docs (Swagger UI)
-
-### Key Endpoints
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/auth/login` | JWT 로그인 |
-| GET | `/api/v1/instances` | 인스턴스 목록 |
-| GET | `/api/v1/instances/{id}/kpi` | 12개 KPI |
-| GET | `/api/v1/instances/{id}/ash/heatmap` | ASH 히트맵 |
-| GET | `/api/v1/incidents` | 인시던트 목록 |
-| POST | `/api/v1/nl2sql/query` | NL2SQL 쿼리 |
-| POST | `/api/v1/rag/search` | RAG 유사 검색 |
+**License Policy**: Apache 2.0 / MIT / BSD only. No GPL/AGPL/SSPL.
 
 ## Project Structure
 
 ```
 AIDbChecker/
-├── backend/                 # Python + FastAPI
+├── backend/                  # Python + FastAPI
 │   ├── app/
-│   │   ├── api/v1/          # REST API routes
+│   │   ├── api/v1/          # 22 API routers
+│   │   ├── models/          # 16 SQLAlchemy models
+│   │   ├── schemas/         # 21 Pydantic schemas
+│   │   ├── services/        # 14 business services
+│   │   ├── agents/          # DB Copilot + Tuning Agent
 │   │   ├── adapters/        # PostgreSQL Remote Adapter
-│   │   ├── analyzers/       # Baseline + Anomaly Detection
-│   │   ├── services/        # KPI, NL2SQL, RAG, MTL, Schema Detection
-│   │   ├── models/          # SQLAlchemy ORM (14 models)
-│   │   ├── schemas/         # Pydantic v2 schemas
-│   │   ├── middleware/      # Audit log
-│   │   ├── tasks/           # Celery (collect, analyze, alert, schema)
+│   │   ├── tasks/           # 6 Celery Beat schedules
+│   │   ├── mcp/             # MCP Server
 │   │   └── websocket/       # Socket.io real-time
-│   ├── migrations/          # Alembic (13 tables)
-│   ├── scripts/             # Harness tools (gen_spec_tests, validate_spec, spec_dashboard)
-│   └── tests/               # pytest (80 real + 74 AC stubs)
-├── frontend/                # React + Vite + TypeScript
+│   ├── playbooks/builtin/   # 7 built-in YAML playbooks
+│   ├── migrations/           # Alembic
+│   └── tests/               # 492+ tests, 217 ACs
+├── frontend/                 # React + Vite
 │   └── src/
-│       ├── components/      # Dashboard, ASH, Incidents, KPI, Toast, NL2SQL
-│       ├── api/hooks/       # TanStack Query hooks
-│       ├── stores/          # Zustand (auth, metrics, notifications)
-│       └── routes/          # TanStack Router pages
-├── docs/                    # Spec 문서 (30개)
-│   └── specs/               # Feature Specs with ACs
-└── infra/docker/            # Docker Compose + Dockerfiles
+│       ├── components/       # 20 TSX components
+│       ├── api/hooks/        # 7 TanStack Query hooks
+│       ├── stores/           # 3 Zustand stores
+│       └── routes/           # 7 pages
+├── infra/docker/             # Docker Compose
+├── docs/
+│   ├── specs/               # 43 Spec documents
+│   ├── ADR/                 # 11 Architecture Decision Records
+│   └── etc/                 # Analysis docs
+└── CLAUDE.md                # AI harness context
 ```
+
+## Commands
+
+```bash
+# Backend
+uv run pytest                              # All tests (492+)
+uv run ruff check app/                     # Lint (0 errors)
+uv run ruff format app/                    # Format
+uv run alembic upgrade head                # Migrate
+
+# Frontend
+npm run dev                                # Dev server
+npm run test                               # Vitest (65 tests)
+npm run build                              # Production build
+
+# Docker
+cd infra/docker
+docker compose up -d                       # Start all
+docker compose down                        # Stop all
+```
+
+## Spec-Driven Development
+
+All code follows the **Spec-Driven Harness Engineering** methodology:
+
+1. Spec First — no code without a Spec document
+2. `# Spec: FS-AI-005` comment in every source file
+3. `@spec_ref("FS-AI-005", "AC-1")` decorator on every test
+4. `pytest_terminal_summary` shows AC pass/fail dashboard
+5. 11 ADRs document all architectural decisions
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategy, commit conventions, and PR process.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategy, commit convention, and review checklist.
 
 ## License
 
-Apache 2.0 / MIT / BSD only. See [license audit](ai-db-monitor-license-audit.jsx).
+All dependencies use permissive licenses (MIT, Apache 2.0, BSD, PostgreSQL License).
+See [ai-db-monitor-license-audit.jsx](ai-db-monitor-license-audit.jsx) for full audit.
