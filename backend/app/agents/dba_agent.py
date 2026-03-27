@@ -252,9 +252,7 @@ class DBAAgent:
         result = await agent.analyze(question, instance_id)
 
         # result may be TuningResponse or str
-        answer_text = (
-            result.summary if hasattr(result, "summary") else str(result)
-        )
+        answer_text = result.summary if hasattr(result, "summary") else str(result)
         actions = self._extract_actions_from_text(answer_text, instance_id)
         model = mgr.get_model_name()
 
