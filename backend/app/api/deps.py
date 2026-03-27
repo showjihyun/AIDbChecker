@@ -1,11 +1,11 @@
-# Spec: MVP-ADMIN-001, MVP-ADMIN-002
-"""FastAPI dependency injection — DB sessions + JWT authentication."""
+# Spec: MVP-ADMIN-001, MVP-ADMIN-002, FS-ADMIN-002
+"""FastAPI dependency injection — DB sessions + JWT + API Key authentication."""
 
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -17,31 +17,41 @@ from app.models.user import User
 
 # OAuth2 scheme — extracts Bearer token from Authorization header.
 # tokenUrl points to the login endpoint for OpenAPI docs integration.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
-# Optional variant that doesn't raise 401 when token is missing.
-oauth2_scheme_optional = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login", auto_error=False
-)
+# auto_error=False to allow API Key fallback (FS-ADMIN-002 AC-4)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 # Re-export get_session so deps.py is the canonical import for API dependencies
 __all__ = ["get_session", "get_current_user", "require_role", "oauth2_scheme"]
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    request: Request,
+    token: Annotated[str | None, Depends(oauth2_scheme)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
-    """Validate JWT token and return the authenticated User.
+    """Validate JWT token or API Key and return the authenticated User.
 
-    Raises HTTPException 401 if the token is invalid, expired, or the
-    user is not found / inactive.
+    Priority: Bearer JWT token → X-API-Key header fallback (FS-ADMIN-002 AC-4).
+    Raises HTTPException 401 if neither is valid.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token. Please log in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # Spec: FS-ADMIN-002 AC-4 — API Key fallback
+    if token is None:
+        api_key = request.headers.get(settings.API_KEY_HEADER)
+        if api_key:
+            from app.services.sso import authenticate_api_key
+
+            user = await authenticate_api_key(session, api_key)
+            if user:
+                return user
+        raise credentials_exception
+
+    # JWT path (existing)
     try:
         payload = jwt.decode(
             token,
@@ -51,7 +61,6 @@ async def get_current_user(
         user_id_str: str | None = payload.get("sub")
         if user_id_str is None:
             raise credentials_exception
-        # Check expiration
         exp = payload.get("exp")
         if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(
             tz=timezone.utc
