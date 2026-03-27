@@ -14,6 +14,7 @@ import { LLMSettingsPage } from '@/routes/pages/LLMSettingsPage';
 import { IncidentsPage } from '@/routes/pages/IncidentsPage';
 import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
 import { TuningPage } from '@/routes/pages/TuningPage';
+import { DBAAgentPage } from '@/routes/pages/DBAAgentPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -94,9 +95,15 @@ const tuningRoute = createRoute({
   component: TuningPage,
 });
 
+const dbaAgentRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/dba',
+  component: DBAAgentPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, tuningRoute, settingsRoute, llmSettingsRoute]),
+  authenticatedRoute.addChildren([dashboardRoute, ashRoute, incidentsRoute, instancesRoute, tuningRoute, dbaAgentRoute, settingsRoute, llmSettingsRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

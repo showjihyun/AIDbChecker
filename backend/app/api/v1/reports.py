@@ -48,7 +48,7 @@ async def generate_report(
             detail="period_start and period_end required when period='custom'",
         )
 
-    if body.period == "custom" and body.period_start >= body.period_end:
+    if body.period == "custom" and body.period_start and body.period_end and body.period_start >= body.period_end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="period_start must be before period_end",

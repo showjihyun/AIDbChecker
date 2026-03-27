@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: FS-AI-NL2SQL-001
 """GraphEdge model -- Schema Knowledge Graph edge for NL2GraphRAG.
 

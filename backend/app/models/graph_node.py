@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: FS-AI-NL2SQL-001
 """GraphNode model -- Schema Knowledge Graph node for NL2GraphRAG.
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """MetricSample model — 1-second metric snapshots (partitioned by sampled_at).
 

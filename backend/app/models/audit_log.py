@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """AuditLog model — immutable audit trail (partitioned by created_at).
 

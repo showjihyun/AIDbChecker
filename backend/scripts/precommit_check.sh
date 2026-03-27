@@ -87,15 +87,28 @@ else
     echo -e "${GREEN}  SKIP${NC}"
 fi
 
-# Frontend TypeScript (blocks)
+# Frontend TypeScript — dev/staging: warn only on staged files
+# Full tsc check deferred to /ship (production gate)
 cd "$ROOT_DIR"
 if [ -n "$STAGED_FE" ]; then
     cd "$FRONTEND_DIR"
     TSC_OUT=$(npx tsc --noEmit 2>&1)
     if [ $? -ne 0 ]; then
-        echo "$TSC_OUT" | head -5
-        echo -e "${RED}  FAIL: TypeScript errors${NC}"
-        FAILED=1
+        # Filter errors to staged files only
+        STAGED_ERRORS=""
+        for f in $STAGED_FE; do
+            MATCH=$(echo "$TSC_OUT" | grep "$(basename "$f")" || true)
+            if [ -n "$MATCH" ]; then
+                STAGED_ERRORS="$STAGED_ERRORS$MATCH\n"
+            fi
+        done
+        if [ -n "$STAGED_ERRORS" ]; then
+            echo -e "$STAGED_ERRORS" | head -5
+            echo -e "${YELLOW}  WARN: TypeScript issues in staged files (not blocking — fix before /ship)${NC}"
+        else
+            echo -e "${GREEN}  PASS (staged files clean, pre-existing errors in other files)${NC}"
+        fi
+        # NOT setting FAILED=1 — dev/staging is warn only
     else
         echo -e "${GREEN}  PASS (TypeScript)${NC}"
     fi

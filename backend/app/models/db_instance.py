@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """DBInstance model — monitored database instances."""
 

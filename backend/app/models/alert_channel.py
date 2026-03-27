@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """AlertChannel model — notification channel configuration (Slack, Email, Webhook, PagerDuty)."""
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001, FR-AI-002
 """RAGDocument model — pgvector embeddings for incident similarity search.
 

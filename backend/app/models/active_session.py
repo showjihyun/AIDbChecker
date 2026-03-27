@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """ActiveSession model — ASH 1-second sampling (partitioned by sampled_at).
 

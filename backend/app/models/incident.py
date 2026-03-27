@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Spec: DM-001
 """Incident model — detected anomalies and failures."""
 
