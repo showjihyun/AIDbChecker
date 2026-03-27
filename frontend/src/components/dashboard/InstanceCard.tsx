@@ -68,17 +68,20 @@ export function InstanceCard({
     <button
       onClick={() => onClick(instance.id)}
       className={cn(
-        'w-full text-left rounded-xl p-5 transition-all duration-200 ease-out',
+        'w-full text-left rounded-xl p-5 transition-all duration-200 ease-out border-2',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         isSelected
-          ? 'bg-surface-container-high shadow-neural-glow'
-          : 'bg-surface-container hover:bg-surface-container-high'
+          ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20 ring-1 ring-primary/30'
+          : 'bg-surface-container border-transparent hover:bg-surface-container-high hover:border-white/10'
       )}
       aria-pressed={isSelected}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-on-surface truncate">
+          <h3 className={cn(
+            'text-sm font-semibold truncate',
+            isSelected ? 'text-primary' : 'text-on-surface'
+          )}>
             {instance.name}
           </h3>
           <p className="text-xs text-on-surface-variant mt-0.5">
