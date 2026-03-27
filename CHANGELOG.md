@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1.0] - 2026-03-27 — Post-Release Polish
+
+### Added
+- DBA Agent 미니 채팅 위젯 (우하단 상시 표시, 인스턴스 드롭다운)
+- NL2SQL → DBA Agent 통합 (플로팅 위젯 제거, query 결과 테이블)
+- NL2SQL AC-16/17 skip → pass 전환 (Docker E2E 10/10 정확도 검증)
+
+### Fixed
+- Notification: Clear All / Mark All Read 영구 suppress (sessionStorage)
+- KPI 5초 폴링 후 동일 advisory 재등록 차단
+
+### Metrics
+- Docker E2E: 10/10 NL2SQL queries (100% accuracy)
+- AC Coverage: 221/224 (99%)
+
 ## [1.0.0.0] - 2026-03-27 — v1.0 Release: AI-Powered DBA Agent
 
 ### Milestone
