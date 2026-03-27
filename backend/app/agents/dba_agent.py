@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.schemas.dba import ActionSummary, DBAResponse
 
 logger = structlog.get_logger(__name__)
@@ -80,6 +81,9 @@ _INTENT_KEYWORDS: dict[str, list[str]] = {
         "how many",
         "가져와",
         "알려줘",
+        "recent",
+        "latest",
+        "최근",
     ],
     "status": [
         "상태",
@@ -254,7 +258,7 @@ class DBAAgent:
         # result may be TuningResponse or str
         answer_text = result.summary if hasattr(result, "summary") else str(result)
         actions = self._extract_actions_from_text(answer_text, instance_id)
-        model = mgr.get_model_name()
+        model = settings.AI_MODEL
 
         return DBAResponse(
             session_id=uuid4(),
@@ -280,10 +284,12 @@ class DBAAgent:
         agent = DBCopilotAgent(llm=llm)
         result = await agent.diagnose(instance_id=instance_id, incident_id=None)
 
+        conf = getattr(result, "confidence", 0.0)
+        actions_list = getattr(result, "suggested_actions", [])
         answer = (
             f"진단 결과: {result.selected_branch}\n"
-            f"Confidence: {result.diagnosis.confidence:.2f}\n"
-            f"추천: {', '.join(result.diagnosis.suggested_actions or [])}"
+            f"Confidence: {conf:.2f}\n"
+            f"추천: {', '.join(actions_list or [])}"
         )
 
         return DBAResponse(
@@ -291,7 +297,7 @@ class DBAAgent:
             intent="diagnose",
             answer=answer,
             data=result.model_dump() if hasattr(result, "model_dump") else {},
-            model=mgr.get_model_name(),
+            model=settings.AI_MODEL,
         )
 
     async def _handle_execute(
