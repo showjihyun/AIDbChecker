@@ -196,7 +196,12 @@ async def execute_playbook(
             total_duration_ms=elapsed,
         )
 
-    if autonomy_level < min_level:
+    if autonomy_level >= 3:
+        # Spec: FS-AUTO-002 AC-9, AC-10 — L3/L4 자동 실행 (Phase 3)
+        # Skip approval, proceed directly to execution
+        pass  # fall through to execution below
+
+    elif autonomy_level < min_level:
         # L1 but playbook requires L2: pending approval
         elapsed = int((time.monotonic() - start_time) * 1000)
         return PlaybookExecuteResponse(

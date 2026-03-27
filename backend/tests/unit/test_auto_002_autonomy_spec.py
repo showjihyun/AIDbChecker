@@ -295,3 +295,59 @@ def test_fs_auto_002_ac8_gate_validate_accepts_l0_to_l2():
     """AutonomyGate.validate_phase2 accepts levels 0, 1, 2 without error."""
     for level in [0, 1, 2]:
         AutonomyGate.validate_phase2(level)  # Should not raise
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — AC-9, AC-10, AC-11
+# ---------------------------------------------------------------------------
+
+
+@spec_ref("FS-AUTO-002", "AC-9")
+def test_fs_auto_002_ac9_l3_l4_allowed_in_task_queue():
+    """FS-AUTO-002 AC-9: L3/L4 Task 생성 시 즉시 RUNNING 상태."""
+    from app.services.task_queue import clear_store, create_task
+    from app.schemas.task_queue import TaskStatus
+
+    clear_store()
+    task, err = create_task(
+        playbook_name="vacuum-maintenance",
+        instance_id=uuid4(),
+        autonomy_level=3,
+    )
+    assert err is None
+    assert task.status == TaskStatus.RUNNING
+    clear_store()
+
+
+@spec_ref("FS-AUTO-002", "AC-9")
+def test_fs_auto_002_ac9_l4_also_running():
+    """FS-AUTO-002 AC-9: L4도 즉시 RUNNING."""
+    from app.services.task_queue import clear_store, create_task
+    from app.schemas.task_queue import TaskStatus
+
+    clear_store()
+    task, err = create_task(
+        playbook_name="lock-remediation",
+        instance_id=uuid4(),
+        autonomy_level=4,
+    )
+    assert err is None
+    assert task.status == TaskStatus.RUNNING
+    clear_store()
+
+
+@spec_ref("FS-AUTO-002", "AC-10")
+@pytest.mark.asyncio
+async def test_fs_auto_002_ac10_l3_playbook_auto_execute():
+    """FS-AUTO-002 AC-10: L3에서 Playbook 자동 실행 → success."""
+    from app.services.playbook_executor import _playbook_cache, execute_playbook
+
+    _playbook_cache.clear()
+    result = await execute_playbook(
+        playbook_name="vacuum-maintenance",
+        instance_id=uuid4(),
+        autonomy_level=3,
+        confidence_score=0.8,
+    )
+    assert result.status.value == "success"
+    assert len(result.steps) >= 1

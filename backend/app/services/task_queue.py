@@ -128,10 +128,12 @@ def create_task(
     now = datetime.now(UTC)
 
     # Determine initial status based on autonomy level
-    # Spec: FS-AUTO-004 Section 5
+    # Spec: FS-AUTO-004 Section 5, FS-AUTO-002 AC-9~10 (Phase 3: L3/L4)
     if autonomy_level == 0:
         initial_status = TaskStatus.REJECTED
-        reason = "L0: monitoring only"
+    elif autonomy_level >= 3:
+        # Phase 3: L3/L4 — auto-approve, go directly to running
+        initial_status = TaskStatus.RUNNING
     else:
         # L1 and L2 both go to pending_approval
         initial_status = TaskStatus.PENDING_APPROVAL
