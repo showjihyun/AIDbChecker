@@ -18,11 +18,13 @@ interface HeatmapPreset {
   getFrom: () => Date;
 }
 
+// Spec: FS-KPI-001 §4.5 — X축 시간 정책 (Metrics Timeline과 동일)
 const heatmapPresets: HeatmapPreset[] = [
-  { label: '15m', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
-  { label: '30m', value: '30m', getFrom: () => subMinutes(new Date(), 30) },
-  { label: '1h', value: '1h', getFrom: () => subHours(new Date(), 1) },
-  { label: '6h', value: '6h', getFrom: () => subHours(new Date(), 6) },
+  { label: '5분 (1초)', value: '5m', getFrom: () => subMinutes(new Date(), 5) },
+  { label: '15분 (1초)', value: '15m', getFrom: () => subMinutes(new Date(), 15) },
+  { label: '30분 (1초)', value: '30m', getFrom: () => subMinutes(new Date(), 30) },
+  { label: '1시간 (10초)', value: '1h', getFrom: () => subHours(new Date(), 1) },
+  { label: '6시간 (1분)', value: '6h', getFrom: () => subHours(new Date(), 6) },
 ];
 
 export function ASHHeatmap({ data, isLoading, onTimeRangeChange }: ASHHeatmapProps) {
@@ -105,7 +107,8 @@ export function ASHHeatmap({ data, isLoading, onTimeRangeChange }: ASHHeatmapPro
         itemHeight: 80,
         textStyle: { color: '#88929b', fontSize: 9 },
         inRange: {
-          color: ['#060e20', '#0c3d5f', '#0ea5e9', '#89ceff'],
+          // 어두운 배경에서 선명하게 보이는 그라데이션
+          color: ['#1e293b', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'],
         },
       },
       series: [
@@ -132,16 +135,16 @@ export function ASHHeatmap({ data, isLoading, onTimeRangeChange }: ASHHeatmapPro
         <h3 className="text-sm font-semibold text-on-surface">
           ASH Wait Event Heatmap
         </h3>
-        <div className="flex gap-1" role="group" aria-label="Heatmap time range">
+        <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Heatmap time range">
           {heatmapPresets.map((preset) => (
             <button
               key={preset.value}
               onClick={() => handlePresetClick(preset)}
               className={cn(
-                'px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 ease-out',
+                'px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors duration-200 ease-out whitespace-nowrap',
                 activePreset === preset.value
-                  ? 'bg-primary-container text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
               )}
               aria-pressed={activePreset === preset.value}
             >

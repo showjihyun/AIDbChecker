@@ -9,7 +9,10 @@ function resetStore() {
     unreadCount: 0,
     panelOpen: false,
     _seenKeys: new Map(),
+    _suppressedKeys: new Set(),
   });
+  // Clear sessionStorage suppressed keys
+  try { sessionStorage.removeItem('neuraldb:suppressed-notifications'); } catch { /* */ }
 }
 
 describe('notificationStore', () => {
@@ -82,7 +85,7 @@ describe('notificationStore', () => {
     expect(useNotificationStore.getState().notifications).toHaveLength(2);
   });
 
-  it('suppresses duplicate within 5-min window even after markAllRead', () => {
+  it('markAllRead clears notifications and permanently suppresses re-add', () => {
     const store = useNotificationStore.getState();
 
     store.addNotification({
@@ -92,10 +95,12 @@ describe('notificationStore', () => {
       instanceName: 'pg-prod-01',
     });
 
-    // Mark all read
+    // Mark all read — now clears list + suppresses permanently
     useNotificationStore.getState().markAllRead();
+    expect(useNotificationStore.getState().notifications).toHaveLength(0);
+    expect(useNotificationStore.getState().unreadCount).toBe(0);
 
-    // Same title+instance within 5-min window should be suppressed
+    // Same notification should be permanently suppressed
     const added = useNotificationStore.getState().addNotification({
       level: 'info',
       title: 'Baseline Updated',
@@ -104,7 +109,7 @@ describe('notificationStore', () => {
     });
 
     expect(added).toBe(false);
-    expect(useNotificationStore.getState().notifications).toHaveLength(1);
+    expect(useNotificationStore.getState().notifications).toHaveLength(0);
   });
 
   // --- FIFO max 50 ---
@@ -132,7 +137,7 @@ describe('notificationStore', () => {
 
   // --- markAllRead ---
 
-  it('markAllRead sets all notifications to read and unreadCount to 0', () => {
+  it('markAllRead clears notifications and sets unreadCount to 0', () => {
     const store = useNotificationStore.getState();
 
     store.addNotification({
@@ -152,12 +157,12 @@ describe('notificationStore', () => {
 
     const state = useNotificationStore.getState();
     expect(state.unreadCount).toBe(0);
-    expect(state.notifications.every((n) => n.read)).toBe(true);
+    expect(state.notifications).toHaveLength(0);
   });
 
   // --- clearAll ---
 
-  it('clearAll removes all notifications and resets unreadCount', () => {
+  it('clearAll removes all notifications and permanently suppresses re-add', () => {
     const store = useNotificationStore.getState();
 
     store.addNotification({
@@ -171,6 +176,15 @@ describe('notificationStore', () => {
     const state = useNotificationStore.getState();
     expect(state.notifications).toHaveLength(0);
     expect(state.unreadCount).toBe(0);
+
+    // Same notification should be permanently suppressed
+    const re = useNotificationStore.getState().addNotification({
+      level: 'info',
+      title: 'Alert',
+      message: 'msg again',
+    });
+    expect(re).toBe(false);
+    expect(useNotificationStore.getState().notifications).toHaveLength(0);
   });
 
   // --- togglePanel / closePanel ---
