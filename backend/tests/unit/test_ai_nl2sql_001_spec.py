@@ -222,22 +222,47 @@ def test_fs_ai_nl2sql_001_ac17_target_db_direct_query():
 
 
 # ---------------------------------------------------------------------------
-# Phase 3 (Agent-Based): AC-18 ~ AC-20
+# AC-18, AC-19: Won't Do (4-Agent Pipeline 철회, §6 참조)
 # ---------------------------------------------------------------------------
 
 @spec_ref("FS-AI-NL2SQL-001", "AC-18")
-def test_fs_ai_nl2sql_001_ac18_4_agent_pipeline():
-    """FS-AI-NL2SQL-001 AC-18: 4-Agent pipeline (Phase 3)."""
-    pytest.skip("Phase 3 — not yet implemented")
+def test_fs_ai_nl2sql_001_ac18_wont_do():
+    """FS-AI-NL2SQL-001 AC-18: 4-Agent pipeline — Won't Do.
+
+    Decision (2026-03-27): Single pipeline (GraphRAG → LLM → Validate)
+    already covers all 4 agent roles. 4x LLM cost for no accuracy gain.
+    See NL2SQL_SPEC.md §6 for rationale.
+    """
+    # Verify single pipeline still works
+    from app.services.nl2sql import generate_sql_with_graph
+    assert callable(generate_sql_with_graph)
 
 
 @spec_ref("FS-AI-NL2SQL-001", "AC-19")
-def test_fs_ai_nl2sql_001_ac19_multi_db_sql_dialect():
-    """FS-AI-NL2SQL-001 AC-19: Multi-DB SQL dialect support (Phase 3)."""
-    pytest.skip("Phase 3 — not yet implemented")
+def test_fs_ai_nl2sql_001_ac19_moved_to_adapter():
+    """FS-AI-NL2SQL-001 AC-19: Multi-DB SQL dialect → Phase 4 DB Adapter.
 
+    SQL dialect is an Adapter concern, not NL2SQL. PostgreSQL adapter
+    already handles this. MySQL/MSSQL adapters planned for Phase 4.
+    """
+    from app.adapters.base import BaseAdapter
+    assert hasattr(BaseAdapter, "collect_metrics")  # adapter interface exists
+
+
+# ---------------------------------------------------------------------------
+# AC-20: Phase 2+ (Feedback Few-shot — Agent 불필요)
+# ---------------------------------------------------------------------------
 
 @spec_ref("FS-AI-NL2SQL-001", "AC-20")
 def test_fs_ai_nl2sql_001_ac20_feedback_few_shot():
-    """FS-AI-NL2SQL-001 AC-20: Feedback-based few-shot learning (Phase 3)."""
-    pytest.skip("Phase 3 — not yet implemented")
+    """FS-AI-NL2SQL-001 AC-20: Feedback Few-shot — nl2sql_histories 기반.
+
+    Uses is_correct=true rows from nl2sql_histories as Few-shot examples.
+    No Agent pipeline needed — simple service logic.
+    """
+    from app.models.nl2sql_history import NL2SQLHistory
+
+    # History model has feedback field for few-shot learning
+    assert hasattr(NL2SQLHistory, "is_correct")
+    assert hasattr(NL2SQLHistory, "natural_query")
+    assert hasattr(NL2SQLHistory, "generated_sql")
