@@ -24,12 +24,19 @@ interface DBAResponse {
   processing_time_ms: number;
 }
 
+interface QueryData {
+  sql?: string;
+  columns?: string[];
+  rows?: unknown[][];
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'agent';
   content: string;
   intent?: string;
   actions?: ActionSummary[];
+  data?: QueryData | null;
   model?: string;
   time_ms?: number;
   isLoading?: boolean;
@@ -121,6 +128,7 @@ export function DBAAgentPage() {
         content: res.answer,
         intent: res.intent,
         actions: res.actions ?? undefined,
+        data: res.data as QueryData | null,
         model: res.model,
         time_ms: res.processing_time_ms,
       };
@@ -290,6 +298,47 @@ export function DBAAgentPage() {
                           </code>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Query result table (intent=query) */}
+                  {msg.data?.columns && msg.data.columns.length > 0 && (
+                    <div className="mt-3 overflow-x-auto">
+                      {msg.data.sql && (
+                        <code className="block text-[11px] text-primary/80 bg-black/20 rounded px-2 py-1 mb-2">
+                          {msg.data.sql}
+                        </code>
+                      )}
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10">
+                            {msg.data.columns.map((col: string) => (
+                              <th
+                                key={col}
+                                className="text-left px-2 py-1 text-on-surface-variant font-semibold"
+                              >
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(msg.data.rows ?? []).slice(0, 20).map((row: unknown[], ri: number) => (
+                            <tr key={ri} className="border-b border-white/5">
+                              {row.map((cell: unknown, ci: number) => (
+                                <td key={ci} className="px-2 py-1 text-on-surface/80 font-mono">
+                                  {cell == null ? '—' : String(cell)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {(msg.data.rows?.length ?? 0) > 20 && (
+                        <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                          Showing 20 of {msg.data.rows?.length} rows
+                        </p>
+                      )}
                     </div>
                   )}
 

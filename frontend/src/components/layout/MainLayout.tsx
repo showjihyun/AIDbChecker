@@ -9,7 +9,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/common/Badge';
 import { NotificationPanel } from '@/components/common/NotificationPanel';
 import { ToastContainer } from '@/components/common/Toast';
-import { NL2SQLChat } from '@/components/nl2sql/NL2SQLChat';
+// NL2SQL chat widget unified into DBA Agent (/dba page)
 
 interface NavItem {
   to: string;
@@ -243,8 +243,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
-      {/* Spec: MVP.md §6 — NL2SQL floating chat widget, always visible when authenticated */}
-      <NL2SQLChat />
+      {/* NL2SQL chat widget removed — unified into DBA Agent (/dba page) */}
       <ToastContainer />
     </div>
   );
