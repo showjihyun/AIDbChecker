@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-RAG-001
 - **PRD 참조**: FR-AI-002, FR-AI-014
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: DM-001 (ERD — `rag_documents` 테이블)
 - **사용 Spec**: FS-AI-010 (MTL RCA에 RAG 결과 제공)
 - **구현 파일**:

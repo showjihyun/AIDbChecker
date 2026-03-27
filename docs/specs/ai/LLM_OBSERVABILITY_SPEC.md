@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-013
 - **PRD 참조**: FR-AI-013
 - **우선순위**: P1 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented (Phase 2)
 - **선행 Spec**: FS-AI-010 (MTL RCA), FS-AI-011 (Confidence Score)
 - **참조**: OpenObserve + OpenLIT, 2026 AIOps Market Gap Analysis
 

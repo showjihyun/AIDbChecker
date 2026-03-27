@@ -91,9 +91,9 @@ Commands, Task Boundaries, Code Patterns: @AGENTS.md Section 1, 2, 5
 | **Frontend** | `@docs/specs/frontend/` | COMPONENT_SPEC.md, REACT_HOOKS_SPEC.md, WEBSOCKET_EVENTS_SPEC.md, DB_KPI_SPEC.md, INCIDENT_LIST_SPEC.md |
 | **Playbooks** | `@docs/specs/playbooks/` | PLAYBOOK_SPEC.md |
 | **Protocols** | `@docs/specs/protocols/` | A2A_PROTOCOL.md, KAFKA_SPEC.md, MCP_INTEGRATION.md |
-| **Services** | `@docs/specs/services/` | SERVICE_LAYER_SPEC.md, AUDIT_LOG_SPEC.md, SCHEMA_CHANGE_SPEC.md, AI_DECISION_LOG_SPEC.md, TASK_QUEUE_SPEC.md, SYSTEM_HEALTH_SPEC.md |
+| **Services** | `@docs/specs/services/` | SERVICE_LAYER_SPEC.md, AUDIT_LOG_SPEC.md, SCHEMA_CHANGE_SPEC.md, AI_DECISION_LOG_SPEC.md, TASK_QUEUE_SPEC.md, SYSTEM_HEALTH_SPEC.md, SSO_LDAP_SPEC.md |
 | **Tasks** | `@docs/specs/tasks/` | CELERY_TASKS_SPEC.md |
-| **Tests** | `@docs/specs/tests/` | BACKEND_TEST_SPEC.md, FRONTEND_TEST_SPEC.md, INTEGRATION_TEST_SPEC.md, TEST_SPEC.md, TEST_STRATEGY.md |
+| **Tests** | `@docs/specs/tests/` | BACKEND_TEST_SPEC.md, FRONTEND_TEST_SPEC.md, INTEGRATION_TEST_SPEC.md, HARNESS_V3_SPEC.md, TEST_SPEC.md, TEST_STRATEGY.md |
 
 ### docs/review/ — Technical Reviews
 

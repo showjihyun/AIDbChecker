@@ -4,7 +4,7 @@
 - **Spec ID**: FS-SELF-001
 - **PRD 참조**: FR-SELF-001, FR-SELF-002, FR-SELF-003
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented
 - **구현 파일**:
   - Backend: `backend/app/api/v1/system.py` (기존 — 확장 필요)
   - Frontend: `frontend/src/components/dashboard/SystemHealth.tsx` (기존)

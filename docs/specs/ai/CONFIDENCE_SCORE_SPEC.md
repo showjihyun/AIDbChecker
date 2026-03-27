@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-011
 - **PRD 참조**: FR-AI-011, FR-AI-014
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: FS-AI-010 (MTL RCA)
 - **사용 Spec**: FS-AUTO-002 (Adaptive Autonomy)
 

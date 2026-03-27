@@ -4,7 +4,7 @@
 - **Spec ID**: FS-ADMIN-003
 - **PRD 참조**: FR-ADMIN-003, MVP-ADMIN-003
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: DM-001 (audit_logs 테이블), API-001 (인증)
 - **구현 파일**:
   - Backend: `backend/app/middleware/audit.py`, `backend/app/api/v1/audit.py`

@@ -2,8 +2,8 @@
 
 > **Spec ID**: FS-AUTO-003
 > **PRD 참조**: FR-AUTO-001~005
-> **상태**: Approved (Revised — Lite Scope)
-> **적용 Phase**: Phase 2 (Lite) → Phase 3 (Full)
+> **상태**: Implemented (Phase 2 Lite + Phase 3 Custom CRUD)
+> **적용 Phase**: Phase 2 (Lite: Built-in 7) → Phase 3 (Custom YAML CRUD 추가)
 > **선행 Spec**: AGENT_SPEC.md (Remediation Agent), ERD.md (playbooks, remediation_logs)
 > **ADR**: ADR-008 (경량 Playbook + DB Copilot 하이브리드)
 

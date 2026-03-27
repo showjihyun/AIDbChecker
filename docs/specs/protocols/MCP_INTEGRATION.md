@@ -2,7 +2,7 @@
 
 > **Spec ID**: PROTO-MCP-001
 > **PRD 참조**: FR-ALERT-004
-> **상태**: Approved
+> **상태**: Implemented (Phase 3)
 > **적용 Phase**: Phase 3
 > **SDK**: @modelcontextprotocol/sdk (MIT) — Python 구현
 > **선행 Spec**: API_SPEC.md, AGENT_SPEC.md

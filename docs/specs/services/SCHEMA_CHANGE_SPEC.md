@@ -4,7 +4,7 @@
 - **Spec ID**: FS-SCHEMA-001
 - **PRD 참조**: MVP-SCHEMA-001, MVP-SCHEMA-002, AC-8
 - **우선순위**: P3 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: DM-001 (schema_changes 테이블)
 - **구현 파일**:
   - Backend: `backend/app/services/schema_detector.py`, `backend/app/api/v1/schema_changes.py`

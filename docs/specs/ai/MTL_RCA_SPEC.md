@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-010
 - **PRD 참조**: FR-AI-010, FR-AI-014
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: FS-AI-001 (Auto-Baselining), DM-001 (ERD)
 - **사용 Spec**: FS-AI-011 (Confidence Score), FS-AI-RAG-001 (Lightweight RAG)
 - **구현 파일**:
