@@ -16,6 +16,7 @@ from app.api.v1 import (
     auth,
     baselines,
     copilot,
+    dba,
     graph,
     incidents,
     instances,
@@ -28,9 +29,9 @@ from app.api.v1 import (
     playbooks,
     rag,
     reports,
-    tasks,
     schema_changes,
     system,
+    tasks,
     tuning,
     users,
 )
@@ -54,13 +55,13 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     _target_pools.clear()
 
     # Close tuning agent connection pools
+    import contextlib
+
     from app.api.v1.tuning import _tuning_pool_cache
 
     for pool, _dsn in list(_tuning_pool_cache.values()):
-        try:
+        with contextlib.suppress(Exception):
             await pool.close()
-        except Exception:
-            pass
     _tuning_pool_cache.clear()
 
 
@@ -110,6 +111,7 @@ app.include_router(
     llm_settings.router, prefix="/api/v1", tags=["llm-settings"], dependencies=_auth_dep
 )
 app.include_router(tuning.router, prefix="/api/v1", tags=["tuning"], dependencies=_auth_dep)
+app.include_router(dba.router, prefix="/api/v1", tags=["dba-agent"], dependencies=_auth_dep)
 app.include_router(copilot.router, prefix="/api/v1", tags=["copilot"], dependencies=_auth_dep)
 app.include_router(
     llm_observability.router, prefix="/api/v1", tags=["llm-observability"], dependencies=_auth_dep
