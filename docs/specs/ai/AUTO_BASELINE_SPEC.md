@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-001
 - **PRD 참조**: FR-AI-001, FR-ALERT-003
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented (MVP)
 - **선행 Spec**: DM-001 (ERD — `baselines`, `metric_samples`, `incidents`)
 - **후행 Spec**: FS-AI-010 (MTL RCA — 이상 탐지 결과를 입력으로 사용)
 - **구현 파일**:

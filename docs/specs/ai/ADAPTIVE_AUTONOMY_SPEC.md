@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AUTO-002
 - **PRD 참조**: FR-AUTO-002, FR-AUTO-005
 - **우선순위**: P0 (MVP — L0~L1) / P1 (Phase 2 — L2) / Phase 3 (L3~L4)
-- **상태**: Approved
+- **상태**: Implemented (Phase 3 — L0~L4 전체 + 동적 격하)
 - **선행 Spec**: AG-001 (Agent Architecture)
 - **사용 Spec**: FS-AI-011 (Confidence Score), FS-AI-012 (DB Copilot), FS-AUTO-003 (Playbook Lite)
 - **구현 파일**:

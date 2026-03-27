@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-005
 - **PRD 참조**: FR-AI-005
 - **우선순위**: P1 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented
 - **선행 Spec**: FS-AI-001 (Auto-Baseline), FS-AI-RAG-001 (RAG), DM-001 (ERD), FS-AI-LLM-001 (LLM Provider)
 - **연동 Spec**: FS-AI-011 (Confidence Score), FS-ADMIN-004 (AI Decision Log)
 - **구현 파일**:

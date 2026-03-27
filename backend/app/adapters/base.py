@@ -2,7 +2,7 @@
 """BaseAdapter ABC — common interface for all target DB adapters.
 
 Phase 1: PostgreSQLRemoteAdapter (remote pg_stat_* queries).
-Phase 3: PostgreSQLLocalCollector (sidecar push via Kafka/gRPC).
+Phase 3: PostgreSQLLocalCollector (sidecar push via gRPC — ADR-011: Kafka 제거).
 Both share the same interface — only deployment topology differs.
 """
 

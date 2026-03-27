@@ -294,29 +294,26 @@ GraphRAG 전환 후에도 동일하게 적용:
 
 ---
 
-## 6. Agent 기반 구조 (Phase 3)
+## 6. ~~Agent 기반 구조~~ → **Won't Do** (Phase 2에서 이미 해결)
 
-```
-┌─ Planner Agent ──────────────────────────────────┐
-│  질의 의도 파악 → 실행 계획 수립                    │
-│  "어떤 테이블을 어떤 순서로 조회할지"               │
-└───────────────────────────────────────────────────┘
-    ↓
-┌─ Schema Agent ───────────────────────────────────┐
-│  GraphRAG Retrieval → Subgraph 구성               │
-│  "관련 테이블/컬럼/Join 경로 선택"                 │
-└───────────────────────────────────────────────────┘
-    ↓
-┌─ SQL Agent ──────────────────────────────────────┐
-│  Subgraph + Plan → SQL 생성                       │
-│  "PostgreSQL 문법에 맞는 최적 SQL"                 │
-└───────────────────────────────────────────────────┘
-    ↓
-┌─ Validator Agent ────────────────────────────────┐
-│  5계층 안전 검증 + EXPLAIN ANALYZE 비용 체크       │
-│  "안전하고 효율적인 SQL인지 확인"                   │
-└───────────────────────────────────────────────────┘
-```
+> **결정 (2026-03-27)**: Phase 3 NL2SQL 4-Agent Pipeline 계획을 철회합니다.
+>
+> **근거**:
+> 1. **Phase 2 단일 파이프라인이 이미 동일 기능 수행**: GraphRAGRetriever(=Schema Agent) + LLM(=SQL Agent) + _validate_sql_readonly(=Validator) — 1117 LOC, 1번 LLM 호출
+> 2. **4-Agent = 4x LLM 호출 = 4x 지연/비용**: NeuralDB의 NL2SQL은 DBA의 간단한 질의용이지 복잡한 BI가 아님
+> 3. **복잡도 대비 이익 없음**: LangGraph 상태 그래프 + CrewAI 오케스트레이션 도입은 유지보수 비용만 증가
+> 4. **멀티 DB는 Adapter 레벨에서 해결**: SQL 방언은 DB Adapter가 처리 (Phase 4)
+> 5. **피드백 Few-shot은 Agent 없이 가능**: nl2sql_histories → 프롬프트 예시 자동 추가 (Phase 2 확장)
+>
+> **현재 아키텍처 (유지)**:
+> ```
+> 질의 → GraphRAG Retriever → Subgraph → LLM (1회) → SQL → 5계층 안전 → 실행
+> ```
+>
+> **대안**:
+> - AC-18 (4-Agent): **Won't Do** — 단일 파이프라인으로 충분
+> - AC-19 (멀티 DB SQL): **Phase 4 DB Adapter 이관** — NL2SQL이 아닌 Adapter 책임
+> - AC-20 (피드백 Few-shot): **Phase 2 확장으로 격하** — Agent 불필요, 서비스 로직으로 구현
 
 ---
 
@@ -365,11 +362,19 @@ GraphRAG 전환 후에도 동일하게 적용:
 - [ ] 대상 DB 직접 쿼리 (adapter 통해)
 - [ ] 비즈니스 메트릭/개념 등록 API
 
-### Phase 3 (Agent 기반)
+### ~~Phase 3 (Agent 기반)~~ — Won't Do (2026-03-27)
 
-- [ ] Planner Agent + Schema Agent + SQL Agent + Validator Agent
-- [ ] 멀티 DB 지원 (MySQL, MSSQL 어댑터)
-- [ ] 피드백 학습 (Few-shot 자동 추가)
+> 4-Agent Pipeline 철회. 근거: §6 참조.
+
+- [x] ~~Planner + Schema + SQL + Validator Agent~~ → Won't Do (단일 파이프라인 유지)
+- [ ] 멀티 DB SQL 방언 → **Phase 4 DB Adapter로 이관**
+- [ ] 피드백 Few-shot → **Phase 2 확장** (아래 Phase 2+ 참조)
+
+### Phase 2+ (피드백 Few-shot 학습)
+
+- [ ] `nl2sql_histories`에서 `is_correct=true` 이력을 프롬프트 Few-shot 예시로 자동 추가
+- [ ] 인스턴스별 최대 5개 Few-shot 예시 (가장 최근 정확한 질의)
+- [ ] 피드백 API: POST `/api/v1/nl2sql/feedback` (👍/👎)
 
 ---
 
@@ -410,11 +415,14 @@ GraphRAG 전환 후에도 동일하게 적용:
 - [ ] AC-16: SQL 정확도 80%+ (테스트 세트 기준)
 - [ ] AC-17: 대상 DB 직접 쿼리 지원
 
-### Phase 3 (Agent)
+### ~~Phase 3 (Agent)~~ — Won't Do
 
-- [ ] AC-18: 4-Agent 파이프라인 (Planner→Schema→SQL→Validator)
-- [ ] AC-19: 멀티 DB SQL 방언 지원
-- [ ] AC-20: 피드백 기반 Few-shot 학습
+- [x] ~~AC-18: 4-Agent 파이프라인~~ → **Won't Do** (단일 파이프라인 유지, §6 참조)
+- [x] ~~AC-19: 멀티 DB SQL 방언~~ → **Phase 4 DB Adapter 이관** (NL2SQL 범위 아님)
+
+### Phase 2+ (피드백)
+
+- [ ] AC-20: 피드백 기반 Few-shot 학습 (Agent 없이 서비스 로직으로 구현)
 
 ---
 

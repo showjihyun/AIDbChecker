@@ -1,11 +1,13 @@
 # Kafka Event Spec: NeuralDB 메시징 설계
 
-> **Phase**: Phase 3+ (MVP/Phase 2에서는 Celery + Valkey가 모든 비동기 태스크를 처리합니다)
+> **⚠️ DEPRECATED — ADR-011 (2026-03-27)**
+> Kafka는 기술 스택에서 제거됨. Celery + Valkey + gRPC로 모든 비동기/이벤트를 처리.
+> 이 문서는 **참조 전용**으로 유지됩니다. 새 구현에서 이 Spec을 따르지 마세요.
 >
 > **Spec ID**: PROTO-KAFKA-001
 > **PRD 참조**: FR-DASH-001, FR-DB-001, FR-ALERT-001~003, FR-AUTO-001
-> **상태**: Approved (Phase 3+ 구현 예정)
-> **Broker**: Apache Kafka 3.7+ (KRaft mode, no Zookeeper)
+> **상태**: ~~Approved~~ → **Deprecated (ADR-011)**
+> **대체**: Celery + Valkey (비동기 태스크), gRPC (에이전트 동기 RPC), WebSocket (실시간 push)
 
 ---
 

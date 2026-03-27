@@ -4,7 +4,7 @@
 - **Spec ID**: FS-ADMIN-004
 - **PRD 참조**: FR-ADMIN-004
 - **우선순위**: P0 (MVP)
-- **상태**: Approved
+- **상태**: Implemented
 - **선행 Spec**: DM-001 (ERD — `audit_logs` 테이블), FS-AI-011 (Confidence Score)
 - **구현 파일**:
   - Backend: `backend/app/middleware/audit.py` (기존 감사 미들웨어 확장)

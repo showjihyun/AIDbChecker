@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-LLM-001
 - **PRD 참조**: FR-AI-008 (Online/Offline 전환), MVP-AI-005
 - **우선순위**: P0 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented (Phase 2)
 - **선행 Spec**: FS-AI-010 (MTL RCA), FR-AI-003 (NL2SQL)
 - **구현 파일**:
   - Backend: `backend/app/services/llm_provider.py`, `backend/app/api/v1/llm_settings.py`

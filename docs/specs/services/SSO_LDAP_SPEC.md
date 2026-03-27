@@ -4,7 +4,7 @@
 - **Spec ID**: FS-ADMIN-002
 - **PRD 참조**: FR-ADMIN-002
 - **우선순위**: P1 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented
 - **선행 Spec**: DM-001 (User 모델 — auth_provider 컬럼), MVP-ADMIN-001 (로컬 인증)
 - **구현 파일**:
   - Backend: `backend/app/services/sso.py`, `backend/app/api/v1/auth.py` (확장)

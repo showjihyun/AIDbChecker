@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AUTO-004
 - **PRD 참조**: FR-AUTO-004
 - **우선순위**: P0 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented
 - **선행 Spec**: FS-AUTO-002 (Adaptive Autonomy), FS-AUTO-003 (Playbook Lite), AG-001 (Remediation Agent)
 - **구현 파일**:
   - Backend: `backend/app/services/task_queue.py` (Phase 2 신규)

@@ -4,7 +4,7 @@
 - **Spec ID**: FS-AI-TUNE-001
 - **PRD 참조**: FR-AUTO-001~005, FR-AI-012
 - **우선순위**: P0 (Phase 2)
-- **상태**: Approved
+- **상태**: Implemented (Phase 2)
 - **선행 Spec**: FS-AI-LLM-001 (LLM Provider), DM-001 (ERD), AG-001 (Adapter)
 - **구현 파일**:
   - Backend: `backend/app/agents/tuning_agent.py`, `backend/app/agents/tools/`, `backend/app/api/v1/tuning.py`
