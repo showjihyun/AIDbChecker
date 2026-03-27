@@ -23,15 +23,15 @@
 | 3.7 | WaitBreakdownPanel | *(ASHHeatmap에 통합)* | Phase 2 | ⏳ 별도 분리 예정 |
 | 3.8 | IncidentList | `incidents/IncidentRow.tsx` (행 단위로 변경) | MVP | ✅ 이름 변경 |
 | 3.9 | IncidentCard | *(IncidentRow로 대체)* | MVP | ✅ 통합 |
-| 3.10 | ConfidenceBadge | `common/Badge.tsx` (범용 배지에 포함) | Phase 2 | ⏳ 전용 분리 예정 |
-| 3.11 | ReasoningChainPanel | - | Phase 2 | ⏳ |
-| 3.12 | MTLPredictionCard | - | Phase 2 | ⏳ |
+| 3.10 | ConfidenceBadge | `ai/ConfidenceBadge.tsx` | Phase 2 | ✅ |
+| 3.11 | ReasoningChainPanel | `ai/ReasoningChainPanel.tsx` | Phase 2 | ✅ |
+| 3.12 | MTLPredictionCard | `ai/MTLPredictionCard.tsx` | Phase 2 | ✅ |
 | 3.13 | NL2SQLChat | `nl2sql/NL2SQLChat.tsx` | MVP | ✅ |
 | 3.14 | ChatMessage | *(NL2SQLChat 내부 구현)* | MVP | ✅ 통합 |
 | 3.15 | AddDatabaseWizard | `instances/RegisterInstanceModal.tsx` (모달 형태) | MVP | ✅ 이름 변경 |
 | 3.16 | AlertChannelForm | *(Settings 페이지 내부)* | Phase 2 | ⏳ |
 | 3.17 | UserTable | *(Settings 페이지 내부)* | Phase 2 | ⏳ |
-| 3.18 | SchemaChangeTimeline | - | Phase 2 | ⏳ |
+| 3.18 | SchemaChangeTimeline | `schema/SchemaChangeTimeline.tsx` | Phase 2 | ✅ |
 | 3.19 | SystemHealthCard | `dashboard/SystemHealth.tsx` | MVP | ✅ 이름 변경 |
 | 3.20 | 공통 UI | `common/Toast.tsx`, `common/EmptyState.tsx`, `common/Badge.tsx` | MVP | ✅ |
 
