@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0.0] - 2026-03-27 — Phase 2 Complete + Harness v3
+
+### Added
+- **Harness v3**: 4-Pillar Pre-Commit Quality Gate (FS-HARNESS-001, 9/9 ACs)
+  - Pillar 1: ruff lint auto-fix + re-stage (staged files only)
+  - Pillar 2: mypy warn-only (TypeScript blocks)
+  - Pillar 3: affected tests only (~3s vs ~18s)
+  - Pillar 4: AC dashboard feedback (info, never blocks)
+- **MVP P0 Specs**: System Health detail, AI Decision Logger, Auto Baseline tests, Adaptive Autonomy L0-L2
+- **AIGC Report**: AI-generated report service (other agent)
+- **Playbook Lite**: Built-in 7 playbooks + executor (other agent)
+- **ADR-008~010**: Playbook hybrid, LangChain/LangGraph, GraphRAG integration
+
+### Fixed
+- Kafka removed from MVP scope (Phase 3+ only)
+- GraphRAG pgvector insert + DSN decryption
+- NL2SQL prompt tuning (JSONB cast, metric keys)
+- Notification 5-min dedup window
+- Pre-commit hook: incremental lint, multi-agent safe
+
+### Metrics
+- Backend: 430+ tests
+- AC Coverage: 180/189 (95%)
+- Specs: 25 tracked, 23 complete (92%)
+
 ## [0.7.1.0] - 2026-03-26 — NL2SQL Tests + GraphRAG Fixes
 
 ### Added
