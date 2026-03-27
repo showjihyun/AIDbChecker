@@ -243,6 +243,7 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           smooth: true,
           symbol: 'none',
           connectNulls: true,
+          itemStyle: { color: '#0ea5e9' },
           lineStyle: { width: 2, color: '#0ea5e9' },
           areaStyle: {
             color: {
@@ -262,8 +263,19 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           data: connData,
           smooth: true,
           symbol: 'none',
-          connectNulls: true, // null이 있어도 선 이어짐
+          connectNulls: true,
+          itemStyle: { color: '#f59e0b' },
           lineStyle: { width: 2, color: '#f59e0b' },
+          areaStyle: {
+            color: {
+              type: 'linear' as const,
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(245, 158, 11, 0.12)' },
+                { offset: 1, color: 'rgba(245, 158, 11, 0)' },
+              ],
+            },
+          },
         },
         {
           name: 'TPS/s',
@@ -272,8 +284,19 @@ export function MetricChart({ data, isLoading, onTimeRangeChange }: MetricChartP
           data: tpsData,
           smooth: true,
           symbol: 'none',
-          connectNulls: true, // null이 있어도 선 이어짐
+          connectNulls: true,
+          itemStyle: { color: '#4edea3' },
           lineStyle: { width: 2, color: '#4edea3' },
+          areaStyle: {
+            color: {
+              type: 'linear' as const,
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(78, 222, 163, 0.12)' },
+                { offset: 1, color: 'rgba(78, 222, 163, 0)' },
+              ],
+            },
+          },
         },
       ],
     };
