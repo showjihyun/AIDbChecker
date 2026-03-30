@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2.0] - 2026-03-30 — Knowledge Graph Auto-Refresh + Docker Fix
+
+### Added
+- Knowledge Graph 자동 갱신 3가지 경로:
+  - DDL 변경 감지 시 즉시 rebuild
+  - 인스턴스 등록 시 초기 auto-build
+  - Proactive Deep Analysis (6h) 시 주기적 refresh
+- SPEC 반영: NL2SQL §3.5, DBA-003 Deep Analysis, SCHEMA AC-6
+
+### Fixed
+- Docker entrypoint CRLF crash (KPI Data unavailable 해결)
+- AI Configuration: Opus 4.6 + Sonnet 4.6 모델 업데이트
+
 ## [1.1.1.0] - 2026-03-30 — Test Health + Sprint 4 Polish
 
 ### Added
