@@ -18,8 +18,8 @@ RUN uv sync --frozen --no-dev 2>/dev/null || uv sync --no-dev
 # Copy application code
 COPY . .
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
+# Fix CRLF line endings (Windows → Linux) and make executable
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 # SEC-05: Run as non-root user
 RUN adduser --disabled-password --gecos "" --uid 1001 appuser \
