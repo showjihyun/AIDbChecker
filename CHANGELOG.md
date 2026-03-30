@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0.0] - 2026-03-30 — Proactive Agent + Tier 2 Integration
+
+### Added
+- **Proactive DBA Agent** (FS-DBA-003, 10 ACs): 자율 DB 점검
+  - Quick Check (30min): KPI 임계값 → 자동 분석
+  - Deep Analysis (6h): slow query + index + bloat
+  - Morning Report (daily 09:00): 24h 요약 → Slack
+  - Self-Healing: L3+ 인스턴스 자동 조치 + Slack 보고
+- **AI 모델 할당 전략**: SPEC §0 — Plan=Opus 4.6, Code/Test=Sonnet 4.6
+- **AI Configuration 업데이트**: Opus 4.6 + Sonnet 4.6 (구 모델 제거)
+
+### Fixed
+- **Tier 2 통합** (dead code → live):
+  - QuerySimulator: ExecutionEngine._pre_check() 통합
+  - ActionMemory: DBA Agent context 주입
+  - LLM Retry: analyze(2회), diagnose(3회) + safe_mode
+- Proactive: pool=None → _get_pool() 실제 DB 연결
+- KPI AC-7/8 NameError fix (latest→current_hot)
+
+### Metrics
+- 62 PRs merged, 524+ tests, 233/243 ACs (96%)
+
 ## [1.0.2.0] - 2026-03-30 — MCP DBA Agent + Security Hardening
 
 ### Added
