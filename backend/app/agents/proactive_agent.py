@@ -111,12 +111,31 @@ class ProactiveAgent:
         return result
 
     async def deep_analysis(self, instance_id: UUID, session, pool) -> dict:
-        """AC-4: 6-hour deep analysis — slow queries, index, bloat.
+        """AC-4: 6-hour deep analysis — slow queries, index, bloat + graph refresh.
 
         Uses DBA Agent tools directly for analysis.
-        Returns structured results with suggested actions.
+        Also refreshes Knowledge Graph to keep schema context current.
         """
         results = {}
+
+        # Refresh Knowledge Graph (keeps DBA Agent schema-aware)
+        if pool:
+            try:
+                from app.services.graph_rag import SchemaGraphBuilder
+
+                builder = SchemaGraphBuilder()
+                nodes, edges = await builder.build_graph(session, instance_id, pool)
+                await session.commit()
+                results["graph_refresh"] = {"nodes": nodes, "edges": edges}
+                logger.info(
+                    "proactive.graph_refreshed",
+                    instance_id=str(instance_id),
+                    nodes=nodes,
+                    edges=edges,
+                )
+            except Exception as exc:
+                results["graph_refresh"] = {"error": str(exc)}
+                logger.warning("proactive.graph_refresh_failed", error=str(exc))
 
         try:
             from app.agents.tools.db_tools import (

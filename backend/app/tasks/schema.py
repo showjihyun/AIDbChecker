@@ -65,6 +65,8 @@ async def _detect_schema_changes_async() -> None:
                     instance_id=str(instance.id),
                     count=changes_count,
                 )
+                # Auto-refresh Knowledge Graph on schema change
+                await _refresh_graph(instance.id, pool)
 
         except Exception as exc:
             # Spec: FS-SCHEMA-001 — resilient, skip on error
@@ -86,3 +88,32 @@ async def _detect_schema_changes_async() -> None:
 def detect_schema_changes() -> None:
     """Detect schema changes for all active instances (60-second interval)."""
     asyncio.run(_detect_schema_changes_async())
+
+
+async def _refresh_graph(instance_id, pool) -> None:
+    """Auto-refresh Knowledge Graph when schema changes are detected.
+
+    Rebuilds graph_nodes + graph_edges from information_schema.
+    Non-blocking — failure does not affect schema detection.
+    """
+    try:
+        from app.db.session import create_worker_session
+        from app.services.graph_rag import SchemaGraphBuilder
+
+        SessionLocal = create_worker_session()
+        async with SessionLocal() as session:
+            builder = SchemaGraphBuilder()
+            nodes, edges = await builder.build_graph(session, instance_id, pool)
+            await session.commit()
+            logger.info(
+                "schema.graph_refreshed",
+                instance_id=str(instance_id),
+                nodes=nodes,
+                edges=edges,
+            )
+    except Exception as exc:
+        logger.warning(
+            "schema.graph_refresh_failed",
+            instance_id=str(instance_id),
+            error=str(exc),
+        )
