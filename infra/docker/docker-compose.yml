@@ -43,9 +43,9 @@ services:
       - "8001:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
-      VALKEY_URL: redis://valkey:6379/0
-      CELERY_BROKER_URL: redis://valkey:6379/1
-      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+      VALKEY_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/0
+      CELERY_BROKER_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/2
       APP_ENV: development
       APP_DEBUG: "true"
       CORS_ORIGINS: '["http://localhost:3000"]'
@@ -76,9 +76,9 @@ services:
     command: ["uv", "run", "celery", "-A", "app.tasks", "worker", "-l", "info", "--pool", "solo", "-Q", "celery,collect,alert,analyze"]
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
-      VALKEY_URL: redis://valkey:6379/0
-      CELERY_BROKER_URL: redis://valkey:6379/1
-      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+      VALKEY_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/0
+      CELERY_BROKER_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/2
     depends_on:
       backend:
         condition: service_started
@@ -96,9 +96,9 @@ services:
     command: ["uv", "run", "celery", "-A", "app.tasks", "beat", "-l", "info"]
     environment:
       DATABASE_URL: postgresql+asyncpg://neuraldb:neuraldb@postgres:5432/neuraldb
-      VALKEY_URL: redis://valkey:6379/0
-      CELERY_BROKER_URL: redis://valkey:6379/1
-      CELERY_RESULT_BACKEND: redis://valkey:6379/2
+      VALKEY_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/0
+      CELERY_BROKER_URL: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/1
+      CELERY_RESULT_BACKEND: redis://:${VALKEY_PASSWORD:-neuraldb}@valkey:6379/2
     depends_on:
       backend:
         condition: service_started
