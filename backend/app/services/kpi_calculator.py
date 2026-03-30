@@ -261,19 +261,22 @@ class KPICalculator:
             db_size_val = cm.get("database_size_bytes") or cm.get("db_size")
 
         # Fallback: hot metrics에서 db_size 확인 (cold 수집 전이라 없을 수 있음)
-        if db_size_val is None and latest is not None:
-            db_size_val = latest.metrics.get("database_size_bytes") or latest.metrics.get("db_size")
+        # Fallback: use current hot sample if cold not available
+        current_hot = hot_samples[0] if hot_samples else None
+        if db_size_val is None and current_hot is not None:
+            db_size_val = current_hot.metrics.get("database_size_bytes") or current_hot.metrics.get("db_size")
 
-            # KPI-12: Replication Lag (max across all replicas)
-            replication = cm.get("replication", [])
-            if replication:
-                lags = [
-                    r["replay_lag_seconds"]
-                    for r in replication
-                    if r.get("replay_lag_seconds") is not None
-                ]
-                if lags:
-                    replication_lag_val = round(max(lags), 3)
+        # KPI-12: Replication Lag (max across all replicas)
+        storage_metrics = cold_sample.metrics if cold_sample else (current_hot.metrics if current_hot else {})
+        replication = storage_metrics.get("replication", [])
+        if replication:
+            lags = [
+                r["replay_lag_seconds"]
+                for r in replication
+                if r.get("replay_lag_seconds") is not None
+            ]
+            if lags:
+                replication_lag_val = round(max(lags), 3)
 
         # --- Avg Response Time from warm metrics ---
         # KPI-03: pg_stat_statements mean_exec_time is in warm tables data
