@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1.0] - 2026-03-30 — Test Health + Sprint 4 Polish
+
+### Added
+- Playwright E2E setup (auth + dashboard + navigation, 9 tests)
+- LLM Observability page + sidebar nav
+- ARCHITECTURE.md (v1.1.0 full system overview)
+
+### Fixed
+- FS-AI-TRACE-001 AC-3/4 tests → 5/5 pass
+- dbaAgent.test ESM compatible → 73 frontend tests, 0 fail
+- vitest e2e exclude
+
 ## [1.1.0.0] - 2026-03-30 — Proactive Agent + Tier 2 Integration
 
 ### Added
