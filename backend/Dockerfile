@@ -21,6 +21,11 @@ COPY . .
 # Make entrypoint executable
 RUN chmod +x entrypoint.sh
 
+# SEC-05: Run as non-root user
+RUN adduser --disabled-password --gecos "" --uid 1001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 # Entrypoint runs migration + seed, then hands off to CMD
 ENTRYPOINT ["./entrypoint.sh"]
 

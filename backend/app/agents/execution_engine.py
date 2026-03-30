@@ -35,6 +35,7 @@ class ExecutionEngine:
         session: AsyncSession,
         pool,
         autonomy_level: int = 0,
+        user_role: str = "operator",
     ) -> ActionResult:
         """Full execution pipeline.
 
@@ -54,7 +55,7 @@ class ExecutionEngine:
         request.risk_level = risk.value
 
         # Step 2: Policy gate
-        policy = _guard.check_policy(risk, autonomy_level, request.confidence)
+        policy = _guard.check_policy(risk, autonomy_level, request.confidence, user_role=user_role)
 
         if policy.action == "blocked":
             logger.warning(
