@@ -224,6 +224,29 @@ class SchemaGraphBuilder:
         ...
 ```
 
+### 3.5 Knowledge Graph 자동 갱신
+
+Graph는 한 번 빌드 후 끝이 아니라, DB 스키마 변경 시 자동으로 갱신됩니다.
+
+| 갱신 트리거 | 시점 | 구현 위치 | 동작 |
+|------------|------|----------|------|
+| **DDL 변경 감지** | CREATE/ALTER/DROP 감지 시 (60초 주기) | `tasks/schema.py → _refresh_graph()` | 기존 graph 삭제 → information_schema 재스캔 → 노드/엣지 재생성 |
+| **인스턴스 등록** | POST `/api/v1/instances` 시 | `api/v1/instances.py` | 새 인스턴스의 graph 초기 빌드 (비동기, 실패 시 skip) |
+| **Proactive Deep Analysis** | 6시간마다 (Celery Beat) | `agents/proactive_agent.py` | graph refresh → 이후 slow query/index/bloat 분석 |
+
+**갱신 동작:**
+```
+SchemaGraphBuilder.build_graph(session, instance_id, pool)
+  1. DELETE FROM graph_nodes WHERE instance_id = :id  (기존 전체 삭제)
+  2. information_schema.tables → Table 노드 생성 + 임베딩
+  3. information_schema.columns → Column 노드 + HAS_COLUMN 엣지
+  4. pg_constraint → FOREIGN_KEY 엣지
+  5. COMMIT
+```
+
+**비파괴 원칙:** 갱신 실패 시 기존 graph 유지 (삭제 전 트랜잭션 내에서 처리).
+**실패 격리:** graph 갱신 실패가 메트릭 수집이나 DBA Agent 동작에 영향을 주지 않음.
+
 ---
 
 ## 4. GraphRAG Retrieval 프로세스
