@@ -2,7 +2,6 @@
 // AI Health dashboard panel — LLM pipeline metrics visualization
 
 import { useQuery } from '@tanstack/react-query';
-import { ConfidenceBadge } from './ConfidenceBadge';
 import { cn } from '@/lib/cn';
 import { apiClient } from '@/api/client';
 
