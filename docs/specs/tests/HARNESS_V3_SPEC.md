@@ -12,6 +12,54 @@
 
 ---
 
+## 0. AI 모델 할당 전략
+
+### 원칙: "Think는 Opus, Build는 Sonnet"
+
+AI 에이전트(Claude Code)의 작업 유형에 따라 최적 모델을 선택합니다.
+
+| 작업 유형 | 모델 | 근거 |
+|----------|------|------|
+| **Plan-Mode** (설계, 아키텍처, SPEC 작성, 의사결정) | **Opus 4.6** | 깊은 추론, 복잡한 트레이드오프 분석, 장기적 아키텍처 판단 |
+| **Code 작성** (구현, 리팩토링, 버그 수정) | **Sonnet 4.6** | 빠른 코드 생성, 비용 효율, 일관된 패턴 적용 |
+| **Test 작성** (단위/통합/E2E 테스트) | **Sonnet 4.6** | 반복적 패턴, 대량 생성, 속도 우선 |
+| **Review** (보안 감사, 코드 리뷰) | **Opus 4.6** | 취약점 추론, 전체 맥락 파악, 높은 정확도 필수 |
+| **Debug** (원인 분석, 에러 추적) | **Opus 4.6** | 복잡한 인과 관계 추론 |
+| **문서 작성** (SPEC, README, CHANGELOG) | **Sonnet 4.6** | 구조화된 텍스트 생성, 속도 우선 |
+
+### gstack Skill별 모델 매핑
+
+| Skill | 모델 | 이유 |
+|-------|------|------|
+| `/plan-eng-review`, `/plan-ceo-review` | Opus | 아키텍처 판단 |
+| `/review`, `/cso` | Opus | 보안 + 품질 추론 |
+| `/investigate` | Opus | 근본 원인 추론 |
+| `/ship` | Sonnet | 자동화 워크플로우 실행 |
+| `/qa` | Sonnet | 테스트 실행 + 버그 수정 |
+| `/retro` | Sonnet | 메트릭 집계 + 텍스트 생성 |
+| `/office-hours` | Opus | 요구사항 발굴 + 아이디어 검증 |
+
+### 적용 방법
+
+Claude Code에서 모델 전환:
+```bash
+# Plan-Mode (Opus)
+/model opus
+
+# Code/Test 작성 (Sonnet)
+/model sonnet
+```
+
+또는 Agent 도구 사용 시 `model` 파라미터로 지정:
+```
+Agent(subagent_type="Plan", model="opus")
+Agent(subagent_type="python-expert", model="sonnet")
+```
+
+> **비용 최적화**: Opus는 Sonnet 대비 ~5x 비용. Plan/Review처럼 정확도가 핵심인 작업에만 Opus를 사용하고, 반복적 코드 생성은 Sonnet으로 처리.
+
+---
+
 ## 1. 개요
 
 AI 에이전트(Claude Code)가 코드를 생성할 때, **커밋 전에 자동으로 품질 검증**이 실행되고, 실패 시 **Claude가 스스로 수정하여 다시 커밋**하는 자율 피드백 루프.
