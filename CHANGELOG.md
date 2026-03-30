@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2.0] - 2026-03-30 — MCP DBA Agent + Security Hardening
+
+### Added
+- **MCP DBA Agent**: `dba_ask` + `dba_execute` tools — external AI (Claude Code, OpenAI, Gemini) can now use DBA Agent via MCP protocol
+- **Rate limiting**: login 5/min, DBA 10/min, NL2SQL 20/min per IP
+- **Docker E2E script**: `scripts/e2e_docker.sh` — 9-check automated test
+
+### Security (19 total findings fixed across v0.9→v1.0.2)
+- SEC-01 (CRIT): OIDC token JWKS signature verification
+- SEC-02 (HIGH): ExecutionEngine user_role propagation
+- SEC-03 (HIGH): WebSocket JWT authentication on connect
+- SEC-04-06 (HIGH): Docker hardening (env vars, non-root, localhost ports, Valkey auth)
+- SEC-09 (MED): API key SHA-256 hashing
+- SEC-10 (MED): Rate limiting middleware
+
+### Changed
+- AC-20 (Few-shot): Deferred — 정확도 100%, 피드백 0건으로 현재 불필요
+- NL2SQL → DBA Agent 통합 (플로팅 위젯 제거)
+
 ## [1.0.1.0] - 2026-03-27 — Post-Release Polish
 
 ### Added
