@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
+import app.utils.bcrypt_patch  # noqa: F401 — patch bcrypt BEFORE passlib loads
 from app.api.deps import get_current_user
 from app.api.v1 import (
     alerts,
@@ -85,8 +86,8 @@ app.add_middleware(
 app.add_middleware(AuditLogMiddleware)
 
 # Spec: API-ERR-001 -- Standardized error responses
-from app.middleware.error_handler import register_error_handlers
-from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.error_handler import register_error_handlers  # noqa: E402
+from app.middleware.rate_limit import RateLimitMiddleware  # noqa: E402
 
 register_error_handlers(app)
 
