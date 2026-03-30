@@ -18,6 +18,7 @@ import { DBAAgentPage } from '@/routes/pages/DBAAgentPage';
 import { PlaybooksPage } from '@/routes/pages/PlaybooksPage';
 import { TasksPage } from '@/routes/pages/TasksPage';
 import { ReportsPage } from '@/routes/pages/ReportsPage';
+import { LLMObservabilityPage } from '@/routes/pages/LLMObservabilityPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -104,6 +105,12 @@ const dbaAgentRoute = createRoute({
   component: DBAAgentPage,
 });
 
+const llmObsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/llm-observability',
+  component: LLMObservabilityPage,
+});
+
 const playbooksRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/playbooks',
@@ -126,7 +133,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
     dashboardRoute, ashRoute, incidentsRoute, instancesRoute,
-    tuningRoute, dbaAgentRoute, playbooksRoute, tasksRoute, reportsRoute,
+    tuningRoute, dbaAgentRoute, llmObsRoute, playbooksRoute, tasksRoute, reportsRoute,
     settingsRoute, llmSettingsRoute,
   ]),
 ]);
