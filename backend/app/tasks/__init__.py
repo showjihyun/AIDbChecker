@@ -62,6 +62,22 @@ celery_app.conf.update(
             "schedule": schedule(run_every=60.0),
             "options": {"queue": "collect"},
         },
+        # Spec: FS-DBA-003 -- Proactive Agent schedules
+        "proactive-quick-check": {
+            "task": "proactive_quick_check",
+            "schedule": crontab(minute="*/30"),
+            "options": {"queue": "analyze"},
+        },
+        "proactive-deep-analysis": {
+            "task": "proactive_deep_analysis",
+            "schedule": crontab(minute=0, hour="*/6"),
+            "options": {"queue": "analyze"},
+        },
+        "proactive-morning-report": {
+            "task": "proactive_morning_report",
+            "schedule": crontab(minute=0, hour=9),
+            "options": {"queue": "analyze"},
+        },
     },
 )
 
@@ -71,4 +87,5 @@ celery_app.conf.include = [
     "app.tasks.alert",
     "app.tasks.analyze",
     "app.tasks.schema",
+    "app.tasks.proactive",
 ]
