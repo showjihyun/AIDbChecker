@@ -199,6 +199,29 @@ _clean_react_output()
 사용자에게 깨끗한 자연어 응답 반환
 ```
 
+### 대화 맥락 유지 (AC-17~18)
+
+- [ ] **AC-17**: session_id 기반 대화 이어가기 — Valkey에 최근 5턴 저장 (TTL 30분)
+- [ ] **AC-18**: 이전 대화 컨텍스트가 LLM 프롬프트에 포함되어 "아까 그 테이블" 참조 가능
+
+**구현:**
+```
+Turn 1: "DB 느려" → analyze → "slow query 3개, orders 테이블 문제"
+Turn 2: "인덱스 만들어줘" → execute → (session context에서 orders 참조)
+         → create_index(orders, [created_at])
+```
+
+세션 저장: Valkey `dba:session:{session_id}` (TTL 30분, JSON, 최근 5턴)
+
+### 사용자 피드백 (AC-19~20)
+
+- [ ] **AC-19**: DBA Agent 응답에 👍/👎 피드백 버튼 표시 (미니 위젯 + /dba 페이지)
+- [ ] **AC-20**: 피드백 클릭 시 POST `/api/v1/dba/feedback` → audit_logs에 기록
+
+**구현:**
+- Frontend: 각 agent 응답 하단에 👍/👎 아이콘 버튼
+- Backend: `POST /api/v1/dba/feedback {session_id, message_id, feedback: "positive"|"negative"}`
+- 저장: audit_logs (action="dba_feedback", details={feedback, question, intent})
 ---
 
 ## 5.1 Frontend — 미니 채팅 위젯 (AC-11~13)

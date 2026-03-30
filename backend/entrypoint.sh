@@ -39,6 +39,35 @@ echo "[entrypoint] Running demo seed..."
 PYTHONPATH=. uv run python -m app.db.seed_demo
 echo "[entrypoint] Demo seed complete."
 
-# --- 4. Start the application ---
+# --- 4. Auto-build Knowledge Graph for all instances (non-blocking) ---
+echo "[entrypoint] Building Knowledge Graph..."
+PYTHONPATH=. uv run python -c "
+import asyncio
+async def build_graphs():
+    from sqlalchemy import select
+    from app.db.session import AsyncSessionLocal
+    from app.models.db_instance import DBInstance
+    from app.services.graph_rag import SchemaGraphBuilder
+    from app.utils.dsn import build_target_dsn
+    import asyncpg
+    async with AsyncSessionLocal() as session:
+        stmt = select(DBInstance).where(DBInstance.is_active.is_(True), DBInstance.deleted_at.is_(None))
+        result = await session.execute(stmt)
+        for inst in result.scalars().all():
+            try:
+                dsn = build_target_dsn(inst)
+                pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=10)
+                builder = SchemaGraphBuilder()
+                nodes, edges = await builder.build_graph(session, inst.id, pool)
+                await session.commit()
+                await pool.close()
+                print(f'  Graph built: {inst.name} ({nodes} nodes, {edges} edges)')
+            except Exception as e:
+                print(f'  Graph skip: {inst.name} ({e})')
+asyncio.run(build_graphs())
+" 2>/dev/null || echo "[entrypoint] Graph build skipped (non-critical)."
+echo "[entrypoint] Graph build complete."
+
+# --- 5. Start the application ---
 echo "[entrypoint] Starting uvicorn..."
 exec "$@"
