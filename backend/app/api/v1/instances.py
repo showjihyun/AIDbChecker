@@ -128,6 +128,35 @@ async def create_instance(
     await session.refresh(instance)
 
     logger.info("instance.created", instance_id=str(instance.id), name=instance.name)
+
+    # Auto-build Knowledge Graph for the new instance (background, non-blocking)
+    try:
+        import asyncpg
+
+        from app.services.graph_rag import SchemaGraphBuilder
+        from app.utils.dsn import build_target_dsn
+
+        dsn = build_target_dsn(instance)
+        pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=10)
+        try:
+            builder = SchemaGraphBuilder()
+            nodes, edges = await builder.build_graph(session, instance.id, pool)
+            await session.commit()
+            logger.info(
+                "instance.graph_auto_built",
+                instance_id=str(instance.id),
+                nodes=nodes,
+                edges=edges,
+            )
+        finally:
+            await pool.close()
+    except Exception as exc:
+        logger.warning(
+            "instance.graph_auto_build_failed",
+            instance_id=str(instance.id),
+            error=str(exc),
+        )
+
     return _to_response(instance)
 
 
