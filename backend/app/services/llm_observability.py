@@ -31,7 +31,6 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
     "gpt-4o-mini": {"input": 0.00000015, "output": 0.0000006},
     "claude-opus-4-6": {"input": 0.000015, "output": 0.000075},
     "claude-sonnet-4-6": {"input": 0.000003, "output": 0.000015},
-    "claude-sonnet-4-20250514": {"input": 0.000003, "output": 0.000015},
     "gemini-3.1-pro": {"input": 0.000007, "output": 0.000021},
     "gemini-2.0-flash": {"input": 0.0000001, "output": 0.0000004},
     "gemini-1.5-pro": {"input": 0.00000125, "output": 0.000005},
