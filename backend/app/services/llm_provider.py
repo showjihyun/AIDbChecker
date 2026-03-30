@@ -68,34 +68,59 @@ class LLMProviderManager:
         resolved_provider = provider or settings.AI_PROVIDER
         resolved_model = model or settings.AI_MODEL
 
-        # Spec: FS-AI-LLM-001 — fallback chain
-        fallback_order = [resolved_provider] + [
-            p for p in ["ollama", "openai", "anthropic", "google"] if p != resolved_provider
+        # Step 1: Try the explicitly configured provider first
+        try:
+            llm = self._create_llm(
+                resolved_provider,
+                resolved_model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                request_timeout=request_timeout,
+            )
+            if llm is not None:
+                return llm
+        except Exception as exc:
+            logger.warning(
+                "llm_provider.primary_failed",
+                provider=resolved_provider,
+                model=resolved_model,
+                error=str(exc),
+            )
+
+        # Step 2: Fallback to other providers (skip the one that already failed)
+        fallback_providers = [
+            p for p in ["anthropic", "openai", "google", "ollama"] if p != resolved_provider
         ]
 
         last_error: Exception | None = None
-        for prov in fallback_order:
+        for prov in fallback_providers:
             try:
                 llm = self._create_llm(
                     prov,
-                    resolved_model if prov == resolved_provider else self._default_model(prov),
+                    self._default_model(prov),
                     temperature=temperature,
                     max_tokens=max_tokens,
                     request_timeout=request_timeout,
                 )
                 if llm is not None:
+                    logger.info(
+                        "llm_provider.fallback_success",
+                        primary=resolved_provider,
+                        fallback=prov,
+                    )
                     return llm
             except Exception as exc:
                 last_error = exc
                 logger.warning(
-                    "llm_provider.fallback",
+                    "llm_provider.fallback_failed",
                     provider=prov,
                     error=str(exc),
                 )
                 continue
 
         raise RuntimeError(
-            f"No LLM provider available. Last error: {last_error}. "
+            f"No LLM provider available. Primary: {resolved_provider} ({resolved_model}). "
+            f"Last error: {last_error}. "
             "Configure at least one provider (Ollama running or cloud API key set)."
         )
 
@@ -126,11 +151,31 @@ class LLMProviderManager:
             )
 
     def _create_ollama(self, model: str, temperature: float, max_tokens: int):
-        """Create Ollama ChatModel via langchain-community."""
+        """Create Ollama ChatModel via langchain-community.
+
+        Performs a lightweight reachability check before returning the instance.
+        Without this, ChatOllama creation always succeeds (even if Ollama is down),
+        which causes the fallback chain to pick Ollama over the intended provider.
+        """
         try:
             from langchain_community.chat_models import ChatOllama
         except ImportError:
             logger.debug("llm_provider.ollama_not_installed")
+            return None
+
+        # Pre-check: verify Ollama server is reachable before returning the instance.
+        # ChatOllama init never fails — it only fails on first .invoke() call,
+        # which breaks the fallback chain (the chain sees a valid object).
+        import httpx as _httpx
+
+        try:
+            resp = _httpx.get(
+                f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags",
+                timeout=2.0,
+            )
+            resp.raise_for_status()
+        except Exception:
+            logger.debug("llm_provider.ollama_unreachable", url=settings.OLLAMA_BASE_URL)
             return None
 
         return ChatOllama(
