@@ -238,6 +238,16 @@ class DBAAgent:
             question=question[:80],
         )
 
+        # Step 1.5: Fetch action history context (Tier 2 — ActionMemory)
+        action_context = ""
+        try:
+            from app.agents.action_memory import ActionMemory
+
+            memory = ActionMemory()
+            action_context = await memory.get_context(session, instance_id)
+        except Exception:
+            pass  # Non-critical — proceed without context
+
         # Step 2: Route to sub-agent
         try:
             if intent == "analyze":
@@ -286,14 +296,20 @@ class DBAAgent:
     # ------------------------------------------------------------------
 
     async def _handle_analyze(self, question: str, instance_id: UUID, pool) -> DBAResponse:
-        """Route to DBTuningAgent."""
+        """Route to DBTuningAgent with LLM retry (Tier 2)."""
+        from app.agents.llm_retry import retry_llm_call
         from app.agents.tuning_agent import DBTuningAgent
         from app.services.llm_provider import LLMProviderManager
 
         mgr = LLMProviderManager()
         llm = mgr.get_llm()
         agent = DBTuningAgent(llm=llm, pool=pool)
-        result = await agent.analyze(question, instance_id)
+
+        result = await retry_llm_call(
+            agent.analyze, question, instance_id,
+            max_retries=2, backoff_base=1.0,
+            safe_mode_response="LLM unavailable. Check Ollama or API key settings.",
+        )
 
         # result may be TuningResponse or str
         answer_text = result.summary if hasattr(result, "summary") else str(result)
@@ -315,14 +331,21 @@ class DBAAgent:
         session: AsyncSession,
         pool,
     ) -> DBAResponse:
-        """Route to DBCopilotAgent."""
+        """Route to DBCopilotAgent with LLM retry (Tier 2)."""
         from app.agents.copilot_agent import DBCopilotAgent
+        from app.agents.llm_retry import retry_llm_call
         from app.services.llm_provider import LLMProviderManager
 
         mgr = LLMProviderManager()
         llm = mgr.get_llm()
         agent = DBCopilotAgent(llm=llm)
-        result = await agent.diagnose(instance_id=instance_id, incident_id=None)
+
+        result = await retry_llm_call(
+            agent.diagnose,
+            instance_id=instance_id, incident_id=None,
+            max_retries=3, backoff_base=1.0,
+            safe_mode_response=None,
+        )
 
         conf = getattr(result, "confidence", 0.0)
         actions_list = getattr(result, "suggested_actions", [])

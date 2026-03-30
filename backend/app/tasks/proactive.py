@@ -58,12 +58,24 @@ async def _run_quick_check():
         instances = result.scalars().all()
 
         for inst in instances:
+            pool = None
             try:
-                check = await agent.quick_check(inst.id, session, pool=None)
+                # Build target DB pool for this instance
+                pool = await _get_pool(inst)
+
+                check = await agent.quick_check(inst.id, session, pool=pool)
                 if check["status"] == "anomaly":
                     # Send Slack alert
                     msg = agent.format_slack_alert(check, inst.name)
                     await _send_slack(msg)
+
+                    # Self-Healing: trigger DBA Agent analysis for each finding
+                    for finding in check.get("findings", []):
+                        if finding.get("action") in ("analyze", "diagnose"):
+                            await _trigger_dba_analysis(
+                                inst, finding, session, pool,
+                            )
+
                     logger.warning(
                         "proactive.alert_sent",
                         instance=inst.name,
@@ -75,6 +87,9 @@ async def _run_quick_check():
                     instance=inst.name,
                     error=str(exc),
                 )
+            finally:
+                if pool:
+                    await pool.close()
 
 
 async def _run_deep_analysis():
@@ -97,9 +112,11 @@ async def _run_deep_analysis():
         instances = result.scalars().all()
 
         for inst in instances:
+            pool = None
             try:
+                pool = await _get_pool(inst)
                 analysis = await agent.deep_analysis(
-                    inst.id, session, pool=None,
+                    inst.id, session, pool=pool,
                 )
                 logger.info(
                     "proactive.deep_analysis_complete",
@@ -111,6 +128,9 @@ async def _run_deep_analysis():
                     instance=inst.name,
                     error=str(exc),
                 )
+            finally:
+                if pool:
+                    await pool.close()
 
 
 async def _run_morning_report():
@@ -144,6 +164,65 @@ async def _run_morning_report():
                     instance=inst.name,
                     error=str(exc),
                 )
+
+
+async def _get_pool(instance):
+    """Build asyncpg pool for a target DB instance."""
+    try:
+        import asyncpg
+
+        from app.utils.dsn import build_target_dsn
+
+        dsn = build_target_dsn(instance)
+        return await asyncpg.create_pool(
+            dsn, min_size=1, max_size=2,
+            command_timeout=10,
+            server_settings={"statement_timeout": "10000"},
+        )
+    except Exception as exc:
+        logger.warning("proactive.pool_failed", instance=instance.name, error=str(exc))
+        return None
+
+
+async def _trigger_dba_analysis(instance, finding: dict, session, pool):
+    """Self-Healing: trigger DBA Agent analysis on anomaly finding."""
+    try:
+        from app.agents.dba_agent import DBAAgent
+
+        question = f"Analyze: {finding.get('message', 'anomaly detected')}"
+        agent = DBAAgent()
+        response = await agent.ask(
+            question=question,
+            instance_id=instance.id,
+            session=session,
+            pool=pool,
+            autonomy_level=instance.autonomy_level,
+            user_role="db_admin",
+        )
+        logger.info(
+            "proactive.self_healing_triggered",
+            instance=instance.name,
+            intent=response.intent,
+            metric=finding.get("metric"),
+        )
+
+        # If L3+ and actions suggested, they'll be auto-executed by DBA Agent
+        if response.actions:
+            action_msg = "\n".join(
+                f"  [{a.status}] {a.action_type}: {a.description}"
+                for a in response.actions
+            )
+            await _send_slack(
+                f"🤖 [Self-Healing] {instance.name}\n"
+                f"Trigger: {finding.get('message')}\n"
+                f"Agent response ({response.intent}):\n{action_msg}"
+            )
+    except Exception as exc:
+        logger.error(
+            "proactive.self_healing_failed",
+            instance=instance.name,
+            error=str(exc),
+        )
 
 
 async def _send_slack(message: str):

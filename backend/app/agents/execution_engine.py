@@ -14,12 +14,14 @@ import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.query_simulator import QuerySimulator
 from app.agents.safety_guard import SafetyGuard
 from app.agents.tools.ops_tools import ActionRequest, ActionResult
 
 logger = structlog.get_logger(__name__)
 
 _guard = SafetyGuard()
+_simulator = QuerySimulator()
 
 
 class ExecutionEngine:
@@ -210,32 +212,17 @@ class ExecutionEngine:
         )
 
     async def _pre_check(self, pool, sql: str) -> dict:
-        """Spec: FS-DBA-001 AC-2 — EXPLAIN cost estimate before execution.
+        """Spec: FS-DBA-001 AC-2 — EXPLAIN cost via QuerySimulator (Tier 2 통합).
 
-        Finding 5: Reject multi-statement SQL before EXPLAIN.
-        Uses EXPLAIN (not ANALYZE) to avoid actual execution.
+        Uses QuerySimulator for structured impact analysis.
         """
+        if pool is None:
+            return {}
         try:
-            explain_sql = sql.strip().rstrip(";")
-            # Security: reject multi-statement
-            if ";" in explain_sql:
-                return {}
-            if explain_sql.upper().startswith(("SELECT", "INSERT", "UPDATE", "DELETE")):
-                async with pool.acquire() as conn:
-                    # Wrap in read-only transaction for safety
-                    async with conn.transaction(readonly=True):
-                        rows = await conn.fetch(f"EXPLAIN (FORMAT JSON) {explain_sql}")
-                    if rows:
-                        import json
-
-                        plan = json.loads(rows[0][0])
-                        return {
-                            "plan_cost": plan[0].get("Plan", {}).get("Total Cost"),
-                            "plan_rows": plan[0].get("Plan", {}).get("Plan Rows"),
-                        }
+            sim_result = await _simulator.simulate(pool, sql)
+            return sim_result.to_dict()
         except Exception:
-            pass
-        return {}
+            return {}
 
     async def _execute_with_timeout(self, pool, sql: str, timeout_sec: int = 30) -> int:
         """Execute SQL with statement_timeout in explicit transaction.
