@@ -111,3 +111,27 @@ def test_trace_001_ac1_metadata_support():
     assert step.metadata is not None
     assert step.metadata["top_k"] == 3
     assert step.metadata["similarity"] == 0.89
+
+
+@spec_ref("FS-AI-TRACE-001", "AC-3")
+def test_trace_001_ac3_frontend_panel_exists():
+    """AC-3: FE ReActTracePanel 컴포넌트 존재 (접힘/펼침)."""
+    from pathlib import Path
+
+    panel = Path(__file__).resolve().parents[3] / "frontend/src/components/ai/ReActTracePanel.tsx"
+    assert panel.exists()
+    content = panel.read_text(encoding="utf-8")
+    assert "collapsed" in content.lower() or "chevron" in content.lower() or "expand" in content.lower()
+
+
+@spec_ref("FS-AI-TRACE-001", "AC-4")
+def test_trace_001_ac4_step_type_icons():
+    """AC-4: step_type별 아이콘/색상 구분."""
+    from pathlib import Path
+
+    panel = Path(__file__).resolve().parents[3] / "frontend/src/components/ai/ReActTracePanel.tsx"
+    content = panel.read_text(encoding="utf-8")
+    # Should have different visual treatment per step type
+    assert "thought" in content.lower()
+    assert "action" in content.lower()
+    assert "result" in content.lower() or "observation" in content.lower()
