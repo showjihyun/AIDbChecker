@@ -247,7 +247,10 @@ class DBTuningAgent:
                 )
         else:
             # max_iterations exceeded without Final Answer
-            final_text = content if "content" in dir() else "Max iterations exceeded."
+            # Synthesize a summary from collected observations
+            final_text = await self._synthesize_from_observations(
+                messages, question, tools_used,
+            )
 
         duration_ms = int((time.monotonic() - start) * 1000)
 
@@ -275,6 +278,54 @@ class DBTuningAgent:
     # ------------------------------------------------------------------
     # Parsing helpers
     # ------------------------------------------------------------------
+
+    async def _synthesize_from_observations(
+        self,
+        messages: list,
+        question: str,
+        tools_used: list[str],
+    ) -> str:
+        """When ReAct loop exhausts iterations without Final Answer,
+        make one more LLM call to synthesize a clean summary from observations.
+
+        This prevents raw ReAct internal reasoning from reaching the user.
+        """
+        # Collect all Observation texts
+        observations = []
+        for msg in messages:
+            content = msg.content if hasattr(msg, "content") else str(msg)
+            if content.startswith("Observation:"):
+                observations.append(content[len("Observation:"):].strip()[:500])
+
+        if not observations:
+            return "분석을 수행했으나 충분한 데이터를 수집하지 못했습니다."
+
+        obs_text = "\n---\n".join(observations[:5])  # max 5 observations
+
+        try:
+            synthesis_prompt = (
+                f"You are a PostgreSQL DBA expert. The user asked: '{question}'\n\n"
+                f"Tools used: {', '.join(tools_used)}\n\n"
+                f"Tool results:\n{obs_text}\n\n"
+                f"Based on these results, provide a clear, concise analysis in Korean. "
+                f"Include: 현재 상태 요약, 발견된 문제점, 추천 조치사항.\n"
+                f"Format your answer as JSON: {{\"analysis\": \"...\", \"actions\": []}}"
+            )
+            response = await self.llm.ainvoke([
+                SystemMessage(content="You are a PostgreSQL performance analyst. Respond in Korean with clear summaries."),
+                HumanMessage(content=synthesis_prompt),
+            ])
+            return response.content if hasattr(response, "content") else str(response)
+        except Exception as exc:
+            # Fallback: extract key info from observations without LLM
+            logger.warning("tuning_agent.synthesis_failed", error=str(exc))
+            summary_lines = [f"분석 도구 사용: {', '.join(tools_used)}"]
+            for obs in observations[:3]:
+                # Extract first meaningful line from each observation
+                first_line = obs.split("\n")[0][:100]
+                if first_line:
+                    summary_lines.append(f"- {first_line}")
+            return "\n".join(summary_lines)
 
     @staticmethod
     def _parse_action(text: str) -> tuple[str | None, str]:
