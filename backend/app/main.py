@@ -86,8 +86,12 @@ app.add_middleware(AuditLogMiddleware)
 
 # Spec: API-ERR-001 -- Standardized error responses
 from app.middleware.error_handler import register_error_handlers
+from app.middleware.rate_limit import RateLimitMiddleware
 
 register_error_handlers(app)
+
+# SEC-10: Rate limiting on critical endpoints
+app.add_middleware(RateLimitMiddleware)
 
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")

@@ -100,13 +100,26 @@ async def authenticate_oidc(
     if not settings.OIDC_ISSUER_URL or not settings.OIDC_CLIENT_ID:
         raise ValueError("OIDC not configured. Set OIDC_ISSUER_URL and OIDC_CLIENT_ID.")
 
-    # Decode token (simplified — production should verify with JWKS)
+    # SEC-01 fix: Verify OIDC token signature with JWKS
     try:
+        import httpx
         from jose import jwt as jose_jwt
 
-        # Phase 2: decode without verification for flexibility
-        # Production: add JWKS verification via oidc_issuer/.well-known/openid-configuration
-        claims = jose_jwt.get_unverified_claims(id_token)
+        # Fetch JWKS from OIDC issuer
+        jwks_url = f"{settings.OIDC_ISSUER_URL.rstrip('/')}/.well-known/openid-configuration"
+        async with httpx.AsyncClient(timeout=10) as client:
+            oidc_config = (await client.get(jwks_url)).json()
+            jwks_resp = await client.get(oidc_config["jwks_uri"])
+            jwks = jwks_resp.json()
+
+        # Decode AND verify signature, audience, issuer, expiry
+        claims = jose_jwt.decode(
+            id_token,
+            jwks,
+            algorithms=["RS256", "ES256"],
+            audience=settings.OIDC_CLIENT_ID,
+            issuer=settings.OIDC_ISSUER_URL,
+        )
 
         email = claims.get("email")
         name = claims.get("name") or claims.get("preferred_username") or email

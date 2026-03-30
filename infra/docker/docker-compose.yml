@@ -6,11 +6,11 @@ services:
     image: pgvector/pgvector:pg16
     container_name: neuraldb-postgres
     environment:
-      POSTGRES_DB: neuraldb
-      POSTGRES_USER: neuraldb
-      POSTGRES_PASSWORD: neuraldb
+      POSTGRES_DB: ${POSTGRES_DB:-neuraldb}
+      POSTGRES_USER: ${POSTGRES_USER:-neuraldb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neuraldb}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # SEC-06: bind to localhost only
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ../postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -25,8 +25,8 @@ services:
     image: valkey/valkey:8-alpine
     container_name: neuraldb-valkey
     ports:
-      - "6379:6379"
-    command: valkey-server --maxmemory 1gb --maxmemory-policy allkeys-lru
+      - "127.0.0.1:6379:6379"  # SEC-06: bind to localhost only
+    command: valkey-server --maxmemory 1gb --maxmemory-policy allkeys-lru --requirepass ${VALKEY_PASSWORD:-neuraldb}
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
@@ -57,8 +57,8 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_USER: neuraldb
-      # Seed script default admin password
-      SEED_ADMIN_PASSWORD: "NeuralDB@2026!"
+      # SEC-04: Use env vars for secrets (override via .env file)
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-NeuralDB@2026!}
     depends_on:
       postgres:
         condition: service_healthy

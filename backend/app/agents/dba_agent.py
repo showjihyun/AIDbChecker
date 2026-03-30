@@ -99,6 +99,32 @@ _INTENT_KEYWORDS: dict[str, list[str]] = {
     ],
 }
 
+# Spec: FS-DBA-003 — Tier 1: Greeting / Off-topic
+_GREETING_KW = ["hi", "hello", "hey", "안녕", "반가", "하이", "고마워", "감사", "thanks", "bye", "잘가"]
+_GREETING_RESP_HI = "안녕하세요! 👋 NeuralDB DBA Agent입니다.\nDB 성능 분석, 쿼리 튜닝, 인시던트 진단을 도와드립니다.\n어떤 DB 문제를 해결해 드릴까요?"
+_GREETING_RESP_THX = "도움이 되었다니 다행입니다! 😊 다른 DB 질문이 있으면 언제든 물어보세요."
+_GREETING_RESP_BYE = "수고하셨습니다! 👋 DB에 문제가 생기면 언제든 찾아주세요."
+_OFFTOPIC_RESP = "죄송합니다, 저는 DB 전문 에이전트라 해당 주제는 어렵습니다. 😅\n\n💡 도움 가능: 성능 분석, 쿼리 튜닝, 인시던트 진단, 데이터 조회\n예: \"현재 가장 느린 쿼리는?\", \"CPU가 왜 높아?\""
+
+_DBA_SIGNALS = ["db", "database", "쿼리", "query", "sql", "인덱스", "index", "테이블", "table", "성능", "performance", "느린", "slow", "모니터링", "monitor", "인시던트", "incident", "vacuum", "lock", "deadlock", "tps", "cpu", "memory", "postgresql", "explain", "튜닝", "tuning", "커넥션", "connection"]
+
+
+def _detect_tier1(question: str) -> tuple[str | None, str]:
+    """Spec: FS-DBA-003 — Tier 1 감지. Returns (intent, response) or (None, '')."""
+    q = question.lower().strip()
+    words = q.split()
+    if len(words) <= 3 and any(kw in q for kw in _GREETING_KW):
+        if any(k in q for k in ["고마워", "감사", "thanks"]):
+            return "greeting", _GREETING_RESP_THX
+        if any(k in q for k in ["bye", "잘가", "안녕히"]):
+            return "greeting", _GREETING_RESP_BYE
+        return "greeting", _GREETING_RESP_HI
+    if not any(s in q for s in _DBA_SIGNALS) and len(words) <= 6:
+        if not any(any(kw in q for kw in kws) for kws in _INTENT_KEYWORDS.values()):
+            return "offtopic", _OFFTOPIC_RESP
+    return None, ""
+
+
 _INTENT_PROMPT = """You are a DBA Agent intent classifier.
 Classify the user's question into exactly one category:
 - analyze: performance analysis, slow query, index, tuning
@@ -189,7 +215,18 @@ class DBAAgent:
         session_id = uuid4()
         start = time.monotonic()
 
-        # Step 1: Intent classification
+        # Step 0: Tier 1 — greeting/offtopic (Spec: FS-DBA-003)
+        tier1_intent, tier1_resp = _detect_tier1(question)
+        if tier1_intent is not None:
+            elapsed = int((time.monotonic() - start) * 1000)
+            return DBAResponse(
+                session_id=session_id,
+                intent=tier1_intent,
+                answer=tier1_resp,
+                elapsed_ms=elapsed,
+            )
+
+        # Step 1: Intent classification (DBA intents)
         intent, confident = self.classify_intent(question)
         if not confident:
             intent = await self.classify_intent_with_llm(question)
@@ -327,7 +364,9 @@ class DBAAgent:
             )
 
         engine = ExecutionEngine()
-        result = await engine.execute(action, session, pool, autonomy_level)
+        result = await engine.execute(
+            action, session, pool, autonomy_level, user_role=user_role,
+        )
 
         actions = [
             ActionSummary(
