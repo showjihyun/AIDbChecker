@@ -3,6 +3,7 @@
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_session, require_role
@@ -83,3 +84,46 @@ async def ask_dba(
     finally:
         if pool:
             await pool.close()
+
+
+class FeedbackRequest(BaseModel):
+    """AC-20: DBA Agent feedback."""
+
+    session_id: str
+    message_id: str | None = None
+    feedback: str  # "positive" | "negative"
+    question: str | None = None
+    intent: str | None = None
+
+
+@router.post(
+    "/dba/feedback",
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
+    summary="Submit feedback on DBA Agent response",
+)
+async def submit_feedback(
+    body: FeedbackRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """AC-19/20: Record user feedback on DBA Agent answers."""
+    try:
+        from app.utils.ai_logger import create_ai_decision_log
+
+        await create_ai_decision_log(
+            session,
+            resource_type="dba_feedback",
+            user_id=str(current_user.id),
+            details={
+                "session_id": body.session_id,
+                "message_id": body.message_id,
+                "feedback": body.feedback,
+                "question": body.question,
+                "intent": body.intent,
+            },
+        )
+        await session.commit()
+    except Exception as exc:
+        logger.warning("dba.feedback_failed", error=str(exc))
+
+    return {"status": "recorded", "feedback": body.feedback}

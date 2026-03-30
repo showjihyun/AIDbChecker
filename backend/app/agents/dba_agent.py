@@ -100,13 +100,55 @@ _INTENT_KEYWORDS: dict[str, list[str]] = {
 }
 
 # Spec: FS-DBA-003 — Tier 1: Greeting / Off-topic
-_GREETING_KW = ["hi", "hello", "hey", "안녕", "반가", "하이", "고마워", "감사", "thanks", "bye", "잘가"]
+_GREETING_KW = [
+    "hi",
+    "hello",
+    "hey",
+    "안녕",
+    "반가",
+    "하이",
+    "고마워",
+    "감사",
+    "thanks",
+    "bye",
+    "잘가",
+]
 _GREETING_RESP_HI = "안녕하세요! 👋 NeuralDB DBA Agent입니다.\nDB 성능 분석, 쿼리 튜닝, 인시던트 진단을 도와드립니다.\n어떤 DB 문제를 해결해 드릴까요?"
 _GREETING_RESP_THX = "도움이 되었다니 다행입니다! 😊 다른 DB 질문이 있으면 언제든 물어보세요."
 _GREETING_RESP_BYE = "수고하셨습니다! 👋 DB에 문제가 생기면 언제든 찾아주세요."
-_OFFTOPIC_RESP = "죄송합니다, 저는 DB 전문 에이전트라 해당 주제는 어렵습니다. 😅\n\n💡 도움 가능: 성능 분석, 쿼리 튜닝, 인시던트 진단, 데이터 조회\n예: \"현재 가장 느린 쿼리는?\", \"CPU가 왜 높아?\""
+_OFFTOPIC_RESP = '죄송합니다, 저는 DB 전문 에이전트라 해당 주제는 어렵습니다. 😅\n\n💡 도움 가능: 성능 분석, 쿼리 튜닝, 인시던트 진단, 데이터 조회\n예: "현재 가장 느린 쿼리는?", "CPU가 왜 높아?"'
 
-_DBA_SIGNALS = ["db", "database", "쿼리", "query", "sql", "인덱스", "index", "테이블", "table", "성능", "performance", "느린", "slow", "모니터링", "monitor", "인시던트", "incident", "vacuum", "lock", "deadlock", "tps", "cpu", "memory", "postgresql", "explain", "튜닝", "tuning", "커넥션", "connection"]
+_DBA_SIGNALS = [
+    "db",
+    "database",
+    "쿼리",
+    "query",
+    "sql",
+    "인덱스",
+    "index",
+    "테이블",
+    "table",
+    "성능",
+    "performance",
+    "느린",
+    "slow",
+    "모니터링",
+    "monitor",
+    "인시던트",
+    "incident",
+    "vacuum",
+    "lock",
+    "deadlock",
+    "tps",
+    "cpu",
+    "memory",
+    "postgresql",
+    "explain",
+    "튜닝",
+    "tuning",
+    "커넥션",
+    "connection",
+]
 
 
 def _detect_tier1(question: str) -> tuple[str | None, str]:
@@ -119,9 +161,12 @@ def _detect_tier1(question: str) -> tuple[str | None, str]:
         if any(k in q for k in ["bye", "잘가", "안녕히"]):
             return "greeting", _GREETING_RESP_BYE
         return "greeting", _GREETING_RESP_HI
-    if not any(s in q for s in _DBA_SIGNALS) and len(words) <= 6:
-        if not any(any(kw in q for kw in kws) for kws in _INTENT_KEYWORDS.values()):
-            return "offtopic", _OFFTOPIC_RESP
+    if (
+        not any(s in q for s in _DBA_SIGNALS)
+        and len(words) <= 6
+        and not any(any(kw in q for kw in kws) for kws in _INTENT_KEYWORDS.values())
+    ):
+        return "offtopic", _OFFTOPIC_RESP
     return None, ""
 
 
@@ -207,20 +252,25 @@ class DBAAgent:
         autonomy_level: int = 0,
         user_id: str | None = None,
         user_role: str = "operator",
+        session_id: str | None = None,
     ) -> DBAResponse:
-        """Spec: FS-DBA-002 AC-1 — unified DBA Agent entry point.
+        """Spec: FS-DBA-002 AC-1, AC-17 — unified DBA Agent with session context.
 
         Classifies intent, routes to sub-agent, returns unified response.
+        AC-17: Loads previous conversation turns from Valkey for context.
         """
-        session_id = uuid4()
+        self._sid = UUID(session_id) if session_id else uuid4()
         start = time.monotonic()
+
+        # AC-17: Load session context from Valkey
+        _prev = await self._load_session(str(self._sid))
 
         # Step 0: Tier 1 — greeting/offtopic (Spec: FS-DBA-003)
         tier1_intent, tier1_resp = _detect_tier1(question)
         if tier1_intent is not None:
             elapsed = int((time.monotonic() - start) * 1000)
             return DBAResponse(
-                session_id=session_id,
+                session_id=self._sid,
                 intent=tier1_intent,
                 answer=tier1_resp,
                 elapsed_ms=elapsed,
@@ -239,14 +289,13 @@ class DBAAgent:
         )
 
         # Step 1.5: Fetch action history context (Tier 2 — ActionMemory)
-        action_context = ""
         try:
             from app.agents.action_memory import ActionMemory
 
             memory = ActionMemory()
-            action_context = await memory.get_context(session, instance_id)
+            self._action_context = await memory.get_context(session, instance_id)
         except Exception:
-            pass  # Non-critical — proceed without context
+            self._action_context = ""
 
         # Step 2: Route to sub-agent
         try:
@@ -269,7 +318,7 @@ class DBAAgent:
                 response = await self._handle_status()
             else:
                 response = DBAResponse(
-                    session_id=session_id,
+                    session_id=self._sid,
                     intent=intent,
                     answer="질문을 이해하지 못했습니다.",
                 )
@@ -280,15 +329,19 @@ class DBAAgent:
                 error=str(exc),
             )
             response = DBAResponse(
-                session_id=session_id,
+                session_id=self._sid,
                 intent=intent,
                 answer="처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
         elapsed = int((time.monotonic() - start) * 1000)
-        response.session_id = session_id
+        response.session_id = self._sid
         response.intent = intent
         response.processing_time_ms = elapsed
+
+        # AC-17: Save session context to Valkey
+        await self._save_session(str(self._sid), question, response.answer, intent)
+
         return response
 
     # ------------------------------------------------------------------
@@ -306,8 +359,11 @@ class DBAAgent:
         agent = DBTuningAgent(llm=llm, pool=pool)
 
         result = await retry_llm_call(
-            agent.analyze, question, instance_id,
-            max_retries=2, backoff_base=1.0,
+            agent.analyze,
+            question,
+            instance_id,
+            max_retries=2,
+            backoff_base=1.0,
             safe_mode_response="LLM unavailable. Check Ollama or API key settings.",
         )
 
@@ -326,7 +382,7 @@ class DBAAgent:
         model = settings.AI_MODEL
 
         return DBAResponse(
-            session_id=uuid4(),
+            session_id=self._sid,
             intent="analyze",
             answer=answer_text,
             actions=actions if actions else None,
@@ -351,8 +407,10 @@ class DBAAgent:
 
         result = await retry_llm_call(
             agent.diagnose,
-            instance_id=instance_id, incident_id=None,
-            max_retries=3, backoff_base=1.0,
+            instance_id=instance_id,
+            incident_id=None,
+            max_retries=3,
+            backoff_base=1.0,
             safe_mode_response=None,
         )
 
@@ -365,7 +423,7 @@ class DBAAgent:
         )
 
         return DBAResponse(
-            session_id=uuid4(),
+            session_id=self._sid,
             intent="diagnose",
             answer=answer,
             data=result.model_dump() if hasattr(result, "model_dump") else {},
@@ -387,7 +445,7 @@ class DBAAgent:
         action = self._parse_action_request(question, instance_id)
         if action is None:
             return DBAResponse(
-                session_id=uuid4(),
+                session_id=self._sid,
                 intent="execute",
                 answer=(
                     "실행할 작업을 파악하지 못했습니다. "
@@ -397,7 +455,11 @@ class DBAAgent:
 
         engine = ExecutionEngine()
         result = await engine.execute(
-            action, session, pool, autonomy_level, user_role=user_role,
+            action,
+            session,
+            pool,
+            autonomy_level,
+            user_role=user_role,
         )
 
         actions = [
@@ -426,7 +488,7 @@ class DBAAgent:
             answer = f"상태: {result.status}"
 
         return DBAResponse(
-            session_id=uuid4(),
+            session_id=self._sid,
             intent="execute",
             answer=answer,
             actions=actions,
@@ -449,7 +511,7 @@ class DBAAgent:
         data = {"sql": sql, "columns": columns, "rows": rows[:20]}
 
         return DBAResponse(
-            session_id=uuid4(),
+            session_id=self._sid,
             intent="query",
             answer=answer,
             data=data,
@@ -478,7 +540,7 @@ class DBAAgent:
         answer = f"System: {overall}\nDB: {db}, Valkey: {valkey}, Celery: {celery}"
 
         return DBAResponse(
-            session_id=uuid4(),
+            session_id=self._sid,
             intent="status",
             answer=answer,
             data={
@@ -488,6 +550,63 @@ class DBAAgent:
                 "status": overall,
             },
         )
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Session context (Valkey)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _load_session(session_id: str) -> str:
+        """AC-17: Load previous conversation turns from Valkey."""
+        try:
+            import redis.asyncio as aioredis
+
+            from app.config import settings
+
+            client = aioredis.from_url(settings.VALKEY_URL, socket_timeout=2)
+            try:
+                raw = await client.get(f"dba:session:{session_id}")
+                if raw:
+                    import json
+
+                    turns = json.loads(raw)
+                    lines = []
+                    for t in turns[-5:]:  # last 5 turns
+                        lines.append(f"{t['role']}: {t['content'][:100]}")
+                    return "\n".join(lines)
+            finally:
+                await client.aclose()
+        except Exception:
+            pass
+        return ""
+
+    @staticmethod
+    async def _save_session(session_id: str, question: str, answer: str, intent: str) -> None:
+        """AC-17: Save conversation turn to Valkey (TTL 30min, max 5 turns)."""
+        try:
+            import json
+
+            import redis.asyncio as aioredis
+
+            from app.config import settings
+
+            client = aioredis.from_url(settings.VALKEY_URL, socket_timeout=2)
+            try:
+                key = f"dba:session:{session_id}"
+                raw = await client.get(key)
+                turns = json.loads(raw) if raw else []
+                turns.append({"role": "user", "content": question})
+                turns.append({"role": "agent", "content": answer[:200], "intent": intent})
+                turns = turns[-10:]  # keep last 10 entries (5 turns)
+                await client.setex(key, 1800, json.dumps(turns))  # TTL 30min
+            finally:
+                await client.aclose()
+        except Exception:
+            pass  # Non-critical — session context is best-effort
 
     # ------------------------------------------------------------------
     # Helpers

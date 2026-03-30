@@ -140,6 +140,7 @@ def determine_overall_status(components: dict[str, str]) -> str:
 - [ ] **AC-4**: GET `/metrics`에서 Prometheus 형식 메트릭 노출
 - [ ] **AC-5**: 프론트엔드 Dashboard에 SystemHealth 컴포넌트가 상태 배지 표시
 - [ ] **AC-6**: GET `/api/v1/system/health/detail`에서 uptime, version, 컴포넌트별 latency 반환
+- [ ] **AC-7**: Celery health check가 `--pool solo` busy worker에서도 정상 응답 (fallback: task count 기반)
 
 ---
 

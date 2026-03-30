@@ -42,6 +42,7 @@ interface ChatMessage {
   time_ms?: number;
   isLoading?: boolean;
   error?: string;
+  feedback?: 'positive' | 'negative';
 }
 
 const INTENT_ICONS: Record<string, string> = {
@@ -67,6 +68,7 @@ export function DBAMiniChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +88,27 @@ export function DBAMiniChat() {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
+  // AC-19: Submit feedback on agent response
+  const handleFeedback = async (messageId: string, feedback: 'positive' | 'negative', content?: string, intent?: string) => {
+    if (!sessionId) return;
+    try {
+      await apiClient.post('/dba/feedback', {
+        session_id: sessionId,
+        message_id: messageId,
+        feedback,
+        question: content,
+        intent,
+      });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, feedback } : m
+        )
+      );
+    } catch {
+      // Silent fail — feedback is non-critical
+    }
+  };
+
   const handleSend = async () => {
     const q = input.trim();
     if (!q || isLoading || !selectedInstanceId) return;
@@ -100,7 +123,9 @@ export function DBAMiniChat() {
       const res = await apiClient.post<DBAResponse>('/dba/ask', {
         question: q,
         instance_id: selectedInstanceId,
+        session_id: sessionId,
       });
+      setSessionId(res.session_id);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === loadingMsg.id
@@ -258,9 +283,36 @@ export function DBAMiniChat() {
                     </div>
                   )}
 
-                  {msg.model && (
-                    <div className="mt-1 text-[8px] text-on-surface-variant/40">
-                      {msg.model} · {msg.time_ms}ms
+                  {/* AC-19: Feedback buttons + meta */}
+                  {msg.role === 'agent' && !msg.isLoading && !msg.error && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        onClick={() => handleFeedback(msg.id, 'positive', msg.content, msg.intent)}
+                        disabled={!!msg.feedback}
+                        className={cn(
+                          'transition-colors',
+                          msg.feedback === 'positive' ? 'text-green-400' : 'text-on-surface-variant/30 hover:text-green-400'
+                        )}
+                        title="Good answer"
+                      >
+                        <span className="material-symbols-outlined text-xs">thumb_up</span>
+                      </button>
+                      <button
+                        onClick={() => handleFeedback(msg.id, 'negative', msg.content, msg.intent)}
+                        disabled={!!msg.feedback}
+                        className={cn(
+                          'transition-colors',
+                          msg.feedback === 'negative' ? 'text-red-400' : 'text-on-surface-variant/30 hover:text-red-400'
+                        )}
+                        title="Bad answer"
+                      >
+                        <span className="material-symbols-outlined text-xs">thumb_down</span>
+                      </button>
+                      {msg.model && (
+                        <span className="text-[8px] text-on-surface-variant/40 ml-auto">
+                          {msg.model} · {msg.time_ms}ms
+                        </span>
+                      )}
                     </div>
                   )}
                 </>

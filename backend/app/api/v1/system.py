@@ -180,7 +180,11 @@ async def _check_celery() -> str:
 
 
 async def _check_celery_detail() -> tuple[str, int | None, dict | None]:
-    """Check Celery with latency and worker count."""
+    """Check Celery with latency and worker count.
+
+    AC-7: Fallback to active_queues check when ping fails (--pool solo busy workers
+    don't respond to ping while processing tasks).
+    """
     try:
         import asyncio
 
@@ -188,7 +192,14 @@ async def _check_celery_detail() -> tuple[str, int | None, dict | None]:
 
         def _sync_ping() -> dict | None:
             inspector = celery_app.control.inspect(timeout=2)
-            return inspector.ping()
+            result = inspector.ping()
+            if result:
+                return result
+            # Fallback: check active queues (works even when workers are busy)
+            queues = inspector.active_queues()
+            if queues:
+                return {k: {"ok": "queue_active"} for k in queues}
+            return None
 
         start = time.monotonic()
         loop = asyncio.get_running_loop()
