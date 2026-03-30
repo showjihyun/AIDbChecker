@@ -311,8 +311,17 @@ class DBAAgent:
             safe_mode_response="LLM unavailable. Check Ollama or API key settings.",
         )
 
-        # result may be TuningResponse or str
-        answer_text = result.summary if hasattr(result, "summary") else str(result)
+        # result may be TuningResponse or str (safe_mode fallback)
+        if hasattr(result, "analysis"):
+            answer_text = result.analysis
+        elif hasattr(result, "summary"):
+            answer_text = result.summary
+        else:
+            answer_text = str(result)
+
+        # Clean up ReAct internal reasoning that may have leaked
+        answer_text = self._clean_react_output(answer_text)
+
         actions = self._extract_actions_from_text(answer_text, instance_id)
         model = settings.AI_MODEL
 
@@ -483,6 +492,25 @@ class DBAAgent:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _clean_react_output(text: str) -> str:
+        """Remove ReAct internal reasoning patterns from user-facing text.
+
+        Strips: 'Action: ...', 'Action Input: ...', 'Observation: ...'
+        that may leak when LLM doesn't produce 'Final Answer:'.
+        """
+        lines = text.split("\n")
+        clean = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(("Action:", "Action Input:", "Observation:")):
+                continue
+            if stripped.startswith("Thought:"):
+                continue
+            clean.append(line)
+        result = "\n".join(clean).strip()
+        return result if result else text  # fallback to original if everything filtered
 
     def _parse_action_request(self, question: str, instance_id: UUID):
         """Extract ActionRequest from natural language."""
