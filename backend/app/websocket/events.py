@@ -28,10 +28,47 @@ sio = socketio.AsyncServer(
 )
 
 
+async def _verify_ws_token(environ: dict) -> bool:
+    """SEC-03: Verify JWT token from WebSocket connection.
+
+    Extracts token from query string (?token=xxx) or Authorization header.
+    Returns False to reject unauthenticated connections.
+    """
+    try:
+        from urllib.parse import parse_qs
+
+        from jose import JWTError, jwt
+
+        from app.config import settings
+
+        # Try query param first, then Authorization header
+        query = environ.get("QUERY_STRING", "")
+        params = parse_qs(query)
+        token = None
+        if "token" in params:
+            token = params["token"][0]
+        else:
+            headers = environ.get("HTTP_AUTHORIZATION", "")
+            if headers.startswith("Bearer "):
+                token = headers[7:]
+
+        if not token:
+            return False
+
+        jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        return True
+    except (JWTError, Exception):
+        return False
+
+
 @sio.on("connect", namespace="/ws/metrics")
-async def on_metrics_connect(sid: str, environ: dict) -> None:
-    """Client connected to metrics namespace."""
+async def on_metrics_connect(sid: str, environ: dict) -> bool | None:
+    """Client connected to metrics namespace. SEC-03: JWT required."""
+    if not await _verify_ws_token(environ):
+        logger.warning("ws.metrics_auth_failed", sid=sid)
+        return False  # Reject connection
     logger.info("ws.metrics_connected", sid=sid)
+    return None
 
 
 @sio.on("disconnect", namespace="/ws/metrics")
@@ -63,8 +100,12 @@ async def on_unsubscribe(sid: str, data: dict) -> None:
 
 
 @sio.on("connect", namespace="/ws/incidents")
-async def on_incidents_connect(sid: str, environ: dict) -> None:
-    """Client connected to incidents namespace."""
+async def on_incidents_connect(sid: str, environ: dict) -> bool | None:
+    """Client connected to incidents namespace. SEC-03: JWT required."""
+    if not await _verify_ws_token(environ):
+        logger.warning("ws.incidents_auth_failed", sid=sid)
+        return False
+    return None
     logger.info("ws.incidents_connected", sid=sid)
 
 

@@ -223,6 +223,12 @@ async def authenticate_ldap(
 # ---------------------------------------------------------------------------
 
 
+def _hash_api_key(key: str) -> str:
+    """SEC-09: Hash API key with SHA-256 for storage comparison."""
+    import hashlib
+    return hashlib.sha256(key.encode()).hexdigest()
+
+
 async def authenticate_api_key(
     session: AsyncSession,
     api_key: str,
@@ -230,10 +236,30 @@ async def authenticate_api_key(
     """Authenticate via API Key stored in user preferences.
 
     Spec: FS-ADMIN-002 AC-4.
-    API Key is stored in users.preferences->>'api_key'.
+    SEC-09: Compare hashed API key using timing-safe comparison.
+    API Key hash stored in users.preferences->>'api_key_hash'.
+    Legacy: also checks plaintext 'api_key' for migration period.
     """
+    import hmac
 
-    # Search for user with matching API key
+    api_key_hash = _hash_api_key(api_key)
+
+    # First try hashed key (SEC-09 secure path)
+    stmt = select(User).where(
+        User.is_active.is_(True),
+        User.deleted_at.is_(None),
+        User.preferences["api_key_hash"].astext == api_key_hash,
+    )
+
+    try:
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            return user
+    except Exception:
+        pass
+
+    # Fallback: legacy plaintext key (migration period)
     stmt = select(User).where(
         User.is_active.is_(True),
         User.deleted_at.is_(None),

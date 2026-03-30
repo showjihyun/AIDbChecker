@@ -152,6 +152,62 @@ def create_mcp_server() -> Server | None:
                     "required": ["instance_id"],
                 },
             ),
+            Tool(
+                name="dba_ask",
+                description=(
+                    "Unified DBA Agent — ask anything about your database. "
+                    "Routes to: analyze (performance), diagnose (RCA), "
+                    "execute (create index, vacuum, kill session), "
+                    "query (NL2SQL), status (health check). "
+                    "Supports SafetyGuard 4-level risk + Autonomy Policy."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "Natural language DBA question",
+                        },
+                        "instance_id": {
+                            "type": "string",
+                            "description": "Target DB instance UUID",
+                        },
+                    },
+                    "required": ["question", "instance_id"],
+                },
+            ),
+            Tool(
+                name="dba_execute",
+                description=(
+                    "Execute a DBA operation with SafetyGuard protection. "
+                    "Operations: create_index, vacuum, kill_session, "
+                    "alter_parameter, reindex, analyze_table. "
+                    "Risk levels: SAFE/WARNING/DANGEROUS/CRITICAL."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "action_type": {
+                            "type": "string",
+                            "enum": [
+                                "create_index", "vacuum", "vacuum_full",
+                                "kill_session", "alter_parameter",
+                                "reindex", "analyze_table",
+                            ],
+                            "description": "Type of DBA operation",
+                        },
+                        "instance_id": {
+                            "type": "string",
+                            "description": "Target DB instance UUID",
+                        },
+                        "params": {
+                            "type": "object",
+                            "description": "Operation parameters (table, columns, pid, etc.)",
+                        },
+                    },
+                    "required": ["action_type", "instance_id"],
+                },
+            ),
         ]
 
     @app.call_tool()
@@ -169,6 +225,10 @@ def create_mcp_server() -> Server | None:
                 result = {"status": "not_implemented", "hint": "Use /api/v1/copilot/diagnose"}
             elif name == "get_schema_changes":
                 result = await _tool_schema_changes(arguments)
+            elif name == "dba_ask":
+                result = await _tool_dba_ask(arguments)
+            elif name == "dba_execute":
+                result = await _tool_dba_execute(arguments)
             else:
                 result = {"error": f"Unknown tool: {name}"}
         except Exception as exc:
@@ -377,3 +437,190 @@ async def _tool_schema_changes(args: dict) -> dict:
                 for c in changes
             ],
         }
+
+
+# ---------------------------------------------------------------------------
+# DBA Agent MCP tools
+# ---------------------------------------------------------------------------
+
+
+async def _tool_dba_ask(args: dict) -> dict:
+    """MCP tool: Unified DBA Agent — routes to analyze/diagnose/execute/query/status.
+
+    Enables external AI tools (Claude Code, OpenAI, Gemini) to use DBA Agent
+    via MCP protocol. Same SafetyGuard + Autonomy as the REST API.
+    """
+    from uuid import UUID
+
+    import asyncpg
+
+    from app.agents.dba_agent import DBAAgent
+    from app.db.session import AsyncSessionLocal
+    from app.models.db_instance import DBInstance
+    from app.utils.dsn import build_target_dsn
+    from sqlalchemy import select
+
+    question = args.get("question", "")
+    instance_id = args.get("instance_id", "")
+
+    if not question or not instance_id:
+        return {"error": "question and instance_id are required."}
+
+    try:
+        iid = UUID(instance_id)
+    except ValueError:
+        return {"error": f"Invalid instance_id: {instance_id}"}
+
+    pool = None
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = select(DBInstance).where(
+                DBInstance.id == iid,
+                DBInstance.deleted_at.is_(None),
+            )
+            result = await session.execute(stmt)
+            instance = result.scalar_one_or_none()
+            if not instance:
+                return {"error": f"Instance {instance_id} not found."}
+
+            # Build target DB pool
+            try:
+                dsn = build_target_dsn(instance)
+                pool = await asyncpg.create_pool(
+                    dsn, min_size=1, max_size=2,
+                    command_timeout=10,
+                )
+            except Exception as exc:
+                logger.warning("mcp.dba_pool_failed", error=str(exc))
+
+            agent = DBAAgent()
+            response = await agent.ask(
+                question=question,
+                instance_id=iid,
+                session=session,
+                pool=pool,
+                autonomy_level=instance.autonomy_level,
+                user_role="db_admin",  # MCP users get db_admin level
+            )
+
+            return {
+                "intent": response.intent,
+                "answer": response.answer,
+                "data": response.data,
+                "actions": (
+                    [a.model_dump() for a in response.actions]
+                    if response.actions
+                    else None
+                ),
+                "model": response.model,
+                "processing_time_ms": response.processing_time_ms,
+            }
+    except Exception as exc:
+        logger.error("mcp.dba_ask_error", error=str(exc))
+        return {"error": str(exc)}
+    finally:
+        if pool:
+            await pool.close()
+
+
+async def _tool_dba_execute(args: dict) -> dict:
+    """MCP tool: Execute a specific DBA operation with SafetyGuard.
+
+    External AI tools can request create_index, vacuum, kill_session, etc.
+    All operations go through SafetyGuard 4-level risk + Autonomy Policy.
+    """
+    from uuid import UUID
+
+    import asyncpg
+
+    from app.agents.execution_engine import ExecutionEngine
+    from app.agents.tools import ops_tools
+    from app.db.session import AsyncSessionLocal
+    from app.models.db_instance import DBInstance
+    from app.utils.dsn import build_target_dsn
+    from sqlalchemy import select
+
+    action_type = args.get("action_type", "")
+    instance_id = args.get("instance_id", "")
+    params = args.get("params", {})
+
+    if not action_type or not instance_id:
+        return {"error": "action_type and instance_id are required."}
+
+    try:
+        iid = UUID(instance_id)
+    except ValueError:
+        return {"error": f"Invalid instance_id: {instance_id}"}
+
+    # Build ActionRequest from params
+    action_builders = {
+        "create_index": lambda: ops_tools.create_index(
+            iid,
+            params.get("table", "unknown"),
+            params.get("columns", ["id"]),
+        ),
+        "vacuum": lambda: ops_tools.vacuum_table(iid, params.get("table", "unknown")),
+        "vacuum_full": lambda: ops_tools.vacuum_table(
+            iid, params.get("table", "unknown"), full=True,
+        ),
+        "kill_session": lambda: ops_tools.kill_session(
+            iid, int(params.get("pid", 0)),
+            reason=params.get("reason", "MCP-initiated"),
+        ),
+        "alter_parameter": lambda: ops_tools.alter_parameter(
+            iid, params.get("param", ""), params.get("value", ""),
+        ),
+        "reindex": lambda: ops_tools.reindex(iid, params.get("index_name", "")),
+        "analyze_table": lambda: ops_tools.analyze_table(iid, params.get("table", "unknown")),
+    }
+
+    builder = action_builders.get(action_type)
+    if not builder:
+        return {"error": f"Unknown action_type: {action_type}. Allowed: {list(action_builders.keys())}"}
+
+    try:
+        action_request = builder()
+    except ValueError as ve:
+        return {"error": f"Invalid params: {ve}"}
+
+    pool = None
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = select(DBInstance).where(
+                DBInstance.id == iid, DBInstance.deleted_at.is_(None),
+            )
+            result = await session.execute(stmt)
+            instance = result.scalar_one_or_none()
+            if not instance:
+                return {"error": f"Instance {instance_id} not found."}
+
+            try:
+                dsn = build_target_dsn(instance)
+                pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2)
+            except Exception as exc:
+                return {"error": f"Cannot connect to target DB: {exc}"}
+
+            engine = ExecutionEngine()
+            result = await engine.execute(
+                action_request, session, pool,
+                autonomy_level=instance.autonomy_level,
+                user_role="db_admin",
+            )
+            await session.commit()
+
+            return {
+                "action_id": str(result.action_id),
+                "status": result.status,
+                "action_type": action_request.action_type,
+                "sql": action_request.sql,
+                "risk_level": action_request.risk_level,
+                "execution_time_ms": result.execution_time_ms,
+                "rows_affected": result.rows_affected,
+                "error": result.error,
+            }
+    except Exception as exc:
+        logger.error("mcp.dba_execute_error", error=str(exc))
+        return {"error": str(exc)}
+    finally:
+        if pool:
+            await pool.close()
