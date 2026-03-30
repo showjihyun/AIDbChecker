@@ -154,6 +154,6 @@ describe('[Spec: FE-COMP-001] Common Components', () => {
 describe('[Spec: FE-COMP-001] Layout Components', () => {
   it('MainLayout exports a function component', async () => {
     const mod = await import('@/components/layout/MainLayout');
-    expect(mod.MainLayout || mod.default).toBeDefined();
+    expect(mod.MainLayout).toBeDefined();
   });
 });

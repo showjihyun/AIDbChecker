@@ -80,30 +80,6 @@ function KPIItem({ label, kpi, displayUnit = '' }: KPIItemProps) {
   );
 }
 
-interface CategorySectionProps {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
-}
-
-function CategorySection({ title, icon, children }: CategorySectionProps) {
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="material-symbols-outlined text-sm text-on-surface-variant">
-          {icon}
-        </span>
-        <h4 className="text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant">
-          {title}
-        </h4>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function KPIOverviewSkeleton() {
   return (
     <div className="bg-surface-container rounded-xl p-5 animate-pulse space-y-4">
