@@ -56,7 +56,7 @@ async def build_graphs():
         for inst in result.scalars().all():
             try:
                 dsn = build_target_dsn(inst)
-                pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=10)
+                pool = await asyncio.wait_for(asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=10), timeout=5)
                 builder = SchemaGraphBuilder()
                 nodes, edges = await builder.build_graph(session, inst.id, pool)
                 await session.commit()
