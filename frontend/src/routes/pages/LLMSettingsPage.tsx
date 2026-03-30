@@ -13,11 +13,11 @@ import {
   type ProviderInfo,
 } from '@/api/hooks/useLLMSettings';
 
-// Spec: FS-AI-LLM-001 §5.2 — Hardcoded model lists per provider
+// Spec: FS-AI-LLM-001 §5.2 — Model lists per provider (2026 current)
 const PROVIDER_MODELS: Record<string, string[]> = {
-  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
-  anthropic: ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'],
-  google: ['gemini-2.0-flash', 'gemini-1.5-pro'],
+  openai: ['gpt-5.4', 'gpt-4o', 'gpt-4o-mini'],
+  anthropic: ['claude-opus-4-6', 'claude-sonnet-4-6'],
+  google: ['gemini-3.1-pro', 'gemini-2.0-flash', 'gemini-1.5-pro'],
 };
 
 const PROVIDER_DISPLAY: Record<string, string> = {

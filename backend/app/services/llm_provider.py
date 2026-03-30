@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 
 # Spec: FS-AI-LLM-001 Section 5 — known models per cloud provider
 _OPENAI_MODELS = ["gpt-5.4", "gpt-4o", "gpt-4o-mini"]
-_ANTHROPIC_MODELS = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-20250514"]
+_ANTHROPIC_MODELS = ["claude-opus-4-6", "claude-sonnet-4-6"]
 _GOOGLE_MODELS = ["gemini-3.1-pro", "gemini-2.0-flash", "gemini-1.5-pro"]
 
 # Provider display names
@@ -199,7 +199,7 @@ class LLMProviderManager:
         defaults = {
             "ollama": settings.OLLAMA_MODEL,
             "openai": "gpt-4o-mini",
-            "anthropic": "claude-sonnet-4-20250514",
+            "anthropic": "claude-sonnet-4-6",
             "google": "gemini-2.0-flash",
         }
         return defaults.get(provider, "unknown")
