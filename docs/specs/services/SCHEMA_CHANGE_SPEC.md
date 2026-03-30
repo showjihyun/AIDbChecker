@@ -93,3 +93,4 @@ WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
 - [ ] AC-3: 인덱스 CREATE/DROP 감지
 - [ ] AC-4: GET /api/v1/instances/{id}/schema-changes에서 이력 조회
 - [ ] AC-5: 스냅샷은 Valkey에 캐싱 (인스턴스별 마지막 스냅샷)
+- [ ] AC-6: DDL 변경 감지 시 Knowledge Graph(pgvector) 자동 갱신 트리거 (`_refresh_graph()`)

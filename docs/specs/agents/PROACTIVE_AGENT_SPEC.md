@@ -69,11 +69,15 @@ DBA Agent가 **사람의 요청 없이도** 주기적으로 DB를 점검하고, 
 
 | 분석 | DBA Tool | 결과 |
 |------|---------|------|
+| **Knowledge Graph 갱신** | `SchemaGraphBuilder.build_graph()` | 최신 스키마로 graph 갱신 (NL2SQL 정확도 유지) |
 | Slow query top 10 | `slow_queries()` | agent_actions에 suggested 저장 |
 | Missing index 추천 | `index_recommendations()` | create_index ActionRequest 생성 |
 | Table bloat > 30% | `table_bloat()` | vacuum ActionRequest 생성 |
 | Vacuum overdue | `table_bloat()` | vacuum ActionRequest 생성 |
 | Parameter tuning | `parameter_tuning()` | alter_parameter 추천 |
+
+> **Graph 갱신 우선**: Deep Analysis 시작 시 graph를 먼저 갱신한 후 분석 수행.
+> 이를 통해 DBA Agent의 NL2SQL이 항상 최신 테이블/컬럼 구조를 기반으로 SQL을 생성.
 
 ### 2.3 Self-Healing (Autonomy L3+)
 
