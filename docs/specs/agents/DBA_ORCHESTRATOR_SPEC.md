@@ -162,6 +162,43 @@ Turn 3: "결과 보여줘" → query → SELECT from agent_actions WHERE ...
 - [ ] **AC-9**: session_id로 이전 대화 이어가기 가능
 - [ ] **AC-10**: DBAResponse에 actions 필드로 실행 가능한 액션 목록 제공
 
+### 답변 품질 (AC-14~16)
+
+- [ ] **AC-14**: 사용자 답변에 ReAct 내부 추론(Action:/Action Input:/Observation:)이 노출되지 않음
+- [ ] **AC-15**: LLM이 Final Answer 없이 max_iterations 도달 시, 수집된 tool 결과를 별도 LLM 호출로 한국어 요약 합성
+- [ ] **AC-16**: DBA Agent 응답의 answer 필드가 사람이 읽을 수 있는 자연어 형태
+
+---
+
+## 5.2 답변 품질 보장 전략
+
+### 문제: ReAct 내부 추론 노출
+
+TuningAgent는 ReAct 패턴(Thought→Action→Observation 반복)으로 동작합니다.
+LLM이 `Final Answer:` 포맷을 따르지 않고 `max_iterations`에 도달하면,
+마지막 LLM 출력(내부 추론)이 사용자에게 그대로 노출될 수 있습니다.
+
+### 해결: 2단계 방어
+
+```
+ReAct Loop (max 5 iterations)
+    ↓
+LLM이 "Final Answer: {...}" 반환? ─Yes─→ JSON 파싱 → 정상 응답
+    │
+    No (max_iterations 도달)
+    ↓
+_synthesize_from_observations()
+    ├─ 수집된 tool 결과 (Observation) 추출 (최대 5개)
+    ├─ 별도 LLM 호출: "이 결과를 한국어 요약으로 합성해줘"
+    └─ 실패 시 Fallback: tool 이름 + 첫 줄 요약 (LLM 미사용)
+    ↓
+_clean_react_output()
+    ├─ Action: / Action Input: / Observation: / Thought: 패턴 제거
+    └─ 빈 결과면 원본 유지 (안전 fallback)
+    ↓
+사용자에게 깨끗한 자연어 응답 반환
+```
+
 ---
 
 ## 5.1 Frontend — 미니 채팅 위젯 (AC-11~13)
