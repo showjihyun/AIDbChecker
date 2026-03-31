@@ -44,7 +44,16 @@ from app.websocket.events import sio
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     """Startup and shutdown events."""
-    # Startup
+    # Startup: restore persisted LLM settings from DB
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.settings_store import apply_llm_settings_from_db
+
+        async with AsyncSessionLocal() as session:
+            await apply_llm_settings_from_db(session)
+    except Exception:
+        pass  # Non-critical — app starts with env defaults
+
     yield
     # Shutdown: dispose system engine and all target DB pools
     from app.db.session import _target_pools, system_engine

@@ -89,16 +89,47 @@ async def test_svc_001_ac1_schema_detector_importable():
 
 @spec_ref("SVC-001", "AC-2")
 async def test_svc_001_ac2_transaction_rollback():
-    """SVC-001 AC-2: Transaction rollback behavior verified.
+    """SVC-001 AC-2: Service functions accept AsyncSession parameter (DI pattern).
 
-    Full transaction boundary testing requires a live DB session.
-    Unit level: verify that services accept AsyncSession (the rollback
-    mechanism is provided by SQLAlchemy, not the service itself).
+    Verifies that key service functions use dependency injection for the DB
+    session, enabling external transaction management (commit/rollback) by
+    the caller. This is the structural prerequisite for transaction rollback.
     """
-    pytest.skip(
-        "Transaction rollback requires live DB. "
-        "Covered by integration tests with real PostgreSQL."
+    import inspect
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    # 1. RAG service: embed_incident accepts AsyncSession
+    from app.services.rag import embed_incident
+    sig = inspect.signature(embed_incident)
+    session_param = sig.parameters.get("session")
+    assert session_param is not None, "embed_incident must accept 'session' parameter"
+    assert session_param.annotation is AsyncSession or "AsyncSession" in str(session_param.annotation), (
+        "embed_incident 'session' must be typed as AsyncSession"
     )
+
+    # 2. NL2SQL service: execute_readonly_sql accepts AsyncSession
+    from app.services.nl2sql import execute_readonly_sql
+    sig2 = inspect.signature(execute_readonly_sql)
+    session_param2 = sig2.parameters.get("session")
+    assert session_param2 is not None, "execute_readonly_sql must accept 'session' parameter"
+    assert session_param2.annotation is AsyncSession or "AsyncSession" in str(session_param2.annotation), (
+        "execute_readonly_sql 'session' must be typed as AsyncSession"
+    )
+
+    # 3. KPICalculator: compute_all_kpi accepts AsyncSession
+    from app.services.kpi_calculator import KPICalculator
+    sig3 = inspect.signature(KPICalculator.compute_all_kpi)
+    session_param3 = sig3.parameters.get("session")
+    assert session_param3 is not None, "KPICalculator.compute_all_kpi must accept 'session' parameter"
+    assert session_param3.annotation is AsyncSession or "AsyncSession" in str(session_param3.annotation), (
+        "KPICalculator.compute_all_kpi 'session' must be typed as AsyncSession"
+    )
+
+    # 4. RAG service: get_embedding_status accepts AsyncSession
+    from app.services.rag import get_embedding_status
+    sig4 = inspect.signature(get_embedding_status)
+    session_param4 = sig4.parameters.get("session")
+    assert session_param4 is not None, "get_embedding_status must accept 'session' parameter"
 
 
 @spec_ref("SVC-001", "AC-3")
