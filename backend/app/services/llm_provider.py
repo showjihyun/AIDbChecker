@@ -368,11 +368,14 @@ class LLMProviderManager:
         """
         from langchain_core.messages import HumanMessage
 
+        # Use default model for this provider if none specified
+        resolved_model = model or self._default_model(provider)
+
         start = time.monotonic()
         try:
             llm = self._create_llm(
                 provider,
-                model,
+                resolved_model,
                 temperature=0.0,
                 max_tokens=50,
                 request_timeout=15,
