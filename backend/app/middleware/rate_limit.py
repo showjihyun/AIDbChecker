@@ -16,14 +16,19 @@ from starlette.responses import JSONResponse
 
 # Rate limits: (max_requests, window_seconds)
 _RATE_LIMITS: dict[str, tuple[int, int]] = {
-    "/api/v1/auth/login": (5, 60),       # 5 per minute
-    "/api/v1/auth/refresh": (10, 60),     # 10 per minute
-    "/api/v1/dba/ask": (10, 60),          # 10 per minute
-    "/api/v1/nl2sql/query": (20, 60),     # 20 per minute
+    "/api/v1/auth/login": (5, 60),  # 5 per minute
+    "/api/v1/auth/refresh": (10, 60),  # 10 per minute
+    "/api/v1/dba/ask": (10, 60),  # 10 per minute
+    "/api/v1/nl2sql/query": (20, 60),  # 20 per minute
 }
 
 # Token bucket: {ip:path -> (tokens, last_refill_time)}
 _buckets: dict[str, tuple[float, float]] = defaultdict(lambda: (0.0, 0.0))
+
+
+def reset_rate_limits() -> None:
+    """Clear all rate limit buckets. Used in tests."""
+    _buckets.clear()
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -47,9 +52,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         last_refill = now
 
         if tokens < 1:
+            from uuid import uuid4
+
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Too many requests. Please try again later."},
+                content={
+                    "error_code": "RATE_LIMITED",
+                    "message": "Too many requests. Please try again later.",
+                    "detail": None,
+                    "field_errors": None,
+                    "request_id": f"req-{uuid4().hex[:12]}",
+                },
             )
 
         _buckets[key] = (tokens - 1, last_refill)

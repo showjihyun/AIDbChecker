@@ -141,6 +141,11 @@ async def client(async_session: AsyncSession) -> AsyncGenerator[AsyncClient, Non
 
     fastapi_app.dependency_overrides[get_session] = _override_get_session
 
+    # Reset rate limits between tests to avoid 429 interference
+    from app.middleware.rate_limit import reset_rate_limits
+
+    reset_rate_limits()
+
     transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
