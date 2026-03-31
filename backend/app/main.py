@@ -8,7 +8,6 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-import app.utils.bcrypt_patch as _bcrypt_patch  # noqa: F401 — patch before passlib
 from app.api.deps import get_current_user
 from app.api.v1 import (
     alerts,
@@ -38,6 +37,7 @@ from app.api.v1 import (
 )
 from app.config import settings
 from app.middleware.audit import AuditLogMiddleware
+from app.utils import bcrypt_patch as _bcrypt_patch  # noqa: F401 — patch before passlib
 from app.websocket.events import sio
 
 
