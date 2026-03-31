@@ -39,9 +39,9 @@ echo "[entrypoint] Running demo seed..."
 PYTHONPATH=. uv run python -m app.db.seed_demo
 echo "[entrypoint] Demo seed complete."
 
-# --- 4. Auto-build Knowledge Graph for all instances (non-blocking) ---
+# --- 4. Auto-build Knowledge Graph for all instances (non-blocking, 30s max) ---
 echo "[entrypoint] Building Knowledge Graph..."
-PYTHONPATH=. uv run python -c "
+timeout 30 sh -c 'PYTHONPATH=. uv run python -c "
 import asyncio
 async def build_graphs():
     from sqlalchemy import select
@@ -56,16 +56,16 @@ async def build_graphs():
         for inst in result.scalars().all():
             try:
                 dsn = build_target_dsn(inst)
-                pool = await asyncio.wait_for(asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=10), timeout=5)
+                pool = await asyncio.wait_for(asyncpg.create_pool(dsn, min_size=1, max_size=2, command_timeout=5), timeout=5)
                 builder = SchemaGraphBuilder()
                 nodes, edges = await builder.build_graph(session, inst.id, pool)
                 await session.commit()
                 await pool.close()
-                print(f'  Graph built: {inst.name} ({nodes} nodes, {edges} edges)')
+                print(f\"  Graph built: {inst.name} ({nodes} nodes, {edges} edges)\")
             except Exception as e:
-                print(f'  Graph skip: {inst.name} ({e})')
+                print(f\"  Graph skip: {inst.name} ({e})\")
 asyncio.run(build_graphs())
-" 2>/dev/null || echo "[entrypoint] Graph build skipped (non-critical)."
+"' 2>/dev/null || echo "[entrypoint] Graph build skipped or timed out (non-critical)."
 echo "[entrypoint] Graph build complete."
 
 # --- 5. Start the application ---
