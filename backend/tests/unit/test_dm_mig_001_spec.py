@@ -51,12 +51,21 @@ async def test_dm_mig_001_ac1_orm_tables_registered():
 
 
 @spec_ref("DM-MIG-001", "AC-2")
-async def test_dm_mig_001_ac2_alembic_downgrade():
-    """DM-MIG-001 AC-2: alembic downgrade base -- destructive, manual only."""
-    pytest.skip(
-        "Destructive operation -- verify manually with: "
-        "uv run alembic downgrade base && uv run alembic upgrade head"
-    )
+def test_dm_mig_001_ac2_alembic_downgrade():
+    """DM-MIG-001 AC-2: All migrations have downgrade() defined for rollback."""
+    from pathlib import Path
+
+    versions_dir = Path(__file__).resolve().parent.parent.parent / "migrations" / "versions"
+    migration_files = list(versions_dir.glob("*.py"))
+    assert len(migration_files) >= 1, "No migration files found"
+
+    for mf in migration_files:
+        if mf.name.startswith("__"):
+            continue
+        content = mf.read_text(encoding="utf-8")
+        assert "def downgrade()" in content, (
+            f"Migration {mf.name} missing downgrade() function"
+        )
 
 
 @spec_ref("DM-MIG-001", "AC-3")

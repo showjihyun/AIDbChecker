@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import structlog
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_role
+from app.api.deps import get_session, require_role
 from app.config import settings
 from app.schemas.llm_settings import (
     LLMSettingsResponse,
@@ -57,31 +58,43 @@ async def get_llm_settings() -> LLMSettingsResponse:
 )
 async def update_llm_settings(
     body: LLMSettingsUpdate,
+    session: AsyncSession = Depends(get_session),
 ) -> LLMSettingsResponse:
     """Update LLM provider, model, or API keys.
 
     Only fields that are provided (non-None) are updated.
-    Changes are applied at runtime by mutating the settings singleton.
+    Changes are applied in-memory AND persisted to DB so they survive restarts.
     API keys are validated but never returned in the response.
     """
-    # Spec: FS-AI-LLM-001 — partial update: only update provided fields
+    from app.services.settings_store import save_setting
+
+    # Spec: FS-AI-LLM-001 — partial update: apply in-memory + persist to DB
     if body.provider is not None:
         settings.AI_PROVIDER = body.provider
+        await save_setting(session, "ai_provider", body.provider)
     if body.model is not None:
         settings.AI_MODEL = body.model
+        await save_setting(session, "ai_model", body.model)
     if body.openai_api_key is not None:
         settings.OPENAI_API_KEY = body.openai_api_key
+        await save_setting(session, "openai_api_key", body.openai_api_key)
     if body.anthropic_api_key is not None:
         settings.ANTHROPIC_API_KEY = body.anthropic_api_key
+        await save_setting(session, "anthropic_api_key", body.anthropic_api_key)
     if body.google_api_key is not None:
         settings.GOOGLE_API_KEY = body.google_api_key
+        await save_setting(session, "google_api_key", body.google_api_key)
     if body.ollama_base_url is not None:
         settings.OLLAMA_BASE_URL = body.ollama_base_url
+        await save_setting(session, "ollama_base_url", body.ollama_base_url)
+
+    await session.commit()
 
     logger.info(
         "llm_settings.updated",
         provider=settings.AI_PROVIDER,
         model=settings.AI_MODEL,
+        persisted=True,
     )
 
     return LLMSettingsResponse(

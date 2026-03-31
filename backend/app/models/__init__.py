@@ -16,4 +16,5 @@ from app.models.metric import MetricSample  # noqa: F401
 from app.models.nl2sql_history import NL2SQLHistory  # noqa: F401
 from app.models.rag_document import RAGDocument  # noqa: F401
 from app.models.schema_change import SchemaChange  # noqa: F401
+from app.models.system_setting import SystemSetting  # noqa: F401
 from app.models.user import User  # noqa: F401
