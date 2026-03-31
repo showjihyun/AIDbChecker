@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { apiClient } from '@/api/client';
+import { useLLMSettings } from '@/api/hooks/useLLMSettings';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -71,6 +72,8 @@ export function DBAMiniChat() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { data: llmSettings } = useLLMSettings();
 
   // Spec: AC-12 — fetch instance list for dropdown
   const { data: instancesData } = useQuery({
@@ -175,7 +178,14 @@ export function DBAMiniChat() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-surface-container">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-lg">smart_toy</span>
-          <span className="text-sm font-semibold text-on-surface">DBA Agent</span>
+          <div>
+            <span className="text-sm font-semibold text-on-surface">DBA Agent</span>
+            {llmSettings && (
+              <span className="block text-[9px] text-on-surface-variant/60">
+                {llmSettings.provider} · {llmSettings.model}
+              </span>
+            )}
+          </div>
         </div>
         <button onClick={() => setIsOpen(false)} className="text-on-surface-variant hover:text-on-surface">
           <span className="material-symbols-outlined text-lg">close</span>

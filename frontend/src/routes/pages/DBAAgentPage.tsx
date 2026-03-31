@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { apiClient } from '@/api/client';
+import { useLLMSettings } from '@/api/hooks/useLLMSettings';
 import { useMetricStore } from '@/stores/metricStore';
 
 interface ActionSummary {
@@ -75,6 +76,7 @@ export function DBAAgentPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedInstanceId = useMetricStore((s) => s.selectedInstanceId);
+  const { data: llmSettings } = useLLMSettings();
   const { data: instancesData } = useQuery({
     queryKey: ['instances-list'],
     queryFn: () => apiClient.get<{ items: Array<{ id: string; name: string }> }>('/instances'),
@@ -184,6 +186,11 @@ export function DBAAgentPage() {
           <h1 className="text-lg font-semibold text-on-surface">DBA Agent</h1>
           <p className="text-xs text-on-surface-variant">
             AI-powered database administration assistant
+            {llmSettings && (
+              <span className="ml-2 text-primary/60">
+                ({llmSettings.provider} · {llmSettings.model})
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-on-surface-variant">
