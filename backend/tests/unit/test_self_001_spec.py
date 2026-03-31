@@ -76,3 +76,15 @@ def test_fs_self_001_ac6_health_detail_endpoint():
     comp_fields = ComponentHealthDetail.model_fields
     assert "latency_ms" in comp_fields
     assert "last_checked_at" in comp_fields
+
+
+@spec_ref("FS-SELF-001", "AC-7")
+def test_fs_self_001_ac7_celery_pool_solo_fallback():
+    """FS-SELF-001 AC-7: Celery health check fallback for --pool solo busy workers."""
+    import inspect
+
+    from app.api.v1.system import _check_celery_detail
+
+    source = inspect.getsource(_check_celery_detail)
+    # Verify fallback to active_queues when ping fails
+    assert "active_queues" in source

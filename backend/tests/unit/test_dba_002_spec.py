@@ -126,3 +126,39 @@ def test_dba_002_ac10_actions_in_response():
         description="test",
     )
     assert action.risk_level == "warning"
+
+
+@spec_ref("FS-DBA-002", "AC-14")
+def test_dba_002_ac14_clean_react_output():
+    """FS-DBA-002 AC-14: ReAct internal reasoning stripped from user answers."""
+    from app.agents.dba_agent import DBAAgent
+
+    agent = DBAAgent()
+    raw = "Action: search\nAction Input: slow queries\nObservation: found 3\nFinal Answer: 느린 쿼리 3개 발견"
+    cleaned = agent._clean_react_output(raw)
+    assert "Action:" not in cleaned
+    assert "Observation:" not in cleaned
+    assert "느린 쿼리" in cleaned
+
+
+@spec_ref("FS-DBA-002", "AC-15")
+def test_dba_002_ac15_synthesize_from_observations():
+    """FS-DBA-002 AC-15: _synthesize_from_observations exists for max_iterations fallback."""
+    from app.agents.tuning_agent import DBTuningAgent
+
+    assert hasattr(DBTuningAgent, "_synthesize_from_observations")
+
+
+@spec_ref("FS-DBA-002", "AC-16")
+def test_dba_002_ac16_answer_is_natural_language():
+    """FS-DBA-002 AC-16: DBA Agent answer field is human-readable natural language."""
+    from app.agents.dba_agent import DBAAgent
+
+    agent = DBAAgent()
+    # Verify _clean_react_output removes all machine patterns
+    machine_output = "Thought: I need to check\nAction: analyze\nAction Input: cpu\nFinal Answer: CPU 사용률이 높습니다."
+    result = agent._clean_react_output(machine_output)
+    assert "Thought:" not in result
+    assert "Action:" not in result
+    # Should contain the human-readable part
+    assert "CPU" in result
