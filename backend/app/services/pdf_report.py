@@ -167,59 +167,120 @@ def _render_html(report: dict) -> str:
 
 
 def _html_to_simple_pdf(html: str, report: dict) -> bytes:
-    """Fallback: generate a simple text-based PDF using fpdf2."""
+    """Fallback: generate a Korean-capable PDF using fpdf2 + NotoSansKR."""
     try:
+        from pathlib import Path
+
         from fpdf import FPDF
 
         pdf = FPDF()
-        pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
 
-        # Use built-in font (no Korean support, but functional)
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 10, f"NeuralDB DBA Report - {report.get('instance_name', '')}", ln=True)
-        pdf.set_font("Helvetica", "", 10)
-        pdf.cell(
-            0,
-            6,
-            f"Period: {report.get('period', '')} | {report.get('start', '')[:10]} ~ {report.get('end', '')[:10]}",
-            ln=True,
-        )
+        # Register Korean font (NotoSansKR)
+        font_path = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "NotoSansKR.ttf"
+        if font_path.exists():
+            pdf.add_font("NotoSansKR", "", str(font_path), uni=True)
+            pdf.add_font("NotoSansKR", "B", str(font_path), uni=True)
+            kr = "NotoSansKR"
+        else:
+            kr = "Helvetica"
+
+        period_label = {"daily": "일간", "weekly": "주간", "monthly": "월간"}
+        p = period_label.get(report.get("period", ""), report.get("period", ""))
+        m = report.get("metrics_summary", {})
+
+        pdf.add_page()
+
+        # Title
+        pdf.set_font(kr, "B", 16)
+        pdf.cell(0, 10, f"NeuralDB {p} DBA 리포트", ln=True)
+        pdf.set_font(kr, "", 9)
+        pdf.cell(0, 5, f"인스턴스: {report.get('instance_name', '')} | 기간: {report.get('start', '')[:10]} ~ {report.get('end', '')[:10]}", ln=True)
+        pdf.cell(0, 5, f"생성: {report.get('generated_at', '')[:19]}", ln=True)
         pdf.ln(5)
 
-        # Metrics
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, "1. Metrics Summary", ln=True)
-        pdf.set_font("Helvetica", "", 9)
-        m = report.get("metrics_summary", {})
-        for key in ["cpu", "memory", "connections", "tps"]:
-            vals = m.get(key, {})
-            pdf.cell(0, 5, f"  {key}: avg={vals.get('avg', 0)}, max={vals.get('max', 0)}", ln=True)
+        # 1. Metrics
+        pdf.set_font(kr, "B", 12)
+        pdf.cell(0, 8, "1. 핵심 지표 요약", ln=True)
+        pdf.set_font(kr, "", 9)
 
-        # Incidents
+        # Table header
+        col_w = [40, 25, 25, 20]
+        pdf.set_fill_color(241, 245, 249)
+        for header, w in zip(["지표", "평균", "최대", "상태"], col_w):
+            pdf.cell(w, 6, header, border=1, fill=True)
+        pdf.ln()
+
+        metrics_data = [
+            ("CPU 사용률", m.get("cpu", {}), "%", 70, 90),
+            ("메모리 사용률", m.get("memory", {}), "%", 70, 90),
+            ("커넥션 수", m.get("connections", {}), "", 150, 190),
+            ("TPS", m.get("tps", {}), "", 9999, 9999),
+            ("버퍼히트율", m.get("buffer_hit_ratio", {}), "%", 0, 0),
+        ]
+        for label, vals, unit, _w, _c in metrics_data:
+            avg_v = vals.get("avg", 0)
+            max_v = vals.get("max", 0)
+            status = "OK" if max_v < _w else ("WARN" if max_v < _c else "CRIT")
+            pdf.cell(col_w[0], 5, label, border=1)
+            pdf.cell(col_w[1], 5, f"{avg_v}{unit}", border=1)
+            pdf.cell(col_w[2], 5, f"{max_v}{unit}" if max_v else "", border=1)
+            pdf.cell(col_w[3], 5, status if _w < 9999 else "", border=1)
+            pdf.ln()
         pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, f"2. Incidents: {report.get('incident_count', 0)}", ln=True)
 
-        # Slow queries
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, f"3. Slow Queries: {len(report.get('slow_queries', []))}", ln=True)
-        pdf.set_font("Helvetica", "", 8)
-        for q in report.get("slow_queries", [])[:10]:
-            pdf.cell(
-                0,
-                4,
-                f"  #{q.get('rank', 0)} {q.get('query', '')[:80]}... - {q.get('mean_exec_time_ms', 0):.0f}ms x {q.get('calls', 0)}",
-                ln=True,
-            )
-
-        # AI analysis
+        # 2. Incidents
+        pdf.set_font(kr, "B", 12)
+        inc_total = report.get("incident_count", 0)
+        incidents = report.get("incidents", [])
+        crit = sum(1 for i in incidents if i.get("severity") == "critical")
+        warn = sum(1 for i in incidents if i.get("severity") == "warning")
+        pdf.cell(0, 8, f"2. 인시던트 요약 (총 {inc_total}건 | Critical {crit}, Warning {warn})", ln=True)
+        pdf.set_font(kr, "", 8)
+        for inc in incidents[:10]:
+            pdf.cell(0, 4, f"  [{inc.get('severity','').upper()}] {inc.get('detected_at','')[:16]} - {inc.get('title','')}", ln=True)
+        if not incidents:
+            pdf.cell(0, 4, "  인시던트 없음", ln=True)
         pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 8, "5. AI Analysis", ln=True)
-        pdf.set_font("Helvetica", "", 9)
-        for line in (report.get("ai_analysis", "") or "N/A").split("\n")[:10]:
-            pdf.cell(0, 5, f"  {line[:100]}", ln=True)
+
+        # 3. Slow Queries
+        sqs = report.get("slow_queries", [])
+        pdf.set_font(kr, "B", 12)
+        pdf.cell(0, 8, f"3. Slow Query Top {len(sqs)}", ln=True)
+        pdf.set_font(kr, "", 8)
+        for q in sqs[:10]:
+            query_short = q.get("query", "")[:80].replace("\n", " ")
+            pdf.cell(0, 4, f"  #{q.get('rank',0)} | {q.get('mean_exec_time_ms',0):.0f}ms x {q.get('calls',0):,}회 | 총 {q.get('total_exec_time_ms',0)/1000:.1f}초", ln=True)
+            pdf.set_font(kr, "", 7)
+            pdf.cell(0, 3, f"    SQL: {query_short}", ln=True)
+            pdf.set_font(kr, "", 8)
+        if not sqs:
+            pdf.cell(0, 4, "  Slow Query 없음", ln=True)
+        pdf.ln(3)
+
+        # 4. Schema Changes
+        scs = report.get("schema_changes", [])
+        pdf.set_font(kr, "B", 12)
+        pdf.cell(0, 8, f"4. 스키마 변경 ({len(scs)}건)", ln=True)
+        pdf.set_font(kr, "", 8)
+        for sc in scs[:10]:
+            pdf.cell(0, 4, f"  [{sc.get('change_type','')}] {sc.get('object_name','')} - {sc.get('detected_at','')[:16]}", ln=True)
+        if not scs:
+            pdf.cell(0, 4, "  변경 없음", ln=True)
+        pdf.ln(3)
+
+        # 5. AI Analysis
+        pdf.set_font(kr, "B", 12)
+        pdf.cell(0, 8, "5. AI 분석 요약", ln=True)
+        pdf.set_font(kr, "", 9)
+        ai_text = report.get("ai_analysis", "") or "분석 데이터 없음"
+        for line in ai_text.split("\n")[:15]:
+            pdf.multi_cell(0, 5, f"  {line[:120]}")
+
+        # Footer
+        pdf.ln(10)
+        pdf.set_font(kr, "", 7)
+        pdf.cell(0, 4, f"Generated by NeuralDB | {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=True, align="C")
 
         return pdf.output()
     except ImportError:
