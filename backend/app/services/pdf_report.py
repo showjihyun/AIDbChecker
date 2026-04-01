@@ -274,8 +274,12 @@ def _html_to_simple_pdf(html: str, report: dict) -> bytes:
         pdf.cell(0, 8, "5. AI 분석 요약", ln=True)
         pdf.set_font(kr, "", 9)
         ai_text = report.get("ai_analysis", "") or "분석 데이터 없음"
+        # Use page width minus margins for multi_cell
+        usable_w = pdf.w - pdf.l_margin - pdf.r_margin - 2
         for line in ai_text.split("\n")[:15]:
-            pdf.multi_cell(0, 5, f"  {line[:120]}")
+            clean = line.strip()[:200]
+            if clean:
+                pdf.multi_cell(usable_w, 5, f"  {clean}")
 
         # Footer
         pdf.ln(10)
