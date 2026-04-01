@@ -15,6 +15,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.active_session import ActiveSession
 from app.models.incident import Incident
 from app.models.metric import MetricSample
 from app.models.schema_change import SchemaChange
@@ -149,6 +150,88 @@ async def _fetch_schema_changes(
     ]
 
 
+async def _fetch_ash_summary(
+    session: AsyncSession, instance_id: UUID, since: datetime
+) -> dict:
+    """Fetch ASH wait event breakdown + top sessions for the period."""
+    # Wait event breakdown
+    stmt_wait = (
+        select(
+            ActiveSession.wait_event_type,
+            func.count().label("cnt"),
+        )
+        .where(
+            ActiveSession.instance_id == instance_id,
+            ActiveSession.sampled_at >= since,
+            ActiveSession.wait_event_type.isnot(None),
+        )
+        .group_by(ActiveSession.wait_event_type)
+        .order_by(func.count().desc())
+        .limit(10)
+    )
+    wait_result = await session.execute(stmt_wait)
+    wait_breakdown = [
+        {"wait_event_type": r.wait_event_type, "count": r.cnt}
+        for r in wait_result.all()
+    ]
+
+    total_samples = sum(w["count"] for w in wait_breakdown)
+    for w in wait_breakdown:
+        w["percentage"] = round(w["count"] / max(total_samples, 1) * 100, 1)
+
+    # Top wait events (detail)
+    stmt_events = (
+        select(
+            ActiveSession.wait_event_type,
+            ActiveSession.wait_event,
+            func.count().label("cnt"),
+        )
+        .where(
+            ActiveSession.instance_id == instance_id,
+            ActiveSession.sampled_at >= since,
+            ActiveSession.wait_event.isnot(None),
+        )
+        .group_by(ActiveSession.wait_event_type, ActiveSession.wait_event)
+        .order_by(func.count().desc())
+        .limit(10)
+    )
+    event_result = await session.execute(stmt_events)
+    top_events = [
+        {
+            "wait_event_type": r.wait_event_type,
+            "wait_event": r.wait_event,
+            "count": r.cnt,
+        }
+        for r in event_result.all()
+    ]
+
+    # Active session state breakdown
+    stmt_state = (
+        select(
+            ActiveSession.state,
+            func.count().label("cnt"),
+        )
+        .where(
+            ActiveSession.instance_id == instance_id,
+            ActiveSession.sampled_at >= since,
+        )
+        .group_by(ActiveSession.state)
+        .order_by(func.count().desc())
+    )
+    state_result = await session.execute(stmt_state)
+    state_breakdown = [
+        {"state": r.state, "count": r.cnt}
+        for r in state_result.all()
+    ]
+
+    return {
+        "total_samples": total_samples,
+        "wait_breakdown": wait_breakdown,
+        "top_events": top_events,
+        "state_breakdown": state_breakdown,
+    }
+
+
 # ---------------------------------------------------------------------------
 # AI Analysis
 # ---------------------------------------------------------------------------
@@ -159,6 +242,7 @@ async def _generate_ai_summary(
     incidents: list[dict],
     slow_queries: list[dict],
     schema_changes: list[dict],
+    ash_summary: dict,
     period: str,
 ) -> str:
     """Generate Korean AI analysis summary using LLM."""
@@ -168,7 +252,7 @@ async def _generate_ai_summary(
         from app.services.llm_provider import LLMProviderManager
 
         mgr = LLMProviderManager()
-        llm = mgr.get_llm(temperature=0.3, max_tokens=800)
+        llm = mgr.get_llm(temperature=0.3, max_tokens=1000)
 
         top_queries = "\n".join(
             f"  #{q['rank']}. {q['query'][:80]}... — {q['mean_exec_time_ms']}ms × {q['calls']}회"
@@ -177,16 +261,36 @@ async def _generate_ai_summary(
         inc_summary = f"Critical {sum(1 for i in incidents if i['severity'] == 'critical')}건, "
         inc_summary += f"Warning {sum(1 for i in incidents if i['severity'] == 'warning')}건"
 
+        # ASH summary for prompt
+        ash_wait = "\n".join(
+            f"  {w['wait_event_type']}: {w['count']}건 ({w['percentage']}%)"
+            for w in ash_summary.get("wait_breakdown", [])[:5]
+        )
+        ash_states = ", ".join(
+            f"{s['state']}={s['count']}"
+            for s in ash_summary.get("state_breakdown", [])[:5]
+        )
+        inc_details = "\n".join(
+            f"  [{i['severity'].upper()}] {i['title']}"
+            for i in incidents[:5]
+        )
+
         prompt = (
             f"기간: {period} | 인시던트: {len(incidents)}건 ({inc_summary})\n"
             f"CPU: avg {metrics['cpu']['avg']}%, max {metrics['cpu']['max']}%\n"
             f"TPS: avg {metrics['tps']['avg']}, max {metrics['tps']['max']}\n"
             f"커넥션: avg {metrics['connections']['avg']}, max {metrics['connections']['max']}\n"
-            f"버퍼히트율: {metrics['buffer_hit_ratio']['avg']}%\n"
-            f"Slow Query Top 5:\n{top_queries}\n"
+            f"버퍼히트율: {metrics['buffer_hit_ratio']['avg']}%\n\n"
+            f"인시던트 상세:\n{inc_details or '  없음'}\n\n"
+            f"ASH Wait Event 분석 (총 {ash_summary.get('total_samples', 0)}건):\n{ash_wait or '  없음'}\n"
+            f"세션 상태 분포: {ash_states or '없음'}\n\n"
+            f"Slow Query Top 5:\n{top_queries or '  없음'}\n"
             f"스키마 변경: {len(schema_changes)}건\n\n"
-            f"위 데이터를 바탕으로 DBA를 위한 핵심 분석 요약을 3~5문장으로 작성하세요.\n"
-            f"포함 내용: 주요 발견사항, 성능 트렌드, 우선 조치 권장사항."
+            f"위 데이터를 바탕으로 DBA를 위한 핵심 분석 요약을 작성하세요.\n"
+            f"포함 내용:\n"
+            f"1. 주요 발견사항 (인시던트, Wait Event 이상 포함)\n"
+            f"2. ASH 기반 성능 병목 분석\n"
+            f"3. 우선 조치 권장사항"
         )
 
         response = await llm.ainvoke(
@@ -226,15 +330,16 @@ async def generate_dba_report(
     hours = PERIOD_HOURS[period]
     since = datetime.utcnow() - timedelta(hours=hours)
 
-    # Collect data in parallel (conceptually — SQLAlchemy sessions aren't thread-safe)
+    # Collect all data
     metrics = await _fetch_metrics_summary(session, instance_id, since)
     incidents = await _fetch_incidents(session, instance_id, since)
     slow_queries = await _fetch_slow_queries(pool, limit=slow_query_limit)
     schema_changes = await _fetch_schema_changes(session, instance_id, since)
+    ash_summary = await _fetch_ash_summary(session, instance_id, since)
 
-    # AI analysis
+    # AI analysis (includes ASH data)
     ai_analysis = await _generate_ai_summary(
-        metrics, incidents, slow_queries, schema_changes, period
+        metrics, incidents, slow_queries, schema_changes, ash_summary, period
     )
 
     # Build report
@@ -251,6 +356,7 @@ async def generate_dba_report(
         "slow_queries": slow_queries,
         "schema_changes_count": len(schema_changes),
         "schema_changes": schema_changes,
+        "ash_summary": ash_summary,
         "ai_analysis": ai_analysis,
     }
 
@@ -298,6 +404,22 @@ def format_slack_report(report: dict) -> str:
         )
     sq_text = "\n".join(sq_lines) if sq_lines else "  (없음)"
 
+    # Incidents detail (top 5)
+    inc_lines = []
+    for inc in incidents[:5]:
+        sev = inc.get("severity", "").upper()
+        sev_icon = {"CRITICAL": "🔴", "WARNING": "🟡", "NOTICE": "🔵"}.get(sev, "⚪")
+        inc_lines.append(f"  {sev_icon} [{sev}] {inc.get('title', '')[:60]}")
+    inc_text = "\n".join(inc_lines) if inc_lines else "  (없음)"
+
+    # ASH summary
+    ash = report.get("ash_summary", {})
+    ash_total = ash.get("total_samples", 0)
+    ash_lines = []
+    for w in ash.get("wait_breakdown", [])[:3]:
+        ash_lines.append(f"  {w['wait_event_type']}: {w['count']}건 ({w['percentage']}%)")
+    ash_text = "\n".join(ash_lines) if ash_lines else "  (데이터 없음)"
+
     msg = (
         f"📊 *NeuralDB {p} DBA 리포트* — {report['instance_name']}\n"
         f"기간: {report['start'][:10]} ~ {report['end'][:10]}\n"
@@ -306,6 +428,8 @@ def format_slack_report(report: dict) -> str:
         f"TPS {m['tps']['avg']:,} | {conn_icon} 커넥션 {m['connections']['avg']}\n"
         f"🚨 인시던트: {inc_total}건 (Critical {crit}, Warning {warn}) | "
         f"해결률 {resolved}/{inc_total} ({round(resolved / max(inc_total, 1) * 100)}%)\n"
+        f"{inc_text}\n"
+        f"⏱️ ASH 분석 ({ash_total} samples):\n{ash_text}\n"
         f"🐌 Slow Query Top 3:\n{sq_text}\n"
         f"🔄 스키마 변경: {report['schema_changes_count']}건\n"
         f"🤖 AI 요약: {report['ai_analysis'][:300]}"

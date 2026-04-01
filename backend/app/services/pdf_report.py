@@ -207,7 +207,7 @@ def _html_to_simple_pdf(html: str, report: dict) -> bytes:
         # Table header
         col_w = [40, 25, 25, 20]
         pdf.set_fill_color(241, 245, 249)
-        for header, w in zip(["지표", "평균", "최대", "상태"], col_w):
+        for header, w in zip(["지표", "평균", "최대", "상태"], col_w, strict=True):
             pdf.cell(w, 6, header, border=1, fill=True)
         pdf.ln()
 
@@ -258,10 +258,40 @@ def _html_to_simple_pdf(html: str, report: dict) -> bytes:
             pdf.cell(0, 4, "  Slow Query 없음", ln=True)
         pdf.ln(3)
 
-        # 4. Schema Changes
+        # 4. ASH (Active Session History) 분석
+        ash = report.get("ash_summary", {})
+        ash_total = ash.get("total_samples", 0)
+        pdf.set_font(kr, "B", 12)
+        pdf.cell(0, 8, f"4. ASH 분석 (총 {ash_total} samples)", ln=True)
+        pdf.set_font(kr, "", 8)
+
+        # Wait event breakdown
+        for w in ash.get("wait_breakdown", [])[:8]:
+            bar_len = max(1, int(w.get("percentage", 0) / 5))
+            bar = "|" * bar_len
+            pdf.cell(0, 4, f"  {w.get('wait_event_type',''):15s} {w.get('count',0):>5}건 ({w.get('percentage',0):>5.1f}%) {bar}", ln=True)
+        if not ash.get("wait_breakdown"):
+            pdf.cell(0, 4, "  ASH 데이터 없음", ln=True)
+
+        # Session state
+        states = ash.get("state_breakdown", [])
+        if states:
+            state_text = ", ".join(f"{s['state']}={s['count']}" for s in states[:5])
+            pdf.cell(0, 4, f"  세션 상태: {state_text}", ln=True)
+
+        # Top wait events
+        top_events = ash.get("top_events", [])
+        if top_events:
+            pdf.set_font(kr, "", 7)
+            for ev in top_events[:5]:
+                pdf.cell(0, 3, f"    {ev.get('wait_event_type','')}/{ev.get('wait_event','')} — {ev.get('count',0)}건", ln=True)
+            pdf.set_font(kr, "", 8)
+        pdf.ln(3)
+
+        # 5. Schema Changes
         scs = report.get("schema_changes", [])
         pdf.set_font(kr, "B", 12)
-        pdf.cell(0, 8, f"4. 스키마 변경 ({len(scs)}건)", ln=True)
+        pdf.cell(0, 8, f"5. 스키마 변경 ({len(scs)}건)", ln=True)
         pdf.set_font(kr, "", 8)
         for sc in scs[:10]:
             pdf.cell(0, 4, f"  [{sc.get('change_type','')}] {sc.get('object_name','')} - {sc.get('detected_at','')[:16]}", ln=True)
@@ -269,9 +299,9 @@ def _html_to_simple_pdf(html: str, report: dict) -> bytes:
             pdf.cell(0, 4, "  변경 없음", ln=True)
         pdf.ln(3)
 
-        # 5. AI Analysis
+        # 6. AI Analysis
         pdf.set_font(kr, "B", 12)
-        pdf.cell(0, 8, "5. AI 분석 요약", ln=True)
+        pdf.cell(0, 8, "6. AI 분석 요약", ln=True)
         pdf.set_font(kr, "", 9)
         ai_text = report.get("ai_analysis", "") or "분석 데이터 없음"
         # Use page width minus margins for multi_cell
