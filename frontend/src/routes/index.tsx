@@ -11,6 +11,7 @@ import { DashboardPage } from '@/routes/pages/DashboardPage';
 import { ASHExplorerPage } from '@/routes/pages/ASHExplorerPage';
 import { SettingsPage } from '@/routes/pages/SettingsPage';
 import { LLMSettingsPage } from '@/routes/pages/LLMSettingsPage';
+import { SlackSettingsPage } from '@/routes/pages/SlackSettingsPage';
 import { IncidentsPage } from '@/routes/pages/IncidentsPage';
 import { InstancesManagementPage } from '@/routes/pages/InstancesManagementPage';
 import { TuningPage } from '@/routes/pages/TuningPage';
@@ -93,6 +94,12 @@ const llmSettingsRoute = createRoute({
   component: LLMSettingsPage,
 });
 
+const slackSettingsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/settings/slack',
+  component: SlackSettingsPage,
+});
+
 const tuningRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/tuning',
@@ -134,7 +141,7 @@ const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     dashboardRoute, ashRoute, incidentsRoute, instancesRoute,
     tuningRoute, dbaAgentRoute, llmObsRoute, playbooksRoute, tasksRoute, reportsRoute,
-    settingsRoute, llmSettingsRoute,
+    settingsRoute, llmSettingsRoute, slackSettingsRoute,
   ]),
 ]);
 

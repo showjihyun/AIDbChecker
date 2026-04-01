@@ -124,7 +124,8 @@ export function SettingsPage() {
           items={[
             {
               label: 'Slack Integration',
-              detail: 'Send CRITICAL/WARNING/NOTICE/INFO alerts to Slack',
+              detail: 'Bot Token + Channel ID 설정, 테스트 발송',
+              to: '/settings/slack',
             },
             {
               label: 'Webhook Endpoints',
@@ -135,6 +136,8 @@ export function SettingsPage() {
               detail: '30-minute cooldown between duplicate alerts',
             },
           ]}
+          actionLabel="Slack 설정"
+          actionTo="/settings/slack"
         />
 
         {/* User Management */}

@@ -30,6 +30,7 @@ from app.api.v1 import (
     rag,
     reports,
     schema_changes,
+    slack_settings,
     system,
     tasks,
     tuning,
@@ -137,6 +138,9 @@ app.include_router(
 )
 app.include_router(graph.router, prefix="/api/v1", tags=["graph"], dependencies=_auth_dep)
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"], dependencies=_auth_dep)
+app.include_router(
+    slack_settings.router, prefix="/api/v1", tags=["slack-settings"], dependencies=_auth_dep
+)
 app.include_router(playbooks.router, prefix="/api/v1", tags=["playbooks"], dependencies=_auth_dep)
 app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"], dependencies=_auth_dep)
 
