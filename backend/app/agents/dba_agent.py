@@ -367,40 +367,21 @@ class DBAAgent:
     # ------------------------------------------------------------------
 
     async def _handle_analyze(self, question: str, instance_id: UUID, pool) -> DBAResponse:
-        """Route to DBTuningAgent with LLM retry (Tier 2)."""
-        from app.agents.llm_retry import retry_llm_call
-        from app.agents.tuning_agent import DBTuningAgent
-        from app.services.llm_provider import LLMProviderManager
+        """FS-DBA-005: Route to NativeToolAgent (Claude) or ReAct fallback."""
+        from app.agents.native_tool_agent import NativeToolAgent
 
-        mgr = LLMProviderManager()
-        llm = mgr.get_llm()
-        agent = DBTuningAgent(llm=llm, pool=pool)
-
-        # AC-18: inject session context into question for LLM continuity
+        # Build contextual question with multi-turn memory
         contextual_q = self._build_contextual_question(question)
 
-        result = await retry_llm_call(
-            agent.analyze,
-            contextual_q,
-            instance_id,
-            max_retries=2,
-            backoff_base=1.0,
-            safe_mode_response="LLM unavailable. Check Ollama or API key settings.",
-        )
+        agent = NativeToolAgent(pool=pool)
+        result = await agent.analyze(contextual_q, instance_id)
 
-        # result may be TuningResponse or str (safe_mode fallback)
-        if hasattr(result, "analysis"):
-            answer_text = result.analysis
-        elif hasattr(result, "summary"):
-            answer_text = result.summary
-        else:
-            answer_text = str(result)
-
-        # Clean up ReAct internal reasoning that may have leaked
+        answer_text = result.get("analysis", "분석 결과를 생성하지 못했습니다.")
+        # Clean up any ReAct artifacts (fallback path)
         answer_text = self._clean_react_output(answer_text)
 
         actions = self._extract_actions_from_text(answer_text, instance_id)
-        model = settings.AI_MODEL
+        model = result.get("model", settings.AI_MODEL)
 
         return DBAResponse(
             session_id=self._sid,
