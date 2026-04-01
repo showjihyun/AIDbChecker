@@ -78,6 +78,25 @@ celery_app.conf.update(
             "schedule": crontab(minute=0, hour=9),
             "options": {"queue": "analyze"},
         },
+        # Spec: FS-AI-REPORT-001 — DBA periodic reports
+        "daily-dba-report": {
+            "task": "app.tasks.reports.generate_dba_report",
+            "schedule": crontab(minute=0, hour=9),
+            "args": ("daily",),
+            "options": {"queue": "analyze"},
+        },
+        "weekly-dba-report": {
+            "task": "app.tasks.reports.generate_dba_report",
+            "schedule": crontab(minute=0, hour=9, day_of_week=1),
+            "args": ("weekly",),
+            "options": {"queue": "analyze"},
+        },
+        "monthly-dba-report": {
+            "task": "app.tasks.reports.generate_dba_report",
+            "schedule": crontab(minute=0, hour=9, day_of_month=1),
+            "args": ("monthly",),
+            "options": {"queue": "analyze"},
+        },
     },
 )
 
@@ -88,4 +107,5 @@ celery_app.conf.include = [
     "app.tasks.analyze",
     "app.tasks.schema",
     "app.tasks.proactive",
+    "app.tasks.reports",
 ]

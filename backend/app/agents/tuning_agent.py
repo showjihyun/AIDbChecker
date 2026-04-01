@@ -52,6 +52,12 @@ RULES:
   "actions" (list of objects with the fields above).
 - If a tool returns an error, mention it in your analysis and move on.
 - Keep your analysis concise but thorough.
+
+LANGUAGE:
+- ALL "analysis" text MUST be written in Korean (한국어).
+- Use DBA-friendly terminology: 인덱스, 풀스캔, 버퍼히트율, 커넥션 풀, 데드락, 블로킹 등.
+- Structure analysis as: [현황] → [원인 분석] → [권장 조치] sections.
+- SQL in "actions" remains in English (SQL is universal).
 """
 
 
@@ -249,7 +255,9 @@ class DBTuningAgent:
             # max_iterations exceeded without Final Answer
             # Synthesize a summary from collected observations
             final_text = await self._synthesize_from_observations(
-                messages, question, tools_used,
+                messages,
+                question,
+                tools_used,
             )
 
         duration_ms = int((time.monotonic() - start) * 1000)
@@ -295,7 +303,7 @@ class DBTuningAgent:
         for msg in messages:
             content = msg.content if hasattr(msg, "content") else str(msg)
             if content.startswith("Observation:"):
-                observations.append(content[len("Observation:"):].strip()[:500])
+                observations.append(content[len("Observation:") :].strip()[:500])
 
         if not observations:
             return "분석을 수행했으나 충분한 데이터를 수집하지 못했습니다."
@@ -304,17 +312,28 @@ class DBTuningAgent:
 
         try:
             synthesis_prompt = (
-                f"You are a PostgreSQL DBA expert. The user asked: '{question}'\n\n"
-                f"Tools used: {', '.join(tools_used)}\n\n"
-                f"Tool results:\n{obs_text}\n\n"
-                f"Based on these results, provide a clear, concise analysis in Korean. "
-                f"Include: 현재 상태 요약, 발견된 문제점, 추천 조치사항.\n"
-                f"Format your answer as JSON: {{\"analysis\": \"...\", \"actions\": []}}"
+                f"사용자 질문: '{question}'\n\n"
+                f"사용 도구: {', '.join(tools_used)}\n\n"
+                f"도구 실행 결과:\n{obs_text}\n\n"
+                f"위 결과를 바탕으로 DBA 관점의 분석 보고서를 작성하세요.\n\n"
+                f"형식:\n"
+                f"[현황] 현재 DB 상태 요약 (수치 포함)\n"
+                f"[원인 분석] 성능 저하 또는 이상의 원인\n"
+                f"[권장 조치] 구체적인 조치사항 (SQL 포함)\n\n"
+                f'JSON 형식: {{"analysis": "...", "actions": []}}'
             )
-            response = await self.llm.ainvoke([
-                SystemMessage(content="You are a PostgreSQL performance analyst. Respond in Korean with clear summaries."),
-                HumanMessage(content=synthesis_prompt),
-            ])
+            response = await self.llm.ainvoke(
+                [
+                    SystemMessage(
+                        content=(
+                            "당신은 PostgreSQL 성능 분석 전문가입니다. "
+                            "반드시 한국어로 답변하세요. DBA가 즉시 이해할 수 있는 "
+                            "명확하고 구조적인 분석을 제공하세요."
+                        )
+                    ),
+                    HumanMessage(content=synthesis_prompt),
+                ]
+            )
             return response.content if hasattr(response, "content") else str(response)
         except Exception as exc:
             # Fallback: extract key info from observations without LLM
