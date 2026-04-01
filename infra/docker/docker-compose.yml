@@ -57,6 +57,10 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_USER: neuraldb
+      # Slack Bot Token API (set via .env or override)
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_CHANNEL_ID: ${SLACK_CHANNEL_ID:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       # SEC-04: Use env vars for secrets (override via .env file)
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-NeuralDB@2026!}
     depends_on:

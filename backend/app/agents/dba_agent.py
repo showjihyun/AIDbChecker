@@ -419,10 +419,16 @@ class DBAAgent:
 
         conf = getattr(result, "confidence", 0.0)
         actions_list = getattr(result, "suggested_actions", [])
+        root_cause = getattr(result, "root_cause", "")
+        conf_bar = "█" * int(conf * 10) + "░" * (10 - int(conf * 10))
+        actions_text = "\n".join(f"  • {a}" for a in (actions_list or [])) or "  (없음)"
         answer = (
-            f"진단 결과: {result.selected_branch}\n"
-            f"Confidence: {conf:.2f}\n"
-            f"추천: {', '.join(actions_list or [])}"
+            f"📋 진단 결과\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"분석 유형: {result.selected_branch}\n"
+            f"신뢰도: {conf_bar} {conf:.0%}\n"
+            f"근본 원인: {root_cause}\n\n"
+            f"🔧 권장 조치\n{actions_text}"
         )
 
         return DBAResponse(
@@ -476,17 +482,26 @@ class DBAAgent:
             )
         ]
 
+        risk_emoji = {"safe": "🟢", "warning": "🟡", "dangerous": "🔴", "critical": "🚨"}
+        r_icon = risk_emoji.get(action.risk_level, "⚪")
+
         if result.status == "pending":
             answer = (
-                f"승인이 필요합니다.\n"
+                f"⏳ 승인 대기\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"작업: {action.description}\n"
-                f"위험도: {action.risk_level}\n"
+                f"위험도: {r_icon} {action.risk_level.upper()}\n"
                 f"SQL: {action.sql}"
             )
         elif result.status == "executed":
-            answer = f"실행 완료.\n{action.description}\n소요: {result.execution_time_ms}ms"
+            answer = (
+                f"✅ 실행 완료\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"{action.description}\n"
+                f"소요 시간: {result.execution_time_ms}ms"
+            )
         elif result.status == "blocked":
-            answer = f"차단됨: {result.error}"
+            answer = f"🚫 차단됨\n{result.error}"
         else:
             answer = f"상태: {result.status}"
 
@@ -542,7 +557,15 @@ class DBAAgent:
         else:
             overall = "degraded"
 
-        answer = f"System: {overall}\nDB: {db}, Valkey: {valkey}, Celery: {celery}"
+        status_emoji = {"up": "🟢", "down": "🔴", "degraded": "🟡"}
+        overall_emoji = {"healthy": "✅", "degraded": "⚠️", "unhealthy": "🚨"}
+        answer = (
+            f"{overall_emoji.get(overall, '❓')} 시스템 상태: {overall.upper()}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"{status_emoji.get(db, '❓')} 데이터베이스: {db}\n"
+            f"{status_emoji.get(valkey, '❓')} Valkey 캐시: {valkey}\n"
+            f"{status_emoji.get(celery, '❓')} Celery 워커: {celery}"
+        )
 
         return DBAResponse(
             session_id=self._sid,

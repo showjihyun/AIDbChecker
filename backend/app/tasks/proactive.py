@@ -38,7 +38,6 @@ def proactive_morning_report(self):
 
 async def _run_quick_check():
     """Execute quick check for all active instances."""
-    from uuid import UUID
 
     from sqlalchemy import select
 
@@ -73,7 +72,10 @@ async def _run_quick_check():
                     for finding in check.get("findings", []):
                         if finding.get("action") in ("analyze", "diagnose"):
                             await _trigger_dba_analysis(
-                                inst, finding, session, pool,
+                                inst,
+                                finding,
+                                session,
+                                pool,
                             )
 
                     logger.warning(
@@ -116,7 +118,9 @@ async def _run_deep_analysis():
             try:
                 pool = await _get_pool(inst)
                 analysis = await agent.deep_analysis(
-                    inst.id, session, pool=pool,
+                    inst.id,
+                    session,
+                    pool=pool,
                 )
                 logger.info(
                     "proactive.deep_analysis_complete",
@@ -175,7 +179,9 @@ async def _get_pool(instance):
 
         dsn = build_target_dsn(instance)
         return await asyncpg.create_pool(
-            dsn, min_size=1, max_size=2,
+            dsn,
+            min_size=1,
+            max_size=2,
             command_timeout=10,
             server_settings={"statement_timeout": "10000"},
         )
@@ -209,8 +215,7 @@ async def _trigger_dba_analysis(instance, finding: dict, session, pool):
         # If L3+ and actions suggested, they'll be auto-executed by DBA Agent
         if response.actions:
             action_msg = "\n".join(
-                f"  [{a.status}] {a.action_type}: {a.description}"
-                for a in response.actions
+                f"  [{a.status}] {a.action_type}: {a.description}" for a in response.actions
             )
             await _send_slack(
                 f"🤖 [Self-Healing] {instance.name}\n"
@@ -226,20 +231,10 @@ async def _trigger_dba_analysis(instance, finding: dict, session, pool):
 
 
 async def _send_slack(message: str):
-    """Send message to Slack via configured webhook."""
+    """Send message to Slack via Bot Token API or Webhook."""
     try:
-        from app.config import settings
+        from app.services.slack import send_slack_message
 
-        if not settings.SLACK_WEBHOOK_URL:
-            logger.debug("proactive.slack_not_configured")
-            return
-
-        import httpx
-
-        async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
-                settings.SLACK_WEBHOOK_URL,
-                json={"text": message},
-            )
+        await send_slack_message(message)
     except Exception as exc:
         logger.error("proactive.slack_failed", error=str(exc))

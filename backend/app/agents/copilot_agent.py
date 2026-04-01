@@ -54,6 +54,11 @@ Respond as JSON with key "branches" containing a list of branch objects,
 each with keys: branch_name, relevance_score, evidence_strength,
 action_confidence, risk_penalty, anomaly_type, root_cause, severity_score,
 suggested_actions (list of strings), reasoning (list of strings).
+
+LANGUAGE:
+- root_cause, suggested_actions, reasoning MUST be in Korean (한국어).
+- branch_name and anomaly_type remain in English (machine-readable).
+- Use DBA terminology: 풀스캔, 인덱스 누락, 커넥션 포화, 데드락, WAL 지연 등.
 """
 
 
