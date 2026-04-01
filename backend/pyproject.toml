@@ -45,6 +45,7 @@ dependencies = [
     # Vector (pgvector)
     "pgvector>=0.3.0",
     "python-multipart>=0.0.22",
+    "fpdf2>=2.8.7",
 ]
 
 [project.optional-dependencies]

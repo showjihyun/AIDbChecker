@@ -6,6 +6,7 @@ GET  /reports          — List generated reports (stub for Phase 2 storage).
 GET  /reports/{id}     — Retrieve a specific report (stub for Phase 2 storage).
 """
 
+import io
 from uuid import UUID
 
 import structlog
@@ -105,6 +106,7 @@ class DBAReportRequest(BaseModel):
 class DBAReportResponse(BaseModel):
     """DBA Report response."""
 
+    report_id: UUID | None = None  # Spec: FS-AI-REPORT-002 AC-1
     instance_name: str
     period: str
     generated_at: str
@@ -114,6 +116,20 @@ class DBAReportResponse(BaseModel):
     schema_changes_count: int
     ai_analysis: str
     slack_sent: bool = False
+
+
+class DBAReportSummary(BaseModel):
+    """DBA Report list item. Spec: FS-AI-REPORT-002 §3.1"""
+
+    id: UUID
+    instance_name: str
+    period: str
+    start_at: str
+    end_at: str
+    incident_count: int
+    slow_query_count: int
+    slack_sent: bool
+    created_at: str
 
 
 @router.post(
@@ -181,7 +197,29 @@ async def generate_dba_report(
             slack_msg = format_slack_report(report)
             slack_sent = await send_slack_message(slack_msg)
 
+        # Spec: FS-AI-REPORT-002 AC-1 — persist to DB
+        from datetime import datetime as dt
+
+        from app.models.dba_report import DBAReport
+
+        db_report = DBAReport(
+            instance_id=inst.id,
+            instance_name=inst.name,
+            period=body.period,
+            start_at=dt.fromisoformat(report["start"]),
+            end_at=dt.fromisoformat(report["end"]),
+            report_data=report,
+            ai_analysis=report["ai_analysis"],
+            incident_count=report["incident_count"],
+            slow_query_count=len(report["slow_queries"]),
+            slack_sent=slack_sent,
+        )
+        session.add(db_report)
+        await session.commit()
+        await session.refresh(db_report)
+
         return DBAReportResponse(
+            report_id=db_report.id,
             instance_name=inst.name,
             period=body.period,
             generated_at=report["generated_at"],
@@ -195,3 +233,112 @@ async def generate_dba_report(
     finally:
         if pool:
             await pool.close()
+
+
+# ---------------------------------------------------------------------------
+# DBA Report List / Detail / PDF — Spec: FS-AI-REPORT-002
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/reports/dba/list",
+    response_model=dict,
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
+    summary="List saved DBA reports",
+)
+async def list_dba_reports(
+    instance_id: UUID | None = None,
+    period: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Spec: FS-AI-REPORT-002 AC-2 — list persisted DBA reports."""
+    from sqlalchemy import func, select
+
+    from app.models.dba_report import DBAReport
+
+    stmt = select(DBAReport).order_by(DBAReport.created_at.desc())
+    count_stmt = select(func.count(DBAReport.id))
+
+    if instance_id:
+        stmt = stmt.where(DBAReport.instance_id == instance_id)
+        count_stmt = count_stmt.where(DBAReport.instance_id == instance_id)
+    if period:
+        stmt = stmt.where(DBAReport.period == period)
+        count_stmt = count_stmt.where(DBAReport.period == period)
+
+    total = (await session.execute(count_stmt)).scalar_one()
+    result = await session.execute(stmt.offset(offset).limit(limit))
+
+    items = [
+        DBAReportSummary(
+            id=r.id,
+            instance_name=r.instance_name,
+            period=r.period,
+            start_at=r.start_at.isoformat() if r.start_at else "",
+            end_at=r.end_at.isoformat() if r.end_at else "",
+            incident_count=r.incident_count,
+            slow_query_count=r.slow_query_count,
+            slack_sent=r.slack_sent,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+        )
+        for r in result.scalars().all()
+    ]
+
+    return {"items": [i.model_dump() for i in items], "total": total}
+
+
+@router.get(
+    "/reports/dba/{report_id}",
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
+    summary="Get DBA report detail",
+)
+async def get_dba_report(
+    report_id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Spec: FS-AI-REPORT-002 AC-3 — full report JSON."""
+    from sqlalchemy import select
+
+    from app.models.dba_report import DBAReport
+
+    stmt = select(DBAReport).where(DBAReport.id == report_id)
+    result = await session.execute(stmt)
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    return report.report_data
+
+
+@router.get(
+    "/reports/dba/{report_id}/pdf",
+    dependencies=[Depends(require_role("super_admin", "db_admin", "operator"))],
+    summary="Download DBA report as PDF",
+)
+async def download_dba_report_pdf(
+    report_id: UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    """Spec: FS-AI-REPORT-002 AC-4 — PDF download."""
+    from fastapi.responses import StreamingResponse
+    from sqlalchemy import select
+
+    from app.models.dba_report import DBAReport
+    from app.services.pdf_report import generate_pdf
+
+    stmt = select(DBAReport).where(DBAReport.id == report_id)
+    result = await session.execute(stmt)
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    pdf_bytes = generate_pdf(report.report_data)
+    filename = f"neuraldb-{report.period}-{report.instance_name}-{report.created_at.strftime('%Y%m%d')}.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
