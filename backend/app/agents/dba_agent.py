@@ -254,16 +254,24 @@ class DBAAgent:
         user_role: str = "operator",
         session_id: str | None = None,
     ) -> DBAResponse:
-        """Spec: FS-DBA-002 AC-1, AC-17 — unified DBA Agent with session context.
+        """Spec: FS-DBA-002 AC-1, FS-DBA-004 — Multi-turn DBA Agent.
 
-        Classifies intent, routes to sub-agent, returns unified response.
-        AC-17: Loads previous conversation turns from Valkey for context.
+        Classifies intent with context, routes to sub-agent, saves to Valkey.
         """
+        from app.services.session_memory import (
+            build_contextual_prompt,
+            load_session,
+            resolve_intent_from_context,
+            save_session,
+        )
+
         self._sid = UUID(session_id) if session_id else uuid4()
         start = time.monotonic()
 
-        # AC-17/18: Load session context from Valkey
-        self._session_context = await self._load_session(str(self._sid))
+        # FS-DBA-004: Load full structured session from Valkey
+        self._session_data = await load_session(str(self._sid))
+        # Legacy compat
+        self._session_context = build_contextual_prompt(self._session_data, "")
 
         # Step 0: Tier 1 — greeting/offtopic (Spec: FS-DBA-003)
         tier1_intent, tier1_resp = _detect_tier1(question)
@@ -276,9 +284,11 @@ class DBAAgent:
                 elapsed_ms=elapsed,
             )
 
-        # Step 1: Intent classification (DBA intents)
+        # Step 1: Intent classification with context (FS-DBA-004 AC-5)
         intent, confident = self.classify_intent(question)
-        if not confident:
+        intent = resolve_intent_from_context(self._session_data, intent, confident)
+        if not confident and intent == self.classify_intent(question)[0]:
+            # Still not confident after flow-based — try LLM
             intent = await self.classify_intent_with_llm(question)
 
         logger.info(
@@ -339,8 +349,16 @@ class DBAAgent:
         response.intent = intent
         response.processing_time_ms = elapsed
 
-        # AC-17: Save session context to Valkey
-        await self._save_session(str(self._sid), question, response.answer, intent)
+        # FS-DBA-004: Save full multi-turn session to Valkey
+        await save_session(
+            session_id=str(self._sid),
+            session_data=self._session_data,
+            question=question,
+            answer=response.answer,
+            intent=intent,
+            data=response.data,
+            instance_id=str(instance_id),
+        )
 
         return response
 
@@ -641,16 +659,13 @@ class DBAAgent:
     # ------------------------------------------------------------------
 
     def _build_contextual_question(self, question: str) -> str:
-        """AC-18: Prepend session context to question for LLM continuity.
+        """FS-DBA-004 AC-4/7: Build prompt with structured session memory.
 
-        Enables references like "아까 그 테이블" by including recent turns.
+        Includes entities, recent turns, and resolves pronouns like "그 테이블".
         """
-        if not self._session_context:
-            return question
-        return (
-            f"[Previous conversation context]\n{self._session_context}\n\n"
-            f"[Current question]\n{question}"
-        )
+        from app.services.session_memory import build_contextual_prompt
+
+        return build_contextual_prompt(self._session_data, question)
 
     @staticmethod
     def _clean_react_output(text: str) -> str:

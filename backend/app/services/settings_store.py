@@ -22,6 +22,9 @@ _LLM_KEYS = {
     "anthropic_api_key": "ANTHROPIC_API_KEY",
     "google_api_key": "GOOGLE_API_KEY",
     "ollama_base_url": "OLLAMA_BASE_URL",
+    "slack_bot_token": "SLACK_BOT_TOKEN",
+    "slack_channel_id": "SLACK_CHANNEL_ID",
+    "slack_webhook_url": "SLACK_WEBHOOK_URL",
 }
 
 
