@@ -59,8 +59,10 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     EMBEDDING_DIMENSIONS: int = 384
 
-    # Notifications
-    SLACK_WEBHOOK_URL: str = ""
+    # Notifications — Slack Bot Token API (preferred) or Webhook URL (legacy)
+    SLACK_BOT_TOKEN: str = ""  # xoxb-... Bot User OAuth Token
+    SLACK_CHANNEL_ID: str = ""  # C0APZRZ4Y7M etc.
+    SLACK_WEBHOOK_URL: str = ""  # Legacy: Incoming Webhook URL
     SLACK_ALERT_COOLDOWN_MINUTES: int = 30
 
     # SSO / External Auth (Spec: FS-ADMIN-002)

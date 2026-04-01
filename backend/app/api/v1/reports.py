@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_session, require_role
-from app.config import settings
 from app.models.user import User
 from app.schemas.report import (
     ReportGenerateRequest,
@@ -174,18 +173,13 @@ async def generate_dba_report(
             slow_query_limit=body.slow_query_limit,
         )
 
-        # Send to Slack if requested
+        # Send to Slack if requested (Bot Token or Webhook)
         slack_sent = False
-        if body.send_slack and settings.SLACK_WEBHOOK_URL:
-            try:
-                import httpx
+        if body.send_slack:
+            from app.services.slack import send_slack_message
 
-                slack_msg = format_slack_report(report)
-                async with httpx.AsyncClient(timeout=10) as client:
-                    await client.post(settings.SLACK_WEBHOOK_URL, json={"text": slack_msg})
-                slack_sent = True
-            except Exception as exc:
-                logger.warning("dba_report.slack_failed", error=str(exc))
+            slack_msg = format_slack_report(report)
+            slack_sent = await send_slack_message(slack_msg)
 
         return DBAReportResponse(
             instance_name=inst.name,

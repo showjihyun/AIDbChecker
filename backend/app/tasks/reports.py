@@ -33,7 +33,6 @@ async def _run_report(period: str) -> dict:
     import asyncpg
     from sqlalchemy import select
 
-    from app.config import settings
     from app.db.session import AsyncSessionLocal
     from app.models.db_instance import DBInstance
     from app.services.dba_report import format_slack_report, generate_dba_report
@@ -67,13 +66,11 @@ async def _run_report(period: str) -> dict:
                     pool=pool,
                 )
 
-                # Send to Slack
-                if settings.SLACK_WEBHOOK_URL:
-                    slack_msg = format_slack_report(report)
-                    await _send_slack(slack_msg)
-                    report["slack_sent"] = True
-                else:
-                    report["slack_sent"] = False
+                # Send to Slack (Bot Token or Webhook)
+                from app.services.slack import send_slack_message
+
+                slack_msg = format_slack_report(report)
+                report["slack_sent"] = await send_slack_message(slack_msg)
 
                 results["reports"].append(
                     {
@@ -97,24 +94,3 @@ async def _run_report(period: str) -> dict:
 
     logger.info("dba_report.batch_complete", period=period, count=len(results["reports"]))
     return results
-
-
-async def _send_slack(message: str) -> None:
-    """Send message to Slack webhook."""
-    import httpx
-
-    from app.config import settings
-
-    if not settings.SLACK_WEBHOOK_URL:
-        return
-
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                settings.SLACK_WEBHOOK_URL,
-                json={"text": message},
-            )
-            if resp.status_code != 200:
-                logger.warning("slack.send_failed", status=resp.status_code)
-    except Exception as exc:
-        logger.warning("slack.error", error=str(exc))
