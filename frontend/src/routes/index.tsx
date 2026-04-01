@@ -17,7 +17,7 @@ import { TuningPage } from '@/routes/pages/TuningPage';
 import { DBAAgentPage } from '@/routes/pages/DBAAgentPage';
 import { PlaybooksPage } from '@/routes/pages/PlaybooksPage';
 import { TasksPage } from '@/routes/pages/TasksPage';
-import { ReportsPage } from '@/routes/pages/ReportsPage';
+import { DBAReportsPage } from '@/routes/pages/DBAReportsPage';
 import { LLMObservabilityPage } from '@/routes/pages/LLMObservabilityPage';
 import { LoginPage } from '@/routes/pages/LoginPage';
 import { useAuthStore } from '@/stores/authStore';
@@ -126,7 +126,7 @@ const tasksRoute = createRoute({
 const reportsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/reports',
-  component: ReportsPage,
+  component: DBAReportsPage,
 });
 
 const routeTree = rootRoute.addChildren([

@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { to: '/tuning', icon: 'tune', label: 'Tuning' },
   { to: '/dba', icon: 'smart_toy', label: 'DBA Agent' },
   { to: '/llm-observability', icon: 'monitoring', label: 'LLM Obs' },
+  { to: '/reports', icon: 'summarize', label: 'Reports' },
   { to: '/settings', icon: 'settings', label: 'Settings' },
 ];
 
