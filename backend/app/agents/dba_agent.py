@@ -262,8 +262,8 @@ class DBAAgent:
         self._sid = UUID(session_id) if session_id else uuid4()
         start = time.monotonic()
 
-        # AC-17: Load session context from Valkey
-        _prev = await self._load_session(str(self._sid))
+        # AC-17/18: Load session context from Valkey
+        self._session_context = await self._load_session(str(self._sid))
 
         # Step 0: Tier 1 — greeting/offtopic (Spec: FS-DBA-003)
         tier1_intent, tier1_resp = _detect_tier1(question)
@@ -358,9 +358,12 @@ class DBAAgent:
         llm = mgr.get_llm()
         agent = DBTuningAgent(llm=llm, pool=pool)
 
+        # AC-18: inject session context into question for LLM continuity
+        contextual_q = self._build_contextual_question(question)
+
         result = await retry_llm_call(
             agent.analyze,
-            question,
+            contextual_q,
             instance_id,
             max_retries=2,
             backoff_base=1.0,
@@ -504,7 +507,9 @@ class DBAAgent:
             get_model_name,
         )
 
-        sql = await generate_sql_with_graph(question, instance_id, session)
+        # AC-18: inject session context for NL2SQL continuity
+        contextual_q = self._build_contextual_question(question)
+        sql = await generate_sql_with_graph(contextual_q, instance_id, session)
         columns, rows, exec_ms = await execute_readonly_sql(session, sql)
 
         answer = f"SQL: {sql}\n결과: {len(rows)}행 반환 ({exec_ms}ms)"
@@ -611,6 +616,18 @@ class DBAAgent:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _build_contextual_question(self, question: str) -> str:
+        """AC-18: Prepend session context to question for LLM continuity.
+
+        Enables references like "아까 그 테이블" by including recent turns.
+        """
+        if not self._session_context:
+            return question
+        return (
+            f"[Previous conversation context]\n{self._session_context}\n\n"
+            f"[Current question]\n{question}"
+        )
 
     @staticmethod
     def _clean_react_output(text: str) -> str:
