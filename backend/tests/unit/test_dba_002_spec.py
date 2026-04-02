@@ -166,18 +166,24 @@ def test_dba_002_ac16_answer_is_natural_language():
 
 @spec_ref("FS-DBA-002", "AC-18")
 def test_dba_002_ac18_session_context_in_prompt():
-    """FS-DBA-002 AC-18: Session context injected into LLM prompt for continuity."""
+    """FS-DBA-002 AC-18: Session context injected into LLM prompt via session_memory."""
     from app.agents.dba_agent import DBAAgent
 
     agent = DBAAgent()
-    agent._session_context = "user: orders 테이블이 느려\nagent: 인덱스 추가 권장"
+    # FS-DBA-004: uses structured session_data now
+    agent._session_data = {
+        "turns": [
+            {"role": "user", "content": "orders 테이블이 느려"},
+            {"role": "agent", "content": "인덱스 추가 권장", "intent": "analyze"},
+        ],
+        "entities": {"tables": ["orders"], "indexes": [], "metrics": [], "last_sql": ""},
+    }
 
     result = agent._build_contextual_question("인덱스 만들어줘")
     assert "orders" in result
     assert "인덱스 만들어줘" in result
-    assert "[Previous conversation context]" in result
 
-    # Empty context should return question as-is
-    agent._session_context = ""
+    # Empty session should return question as-is
+    agent._session_data = {"turns": [], "entities": {}}
     result2 = agent._build_contextual_question("DB 상태 알려줘")
     assert result2 == "DB 상태 알려줘"
