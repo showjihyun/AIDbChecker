@@ -7,7 +7,8 @@
 - **상태**: Implemented (Phase 2)
 - **선행 Spec**: FS-AI-LLM-001 (LLM Provider), DM-001 (ERD), AG-001 (Adapter)
 - **구현 파일**:
-  - Backend: `backend/app/agents/tuning_agent.py`, `backend/app/agents/tools/`, `backend/app/api/v1/tuning.py`
+  - Backend: `backend/app/agents/tuning_agent.py`, `backend/app/agents/native_tool_agent.py`, `backend/app/agents/tools/`, `backend/app/api/v1/tuning.py`
+  - Config: `backend/app/config.py` (`TUNING_REQUEST_TIMEOUT`, `TUNING_POOL_COMMAND_TIMEOUT`)
   - Test: `backend/tests/unit/test_tuning_agent_spec.py`
 
 ---
@@ -192,12 +193,36 @@ class TuningAction(BaseModel):
 
 ---
 
+## 4.3 Agent 라우팅 및 타임아웃
+
+```python
+# Spec: FS-AI-TUNE-001 §4.3
+
+# 환경변수 (config.py)
+TUNING_REQUEST_TIMEOUT = 300      # LLM 요청 타임아웃 (5분, 기본값)
+TUNING_POOL_COMMAND_TIMEOUT = 30  # 대상 DB 개별 쿼리 타임아웃 (30초)
+```
+
+#### Agent 선택 우선순위
+
+| 조건 | Agent | 근거 |
+|------|-------|------|
+| `ANTHROPIC_API_KEY` 설정됨 | **NativeToolAgent** (Claude Tool Use) | 구조화된 tool_use, 8개 도구(7진단+query_database) |
+| API Key 없음 | **DBTuningAgent** (LangChain ReAct) | Ollama/OpenAI 등 LangChain 호환 LLM |
+
+- NativeToolAgent는 `settings.AI_MODEL`에 설정된 Claude 모델 사용
+- ReAct 폴백 시 `LLMProviderManager`가 설정된 provider/model 자동 선택
+- 양쪽 모두 동일한 7개 db_tools 함수 + query_database 공유
+
+---
+
 ## 5. 안전 장치
 
 | 규칙 | 구현 |
 |------|------|
 | **읽기 전용** | 모든 Tool의 DB 쿼리는 read-only 커넥션 사용 |
-| **statement_timeout** | Tool 쿼리 5초 제한 |
+| **statement_timeout** | Tool 쿼리 `TUNING_POOL_COMMAND_TIMEOUT` (기본 30초) |
+| **LLM 타임아웃** | `TUNING_REQUEST_TIMEOUT` (기본 300초 = 5분) |
 | **Agent 반복 제한** | max_iterations (기본 5, 최대 10) |
 | **실행 금지** | Tool은 분석/추천만, 직접 ALTER/CREATE/DROP 실행 금지 |
 | **Autonomy Level** | 추천만 제공 (Level 1), 실행은 사용자 승인 필요 |

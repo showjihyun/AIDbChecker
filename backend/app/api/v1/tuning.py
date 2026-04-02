@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.tuning_agent import DBTuningAgent
 from app.api.deps import get_session, require_role
+from app.config import settings
 from app.models.db_instance import DBInstance
 from app.schemas.tuning import TuningHistoryItem, TuningRequest, TuningResponse
 from app.services.llm_provider import get_llm_manager
@@ -62,9 +63,9 @@ async def _get_tuning_pool(instance: DBInstance) -> asyncpg.Pool:
         dsn,
         min_size=1,
         max_size=2,
-        command_timeout=10,
+        command_timeout=settings.TUNING_POOL_COMMAND_TIMEOUT,
         server_settings={
-            "statement_timeout": "5000",
+            "statement_timeout": str(settings.TUNING_POOL_COMMAND_TIMEOUT * 1000),
             "default_transaction_read_only": "on",
         },
     )
@@ -128,27 +129,51 @@ async def analyze_tuning(
             detail=f"Cannot connect to target DB: {exc}",
         )
 
-    # 3. Get LLM via LLMProviderManager
-    # Spec: FS-AI-TUNE-001 AC-7 — uses LLMProviderManager
-    try:
-        llm = get_llm_manager().get_llm(
-            temperature=0.1,
-            max_tokens=2000,
-            request_timeout=60,
-        )
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"No LLM provider available: {exc}",
-        )
+    # 3. Choose agent: NativeToolAgent (Claude API) > ReAct (LangChain)
+    # Spec: FS-AI-TUNE-001 AC-7, FS-DBA-005
+    timeout = settings.TUNING_REQUEST_TIMEOUT  # 300s default
 
-    # 4. Run agent
-    agent = DBTuningAgent(llm=llm, pool=pool)
-    response = await agent.analyze(
-        question=body.question,
-        instance_id=body.instance_id,
-        max_iterations=body.max_iterations,
-    )
+    if settings.ANTHROPIC_API_KEY:
+        # Prefer NativeToolAgent for structured tool_use
+        from app.agents.native_tool_agent import NativeToolAgent
+
+        agent = NativeToolAgent(pool=pool)
+        result = await agent.analyze(
+            question=body.question,
+            instance_id=body.instance_id,
+            max_iterations=body.max_iterations,
+        )
+        # Map NativeToolAgent dict result to TuningResponse fields
+        response = TuningResponse(
+            instance_id=body.instance_id,
+            question=body.question,
+            analysis=result.get("analysis", ""),
+            actions=[],
+            tools_used=result.get("tools_used", []),
+            model_used=result.get("model", settings.AI_MODEL),
+            iterations=result.get("iterations", 0),
+            duration_ms=result.get("duration_ms", 0),
+        )
+    else:
+        # Fallback to LangChain ReAct agent
+        try:
+            llm = get_llm_manager().get_llm(
+                temperature=0.1,
+                max_tokens=2000,
+                request_timeout=timeout,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"No LLM provider available: {exc}",
+            )
+
+        react_agent = DBTuningAgent(llm=llm, pool=pool)
+        response = await react_agent.analyze(
+            question=body.question,
+            instance_id=body.instance_id,
+            max_iterations=body.max_iterations,
+        )
 
     # 5. Store in history
     _history.append(

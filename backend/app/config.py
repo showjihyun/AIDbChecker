@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "mistral:7b"  # Legacy compat (prefer AI_MODEL)
 
+    # Tuning Agent
+    # Spec: FS-AI-TUNE-001 §4.3 — timeout and pool settings
+    TUNING_REQUEST_TIMEOUT: int = 300  # 5 minutes for LLM analysis
+    TUNING_POOL_COMMAND_TIMEOUT: int = 30  # per-query timeout on target DB
+
     # Embedding
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     EMBEDDING_DIMENSIONS: int = 384
