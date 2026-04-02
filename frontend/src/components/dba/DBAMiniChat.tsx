@@ -1,7 +1,7 @@
 // Spec: FS-DBA-002 AC-11~13 — DBA Agent mini chat widget (bottom-right)
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { cn } from '@/lib/cn';
+import { cn, generateId } from '@/lib/cn';
 import { apiClient } from '@/api/client';
 import { useLLMSettings } from '@/api/hooks/useLLMSettings';
 
@@ -116,8 +116,8 @@ export function DBAMiniChat() {
     const q = input.trim();
     if (!q || isLoading || !selectedInstanceId) return;
 
-    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: q };
-    const loadingMsg: ChatMessage = { id: crypto.randomUUID(), role: 'agent', content: '', isLoading: true };
+    const userMsg: ChatMessage = { id: generateId(), role: 'user', content: q };
+    const loadingMsg: ChatMessage = { id: generateId(), role: 'agent', content: '', isLoading: true };
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
     setInput('');
     setIsLoading(true);

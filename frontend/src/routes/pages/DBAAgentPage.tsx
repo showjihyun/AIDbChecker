@@ -1,7 +1,7 @@
 // Spec: FS-DBA-002 — DBA Agent Chat UI
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { cn } from '@/lib/cn';
+import { cn, generateId } from '@/lib/cn';
 import { apiClient } from '@/api/client';
 import { useLLMSettings } from '@/api/hooks/useLLMSettings';
 import { useMetricStore } from '@/stores/metricStore';
@@ -116,7 +116,7 @@ export function DBAAgentPage() {
       setMessages((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: generateId(),
           role: 'agent',
           content: 'Please select a DB instance first.',
           error: 'No instance selected',
@@ -126,12 +126,12 @@ export function DBAAgentPage() {
     }
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'user',
       content: q,
     };
     const loadingMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'agent',
       content: '',
       isLoading: true,

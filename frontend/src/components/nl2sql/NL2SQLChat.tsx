@@ -1,6 +1,6 @@
 // Spec: MVP-DASH, MVP.md §4.6 — NL2SQL floating chat widget
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { cn } from '@/lib/cn';
+import { cn, generateId } from '@/lib/cn';
 import { apiClient } from '@/api/client';
 import { useMetricStore } from '@/stores/metricStore';
 
@@ -62,7 +62,7 @@ export function NL2SQLChat() {
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    const entryId = crypto.randomUUID();
+    const entryId = generateId();
     const newEntry: ChatEntry = {
       id: entryId,
       query: trimmed,
