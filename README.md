@@ -2,6 +2,33 @@
 
 > PostgreSQL 10+ instances monitoring with AI-driven anomaly detection, root cause analysis, and self-healing.
 
+## Why NeuralDB?
+
+**NeuralDB**는 기존 DB 모니터링 도구가 제공하지 못하는 **AI 네이티브 자율 운영**을 목표로 설계되었습니다.
+
+### vs. 기존 솔루션
+
+| | Datadog DBM | pganalyze | Percona PMM | **NeuralDB** |
+|---|:---:|:---:|:---:|:---:|
+| 메트릭 해상도 | 10초 | 10초~1분 | 1초 (low-res) | **1초 (고해상도)** |
+| ASH (Active Session History) | 부분 | - | 부분 | **1초 ASH** |
+| AI 근본 원인 분석 (RCA) | 상관 분석 | - | - | **RAG + MTL 4-Head** |
+| NL2SQL 자연어 질의 | - | - | - | **GraphRAG + pgvector** |
+| AI 자동 쿼리 튜닝 | 추천만 | 인덱스 추천 | - | **추천 + 자동 적용** |
+| Explainable AI (신뢰도 점수) | - | - | - | **Confidence Score** |
+| DB Copilot (자율 진단) | - | - | - | **ToT 8-Branch** |
+| 온/오프라인 LLM | SaaS only | - | - | **Cloud + Ollama** |
+| 라이선스 | 상용 SaaS | 상용 | AGPL | **MIT/BSD/Apache** |
+
+### 핵심 차별점
+
+- **1-Second Resolution** -- Hot(1초)/Warm(10초)/Cold(1분) 3-Tier 메트릭 수집으로 장애 순간을 놓치지 않음
+- **AI-Native DBA Agent** -- "DB가 느려" 한마디로 분석/진단/실행/쿼리/상태 5가지 intent를 자동 라우팅. Claude Native Tool Use로 구조화된 도구 호출
+- **SafetyGuard 4-Level** -- SAFE/WARNING/DANGEROUS/CRITICAL 위험 분류 + Autonomy Level(L0~L4) + Role-Based Ceiling으로 자율 실행을 안전하게 제어
+- **Spec-Driven Engineering** -- 52개 Spec 문서가 모든 구현의 계약. Spec 없는 코드는 거부. 11개 ADR로 아키텍처 결정 추적
+- **License-Clean** -- GPL/AGPL/SSPL 기술 완전 배제. 독립 솔루션/SaaS 전환에 법적 제약 없음
+- **Proactive Agent** -- Quick Check(30분), Deep Analysis(6시간), Morning Report(매일 09:00)로 장애 전에 미리 감지
+
 ## Quick Start
 
 ```bash
