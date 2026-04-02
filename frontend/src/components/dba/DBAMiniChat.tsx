@@ -181,7 +181,7 @@ export function DBAMiniChat() {
           <div>
             <span className="text-sm font-semibold text-on-surface">DBA Agent</span>
             {llmSettings && (
-              <span className="block text-[9px] text-on-surface-variant/60">
+              <span className="block text-[11px] text-on-surface-variant/60">
                 {llmSettings.provider} · {llmSettings.model}
               </span>
             )}
@@ -319,7 +319,7 @@ export function DBAMiniChat() {
                         <span className="material-symbols-outlined text-xs">thumb_down</span>
                       </button>
                       {msg.model && (
-                        <span className="text-[8px] text-on-surface-variant/40 ml-auto">
+                        <span className="text-[10px] text-on-surface-variant/40 ml-auto">
                           {msg.model} · {msg.time_ms}ms
                         </span>
                       )}
