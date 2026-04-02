@@ -167,16 +167,16 @@ All features are driven by Spec documents in `docs/specs/`. See [CLAUDE.md](CLAU
 
 | Category | Specs | Key Documents |
 |----------|-------|---------------|
-| **Agents** (6) | Agent architecture, DBA execution, orchestrator, proactive, multi-turn, native tool use | `AGENT_SPEC.md`, `DBA_AGENT_EXEC_SPEC.md`, `DBA_ORCHESTRATOR_SPEC.md`, `PROACTIVE_AGENT_SPEC.md`, `DBA_MULTITURN_SPEC.md`, `NATIVE_TOOL_USE_SPEC.md` |
-| **AI** (15) | Baseline, MTL RCA, RAG, NL2SQL, Copilot, Tuning, LLM provider/observability, AIGC report, confidence score, autonomy, ReAct trace, diagnosis flow, report download | `MTL_RCA_SPEC.md`, `NL2SQL_SPEC.md`, `COPILOT_SPEC.md`, `LIGHTWEIGHT_RAG_SPEC.md` |
+| **Agents** (6) | Multi-agent architecture, DBA execution, orchestrator, proactive, multi-turn, native tool use | `AGENT_SPEC.md`, `DBA_AGENT_EXEC_SPEC.md`, `DBA_ORCHESTRATOR_SPEC.md`, `PROACTIVE_AGENT_SPEC.md`, `DBA_MULTITURN_SPEC.md`, `NATIVE_TOOL_USE_SPEC.md` |
+| **AI** (15) | Baseline, MTL RCA, RAG, NL2SQL, Copilot, Tuning, LLM provider/observability, AIGC report, confidence score, ReAct trace, diagnosis flow, DBA report, report download | `MTL_RCA_SPEC.md`, `NL2SQL_SPEC.md`, `COPILOT_SPEC.md`, `LIGHTWEIGHT_RAG_SPEC.md` |
 | **API** (3) | REST API, error codes, GraphQL schema | `API_SPEC.md`, `ERROR_CODES_SPEC.md` |
 | **Config** (1) | Application settings | `SETTINGS_SPEC.md` |
-| **Data Model** (2) | ERD (18 tables), migration strategy | `ERD.md`, `MIGRATION_SPEC.md` |
+| **Data Model** (2) | ERD (20+ tables), migration strategy | `ERD.md`, `MIGRATION_SPEC.md` |
 | **Frontend** (5) | Components, hooks, WebSocket events, KPI dashboard, incident list | `COMPONENT_SPEC.md`, `DB_KPI_SPEC.md` |
 | **Playbooks** (1) | Built-in + custom YAML playbook engine | `PLAYBOOK_SPEC.md` |
-| **Protocols** (3) | A2A, Kafka (Phase 3+), MCP integration | `MCP_INTEGRATION.md`, `A2A_PROTOCOL.md` |
+| **Protocols** (3) | A2A, ~~Kafka~~ (deprecated, ADR-011), MCP integration | `MCP_INTEGRATION.md`, `A2A_PROTOCOL.md` |
 | **Services** (8) | Service layer, audit log, schema change, AI decision log, task queue, system health, SSO/LDAP, Slack settings | `SERVICE_LAYER_SPEC.md`, `TASK_QUEUE_SPEC.md` |
-| **Tasks** (1) | Celery task definitions | `CELERY_TASKS_SPEC.md` |
+| **Tasks** (1) | Celery task definitions and Beat schedules | `CELERY_TASKS_SPEC.md` |
 | **Tests** (7) | Backend/frontend/integration test specs, test strategy, harness v3, live test plan | `TEST_STRATEGY.md`, `HARNESS_V3_SPEC.md` |
 
 ## ADR (Architecture Decision Records)
