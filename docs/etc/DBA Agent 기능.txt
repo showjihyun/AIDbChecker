@@ -1,0 +1,475 @@
+LLM 기반 **DBA Agent**를 만들 때 핵심은 **LLM 자체보다 “Agent Harness Engineering”** 입니다.
+즉, LLM이 **DB를 직접 건드리지 않고**, **안전한 실행 레이어(Harness)** 를 통해 DBA 작업을 수행하도록 설계해야 합니다.
+
+특히 PostgreSQL 기반이라면 아래 **7개 영역을 사전에 설계**해야 합니다.
+
+---
+
+# 1. Agent Harness Architecture 설계
+
+LLM이 직접 SQL을 실행하면 **치명적인 사고**가 발생합니다.
+따라서 **Execution Harness Layer**가 필요합니다.
+
+### 기본 구조
+
+```
+User
+ ↓
+Chat Interface
+ ↓
+LLM Reasoning Layer
+ ↓
+Agent Harness Layer
+ ├─ Tool Router
+ ├─ Safety Guard
+ ├─ Query Planner
+ ├─ Execution Engine
+ ↓
+PostgreSQL
+```
+
+Harness의 핵심 역할
+
+| 역할                 | 설명                    |
+| ------------------ | --------------------- |
+| Tool Routing       | LLM이 어떤 Tool을 호출할지 결정 |
+| SQL Validation     | 위험한 쿼리 차단             |
+| Permission Control | DBA 권한 제한             |
+| Plan Simulation    | 실행 전에 영향 분석           |
+| Rollback Control   | 실패 시 복구               |
+
+---
+
+# 2. DBA Capability Scope 정의 (Agent Skill Set)
+
+Agent가 수행할 **DBA 업무 범위**를 먼저 정의해야 합니다.
+
+### Level 1 (Read Only)
+
+가장 안전한 단계
+
+* DB 상태 조회
+* 성능 분석
+* Slow query 분석
+* 인덱스 추천
+* Vacuum 상태 분석
+
+예
+
+```
+User:
+왜 이 쿼리가 느려?
+
+Agent:
+EXPLAIN ANALYZE 실행
+-> 실행 계획 분석
+-> Index 추천
+```
+
+---
+
+### Level 2 (Safe Operations)
+
+제한된 변경 작업
+
+* Index 생성
+* Autovacuum 튜닝
+* Query rewrite
+* Statistics refresh
+
+---
+
+### Level 3 (Dangerous Operations)
+
+아래 작업은 반드시 **Human Approval** 필요
+
+* DROP TABLE
+* DELETE
+* UPDATE
+* ALTER TABLE
+
+---
+
+# 3. Tool / Skill Design
+
+Agent는 **Tool 기반 구조**로 설계해야 합니다.
+
+예시 Tool Set
+
+```
+tools/
+
+db_tools
+ ├─ run_sql
+ ├─ explain_query
+ ├─ analyze_query
+ ├─ index_recommend
+ ├─ table_stats
+ ├─ lock_status
+ ├─ connection_status
+
+ops_tools
+ ├─ create_index
+ ├─ vacuum_table
+ ├─ reindex_table
+
+monitor_tools
+ ├─ slow_query_report
+ ├─ db_health_report
+ ├─ disk_usage
+```
+
+LLM은 **Tool Call 형태로만 실행**해야 합니다.
+
+---
+
+# 4. SQL Safety Guard (가장 중요)
+
+DBA Agent에서 가장 중요한 부분입니다.
+
+### SQL Risk Classifier
+
+SQL을 위험도별로 분류합니다.
+
+| Level     | Query        |
+| --------- | ------------ |
+| SAFE      | SELECT       |
+| WARNING   | CREATE INDEX |
+| DANGEROUS | UPDATE       |
+| CRITICAL  | DROP         |
+
+---
+
+### Guard Layer
+
+```
+LLM SQL
+ ↓
+SQL Parser
+ ↓
+Risk Classifier
+ ↓
+Policy Engine
+ ↓
+Execution
+```
+
+예
+
+```
+DROP TABLE users
+```
+
+→ BLOCK
+
+또는
+
+```
+DELETE FROM logs WHERE date < now() - interval '1 year'
+```
+
+→ Approval Required
+
+---
+
+# 5. Query Simulation Layer
+
+DBA Agent는 반드시 **실행 전에 영향 분석**을 해야 합니다.
+
+### PostgreSQL 기능 활용
+
+```
+EXPLAIN
+EXPLAIN ANALYZE
+pg_stat_statements
+pg_locks
+pg_stat_activity
+```
+
+예
+
+Agent workflow
+
+```
+1 User query
+2 LLM SQL 생성
+3 Harness SQL Validation
+4 EXPLAIN 실행
+5 영향 분석
+6 승인
+7 실제 실행
+```
+
+---
+
+# 6. Observability (Agent Monitoring)
+
+DBA Agent는 **모든 행동이 기록**되어야 합니다.
+
+로그
+
+```
+Agent Action Log
+
+timestamp
+user_request
+generated_sql
+execution_result
+risk_level
+approval_status
+```
+
+---
+
+추가
+
+### Audit
+
+```
+Agent → DB Action History
+```
+
+예
+
+```
+2026-03-20
+Agent
+CREATE INDEX idx_orders_user
+```
+
+---
+
+# 7. Knowledge Layer (DB Context)
+
+LLM이 DB 구조를 알아야 합니다.
+
+그래서 **Schema Graph**를 만들어야 합니다.
+
+### GraphRAG 구조
+
+```
+Table
+ ↓
+Column
+ ↓
+Foreign Key
+ ↓
+Query Pattern
+```
+
+예
+
+```
+orders
+ ├─ order_id
+ ├─ user_id
+ ├─ created_at
+```
+
+LLM에게 제공
+
+```
+Schema Context
+Query Statistics
+Index Usage
+```
+
+---
+
+# 8. Agent Planning Layer
+
+Agent는 **multi-step reasoning**이 필요합니다.
+
+예
+
+User
+
+```
+DB가 느려
+```
+
+Agent
+
+```
+Step1 DB Health Check
+Step2 Slow Query 분석
+Step3 Index 추천
+Step4 Fix 제안
+```
+
+그래서 **Agent Planner** 필요
+
+```
+Planner
+ ↓
+Tool Executor
+ ↓
+Memory
+```
+
+---
+
+# 9. Human Approval Workflow
+
+DBA Agent는 반드시 **Human-in-the-loop** 필요합니다.
+
+예
+
+```
+Agent:
+Index 생성하면 성능 70% 개선 예상
+
+SQL:
+CREATE INDEX idx_orders_created_at
+```
+
+User
+
+```
+승인
+```
+
+Agent
+
+```
+execute
+```
+
+---
+
+# 10. Offline Knowledge
+
+Agent가 학습해야 할 데이터
+
+```
+DB Schema
+Query History
+Execution Plan
+Index Usage
+Slow Query Log
+```
+
+이걸 VectorDB 저장
+
+추천
+
+* pg_stat_statements
+* Query plan history
+
+---
+
+# 11. Agent Failure Control
+
+LLM이 틀릴 수 있기 때문에 아래 구조 필요
+
+```
+Retry
+Fallback
+Rollback
+Timeout
+```
+
+---
+
+# 12. 실제 추천 기술 스택
+
+### Backend
+
+```
+Python
+FastAPI
+```
+
+---
+
+### Agent Framework
+
+추천
+
+```
+LangGraph
+```
+
+이유
+
+* Agent state 관리
+* Tool orchestration
+* multi-step workflow
+
+---
+
+### VectorDB
+
+```
+pgvector
+Milvus
+```
+
+---
+
+### DB Connection
+
+```
+SQLAlchemy
+asyncpg
+```
+
+---
+
+# 13. 전체 아키텍처
+
+```
+React UI
+   │
+   │ Chat
+   ▼
+FastAPI
+   │
+   │
+Agent Layer (LangGraph)
+   │
+   ├─ Planner
+   ├─ Tool Router
+   ├─ Memory
+   │
+Harness Layer
+   │
+   ├─ SQL Guard
+   ├─ Risk Analyzer
+   ├─ Query Simulator
+   ├─ Approval Manager
+   │
+Execution Layer
+   │
+PostgreSQL
+```
+
+---
+
+# 14. DBA Agent 핵심 차별화
+
+일반적인 NL2SQL과 차이
+
+| 일반 NL2SQL | DBA Agent  |
+| --------- | ---------- |
+| SQL 생성    | DBA 업무 수행  |
+| SELECT 중심 | 운영 자동화     |
+| 단순 질문     | 분석 + 해결    |
+| LLM 중심    | Harness 중심 |
+
+---
+
+💡 **중요한 인사이트**
+
+요즘 DBA Agent 구조는
+
+```
+LLM 20%
+Harness 80%
+```
+
+입니다.
+
+LLM보다 **Execution Control Architecture**가 핵심입니다.
+
+
