@@ -18,10 +18,10 @@ def test_dba_005_ac1_native_agent_exists():
 
 @spec_ref("FS-DBA-005", "AC-2")
 def test_dba_005_ac2_tool_definitions():
-    """AC-2: 7 diagnostic tools defined with Anthropic schema."""
+    """AC-2: 8 tools (7 diagnostic + 1 query) defined with Anthropic schema."""
     from app.agents.native_tool_agent import TOOL_DEFINITIONS
 
-    assert len(TOOL_DEFINITIONS) == 7
+    assert len(TOOL_DEFINITIONS) == 8
 
     names = {t["name"] for t in TOOL_DEFINITIONS}
     assert "slow_queries" in names
@@ -31,6 +31,7 @@ def test_dba_005_ac2_tool_definitions():
     assert "table_bloat" in names
     assert "lock_analysis" in names
     assert "connection_analysis" in names
+    assert "query_database" in names
 
     # Each tool has required fields
     for tool in TOOL_DEFINITIONS:

@@ -469,6 +469,40 @@ _SQL_MAX_CONNECTIONS = textwrap.dedent("""\
 """)
 
 
+async def query_database(pool: asyncpg.Pool, sql: str) -> str:
+    """Execute a read-only SELECT query and return results as formatted text.
+
+    Spec: FS-DBA-005 — query_database tool for data retrieval.
+    Validates read-only, enforces statement_timeout, limits rows to 100.
+    """
+    _validate_sql_readonly(sql)
+
+    sql = sql.rstrip(";").strip()
+
+    # Auto-add LIMIT if not present
+    if "limit" not in sql.lower():
+        sql = f"{sql}\nLIMIT 100"
+
+    try:
+        async with pool.acquire() as conn, conn.transaction():
+            await conn.execute("SET LOCAL statement_timeout = '5000'")
+            rows = await conn.fetch(sql)
+    except asyncpg.PostgresError as exc:
+        return f"Query failed: {exc}"
+
+    if not rows:
+        return "쿼리 결과: 0건 (데이터 없음)"
+
+    # Format as table
+    columns = list(rows[0].keys())
+    lines = ["\t".join(columns), "-" * (len(columns) * 20)]
+    for row in rows[:100]:
+        lines.append("\t".join(str(row[c]) if row[c] is not None else "NULL" for c in columns))
+
+    lines.append(f"\n총 {len(rows)}건 반환")
+    return "\n".join(lines)
+
+
 async def connection_analysis(pool: asyncpg.Pool) -> str:
     """Analyse connection pool efficiency and idle sessions.
 

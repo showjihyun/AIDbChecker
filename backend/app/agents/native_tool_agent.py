@@ -25,6 +25,9 @@ _SYSTEM_PROMPT = """\
 
 규칙:
 - 반드시 한국어로 답변하세요.
+- 사용자가 데이터 조회를 요청하면("보여줘", "리스트", "목록", "알려줘") \
+반드시 query_database 도구로 SQL을 실행하여 실제 결과를 반환하세요. \
+SQL을 텍스트로 알려주지 마세요.
 - 분석은 [현황] → [원인 분석] → [권장 조치] 구조로 작성하세요.
 - 추천 액션에는 실행 가능한 SQL을 포함하세요.
 - 수치 데이터(ms, %, 건수)를 적극 활용하세요.
@@ -114,6 +117,24 @@ TOOL_DEFINITIONS = [
             "properties": {},
         },
     },
+    {
+        "name": "query_database",
+        "description": (
+            "사용자가 데이터를 조회하거나 리스트/목록을 요청할 때 사용합니다. "
+            "읽기 전용 SELECT SQL을 실행하여 실제 결과를 반환합니다. "
+            "예: 테이블 목록, 인덱스 없는 테이블, 스키마 정보, 설정값 조회 등."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "실행할 읽기 전용 SELECT SQL 쿼리",
+                }
+            },
+            "required": ["sql"],
+        },
+    },
 ]
 
 
@@ -177,11 +198,13 @@ class NativeToolAgent:
                     if block.type == "tool_use":
                         self._tools_used.append(block.name)
                         result = await self._invoke_tool(block.name, block.input)
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result,
-                        })
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": result,
+                            }
+                        )
 
                 # Append assistant response + tool results
                 messages.append({"role": "assistant", "content": response.content})
@@ -226,6 +249,7 @@ class NativeToolAgent:
             index_recommendations,
             lock_analysis,
             parameter_tuning,
+            query_database,
             slow_queries,
             table_bloat,
         )
@@ -237,11 +261,10 @@ class NativeToolAgent:
                 self.pool, input_data.get("table_name") or None
             ),
             "parameter_tuning": lambda: parameter_tuning(self.pool),
-            "table_bloat": lambda: table_bloat(
-                self.pool, input_data.get("table_name") or None
-            ),
+            "table_bloat": lambda: table_bloat(self.pool, input_data.get("table_name") or None),
             "lock_analysis": lambda: lock_analysis(self.pool),
             "connection_analysis": lambda: connection_analysis(self.pool),
+            "query_database": lambda: query_database(self.pool, input_data.get("sql", "")),
         }
 
         handler = tool_map.get(name)
@@ -254,9 +277,7 @@ class NativeToolAgent:
         except Exception as exc:
             return f"도구 실행 오류 ({name}): {exc}"
 
-    async def _fallback_react(
-        self, question: str, instance_id: UUID, max_iterations: int
-    ) -> dict:
+    async def _fallback_react(self, question: str, instance_id: UUID, max_iterations: int) -> dict:
         """AC-6: Fallback to existing LangChain ReAct agent."""
         from app.agents.tuning_agent import DBTuningAgent
         from app.services.llm_provider import LLMProviderManager

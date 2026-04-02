@@ -84,6 +84,11 @@ _INTENT_KEYWORDS: dict[str, list[str]] = {
         "recent",
         "latest",
         "최근",
+        "리스트",
+        "목록",
+        "있는",
+        "없는",
+        "뽑아",
     ],
     "status": [
         "상태",
