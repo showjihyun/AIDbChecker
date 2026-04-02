@@ -1,4 +1,4 @@
-# NeuralDB Architecture — v1.1.0
+# NeuralDB Architecture — v1.1.2
 
 ## System Overview
 
@@ -133,6 +133,8 @@ Additional Guards:
 | FS-DBA-001 | Execution Layer (SafetyGuard + ops_tools + Engine) | 16 |
 | FS-DBA-002 | Orchestrator + MCP + Chat UI | 13 |
 | FS-DBA-003 | Proactive Agent (Quick/Deep/Report/Self-Healing) | 10 |
+| FS-DBA-004 | Multi-turn DBA Agent (session memory + context) | 10 |
+| FS-DBA-005 | Claude Native Tool Use Agent | 8 |
 | FS-HARNESS-001 | 4-Pillar Pre-Commit Quality Gate | 9 |
 | FS-AI-NL2SQL-001 | NL2GraphRAG (Knowledge Graph + pgvector) | 20 |
 
