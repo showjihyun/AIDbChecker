@@ -173,7 +173,7 @@ export function DBAMiniChat() {
 
   // ── Expanded: mini chat ──
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[520px] bg-[#0f1729] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed bottom-6 right-6 z-50 w-[720px] h-[800px] bg-[#0f1729] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-surface-container">
         <div className="flex items-center gap-2">
