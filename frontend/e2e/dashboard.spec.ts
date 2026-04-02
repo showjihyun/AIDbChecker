@@ -7,9 +7,9 @@ const ADMIN_PASSWORD = 'NeuralDB@2026!';
 // Helper: login before each test
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/login');
-  await page.getByPlaceholder(/email/i).fill(ADMIN_EMAIL);
-  await page.getByPlaceholder(/password/i).fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: /sign in|log in/i }).click();
+  await page.getByRole('textbox', { name: /email/i }).fill(ADMIN_EMAIL);
+  await page.getByRole('textbox', { name: /password/i }).fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL('/', { timeout: 10_000 });
 }
 
