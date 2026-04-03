@@ -42,7 +42,7 @@ FE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$FE" 2>/dev/null)
 # 2. Auth
 TOKEN=$(curl -s "$API/api/v1/auth/login" -X POST \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "username=admin@neuraldb.local&password=NeuralDB@2026!" 2>/dev/null \
+    -d "username=admin@neuraldb.local&password=${SEED_ADMIN_PASSWORD:-change-me-in-production}" 2>/dev/null \
     | python -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
 
 [ -n "$TOKEN" ] && [ ${#TOKEN} -gt 20 ] && check "Auth (JWT login)" "ok" || check "Auth" "no token"

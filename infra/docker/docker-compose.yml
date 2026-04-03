@@ -62,7 +62,7 @@ services:
       SLACK_CHANNEL_ID: ${SLACK_CHANNEL_ID:-}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       # SEC-04: Use env vars for secrets (override via .env file)
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-NeuralDB@2026!}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-change-me-in-production}
     depends_on:
       postgres:
         condition: service_healthy

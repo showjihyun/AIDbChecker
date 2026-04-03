@@ -55,7 +55,7 @@ curl http://localhost:3000/api/v1/system/health
 
 ```
 Email: admin@neuraldb.local
-Password: (SEED_ADMIN_PASSWORD, 기본: NeuralDB@2026!)
+Password: SEED_ADMIN_PASSWORD 환경변수로 설정
 ```
 
 ### 2.4 업데이트

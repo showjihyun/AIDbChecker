@@ -1,6 +1,7 @@
 # Spec: MVP-ADMIN-001
 """Unit tests for JWT token creation/validation and password hashing."""
 
+import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -18,7 +19,7 @@ class TestPasswordHashing:
     @spec_ref("MVP-ADMIN-001", "AC-6")
     def test_hash_and_verify_correct_password(self) -> None:
         """Hashed password should verify against the original plain text."""
-        plain = "NeuralDB@2026!"
+        plain = os.environ.get("SEED_ADMIN_PASSWORD", "change-me-in-production")
         hashed = pwd_context.hash(plain)
 
         assert hashed != plain, "Hash must differ from plain text"

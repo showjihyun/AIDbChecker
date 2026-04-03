@@ -163,7 +163,7 @@ docker compose up -d
 http://localhost:3000
 
 # 기본 계정
-admin@neuraldb.io / admin123
+admin@neuraldb.local / (SEED_ADMIN_PASSWORD 환경변수)
 ```
 
 ---

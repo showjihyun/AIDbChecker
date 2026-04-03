@@ -13,7 +13,7 @@ cd infra/docker && docker compose up -d
 ### 2. 접속
 - URL: http://localhost:3000
 - ID: admin@neuraldb.local
-- PW: NeuralDB@2026!
+- PW: (SEED_ADMIN_PASSWORD 환경변수로 설정)
 
 ### 3. 사내 DB 등록
 - 좌측 메뉴 "Instances" → "Register Instance"

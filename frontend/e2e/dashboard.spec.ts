@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 
 const ADMIN_EMAIL = 'admin@neuraldb.local';
-const ADMIN_PASSWORD = 'NeuralDB@2026!';
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'change-me-in-production';
 
 // Helper: login before each test
 async function login(page: import('@playwright/test').Page) {
